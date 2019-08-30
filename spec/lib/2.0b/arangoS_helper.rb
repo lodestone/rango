@@ -80,7 +80,8 @@ describe Arango::Server do
       id = @myAQL.execute
       @server.async = false
       val = @server.fetchAsync(id: id)
-      expect(val[:result]).to eq [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 2, 5, 2, 1, 1, 2]
+      # order is undefined
+      expect(val[:result].sort).to eq [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 2, 5, 2, 1, 1, 2].sort
     end
 
     it "cancelAsync" do

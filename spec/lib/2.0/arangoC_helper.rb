@@ -27,7 +27,7 @@ describe Arango::Collection do
       rescue Arango::ErrorDB => e
         error = e.errorNum
       end
-      expect(error.class).to eq Fixnum
+      expect(error.class).to eq Integer
     end
 
     it "create a new Edge Collection" do

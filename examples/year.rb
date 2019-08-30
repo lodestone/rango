@@ -13,7 +13,7 @@ year = 2016
 
 print "\n === DATABASE === \n"
 
-server = Arango::Server.new username: "root", password: "root", server: "localhost",
+server = Arango::Server.new username: "root", password: "", server: "localhost",
   port: "8529", pool: false, active_cache: false, verbose: false
 database = server.database name: "year"
 graph = database.graph name: "yearGraph"

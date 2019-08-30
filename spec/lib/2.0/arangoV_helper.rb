@@ -22,7 +22,7 @@ describe Arango::Vertex do
       rescue Arango::ErrorDB => e
         error = e.errorNum
       end
-      expect(error).to eq 1202
+      expect(error).to eq 1210
     end
   end
 

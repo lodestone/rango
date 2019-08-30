@@ -1,39 +1,23 @@
-ArangoRB [![Gem Version](https://badge.fury.io/rb/arangorb.svg)](https://badge.fury.io/rb/arangorb)
+arangodb-driver
 ===============================
 
 [ArangoDatabase](https://www.arangodb.com/) is a native multi-model database with flexible data models for document, graphs, and key-values.
-ArangoRB is a Gem to use ArangoDatabase with Ruby. ArangoRB is based on the [HTTP API of ArangoDB](https://docs.arangodb.com/3.4/HTTP/index.html).
+arangodb-driver is a Gem to use ArangoDB with Ruby. arangodb-driver is based on the [HTTP API of ArangoDB](https://docs.arangodb.com/3.5/HTTP/index.html)
+and its [Error Codes](https://www.arangodb.com/docs/3.5/appendix-error-codes.html).
 
-ArangoRB 0.1.0 - 1.3.0 have been tested with ArangoDB 3.0  with Ruby 2.3.1</br>
-ArangoRB 1.4.0 has been tested with ArangoDB 3.1 with Ruby 2.3.3</br>
-ArangoRB 2.0.0 has been tested with ArangoDB 3.4 with Ruby 2.3.3</br>
+The version of arangodb-driver follows the ArangoDB version, version 3.5.x of the driver is meant to be used with ArangoDB 3.5.y, where x and y may differ. 
 
 It requires the gems "HTTParty", "Oj" and "connection_pool"</br>
 
-To install ArangoRB: `gem install arangorb`
+To install arangodb-driver: `gem install arangodb-driver`
+To use it in your application: `require "arangodb-driver"`
 
-To use it in your application: `require "arangorb"`
-
-## Support
-
-This is a project managed by one single person. ArangoDB is a wonderful project that it is hard to cover completely alone. For this reason all your supports is more than welcome.
-Any pull request, issue, suggestions and ideas are more than welcome. Do not be shy to contact me, create issues on Github or pushing changes.
-
-Here something the community can help on:
-* Replication example in example/replication_year.rb is a work in progress. Any found bugs and advice to improve it will be great. I removed the IPs in the examples to make clear that it is only an example that needs work.
-* Add test and correct bugs for replication, clustering, foxx and other.
-* Improve AQL instance to implement in Rails.
-* Improve Documentation.
-
-If you like this project, please star it. It will remind me that my work has been useful for somebody.  
-
-For the differences between version 1.4.0 and 2.0.0: [Click here](#differences).
-
-For testing: [Click here](#testing).
+## Community and Support
+At the [Isomorfeus Framework Project](http://isomorfeus.com) 
 
 ## Classes used
 
-ArangoRB has the two type of classes.
+arangodb-driver has the two type of classes.
 
 Classes relative to ArangoDB elements:
 * [Arango::Server](#ArangoServer): to manage a Server
@@ -54,9 +38,9 @@ Classes relative to ArangoDB elements:
 * [Arango::Foxx](#ArangoFoxx): to manage a Foxx instance
 * [Arango::View](#ArangoView): to manage a View instance
 
-Classes relative to the Gem ArangoRB
+Classes relative to the Gem arangodb-driver
 * [Arango::Cache](#ArangoCache): to manage internal Cache
-* [Arango::Error](#ArangoError): to handle ArangoRB errors
+* [Arango::Error](#ArangoError): to handle arangodb-driver errors
 
 All the instances of these classes can be transformed in Hash with the method to_h.
 
@@ -85,7 +69,7 @@ Password is a mandatory field.
 
 ### Returning results
 
-ArangoRB try always to store the information obtained from ArangoDB in an instance.
+arangodb-driver try always to store the information obtained from ArangoDB in an instance.
 If you need to receive the output, you can return it with:
 
 ``` ruby
@@ -110,7 +94,7 @@ server.warning = false # Default true
 
 ### Connection Pool
 
-ArangoRB supports connection pool, to activate it you can setup pool to true during the initialization or the proceedings. To do so use:
+arangodb-driver supports connection pool, to activate it you can setup pool to true during the initialization or the proceedings. To do so use:
 
 ``` ruby
 server = Arango::Server.new username: "MyUsername", password: "MyPassword",
@@ -125,16 +109,16 @@ NB: ConnectionPool is not heavily tested.
 
 ### Cache
 
-Often ArangoRB returns multiple time the same object (for example for lists or for retrieving). It can happens thus that a document instance updated somewhere in your code, it is not update somewhere even if you are refering the same ArangoDB document.
-To avoid this, ArangoRB provides its own cache.
+Often arangodb-driver returns multiple time the same object (for example for lists or for retrieving). It can happens thus that a document instance updated somewhere in your code, it is not update somewhere even if you are refering the same ArangoDB document.
+To avoid this, arangodb-driver provides its own cache.
 
-You can activate the ArangoRB cache by using:
+You can activate the arangodb-driver cache by using:
 
 ``` ruby
 server.active_cache = true # Default false
 ```
 
-If active_cache is true, then a previous document or collection instance will be stored in the ArangoRB cache. In case a new instance of the same document is created, then a new instance will NOT be created but, instead, the old one will be returned.
+If active_cache is true, then a previous document or collection instance will be stored in the arangodb-driver cache. In case a new instance of the same document is created, then a new instance will NOT be created but, instead, the old one will be returned.
 
 With an example:
 
@@ -203,7 +187,7 @@ server.async = true   # fire and forget
 server.async = :store # fire and store
 ```
 
-If Async is "store", then the commands of ArangoRB will return the id of the Async requests.
+If Async is "store", then the commands of arangodb-driver will return the id of the Async requests.
 Arango::Server provides different methods to manage these Async requests.
 
 ``` ruby
@@ -245,7 +229,7 @@ server.execute body: body # Execute a script on the server.
 
 ### Cluster (UNTESTED)
 
-ArangoDB permits the sharding of the database. Although these methods has not been tested with ArangoRB.
+ArangoDB permits the sharding of the database. Although these methods has not been tested with arangodb-driver.
 
 ``` ruby
 server.clusterHealth port: port # Allows to check whether a given port is usable
@@ -424,7 +408,7 @@ myCollection.documents type: "path"
 myCollection.next # Retrieve other documents if the first request is not finished
 ```
 
-Type can be "path", "id" or "key" in relation what we wish to have. If not specified ArangoRB will return an array of Arango::Document instances.
+Type can be "path", "id" or "key" in relation what we wish to have. If not specified arangodb-driver will return an array of Arango::Document instances.
 
 ``` ruby
 myCollection.allDocuments skip: 3, limit: 100, batchSize: 10
@@ -579,7 +563,7 @@ myDocument = Arango::Document.new body: {"value":  17}, name: "MyDocument"
 
 ### Main methods
 
-ArangoRB provides several way to create a single Document.
+arangodb-driver provides several way to create a single Document.
 
 ``` ruby
 myDocument.create                      # Create a new document
@@ -868,7 +852,7 @@ Than to do a simple syncronization uses;
 myReplication.sync    # Sync master - slave database
 ```
 
-To retrieve other information ArangoRB provides the following methods:
+To retrieve other information arangodb-driver provides the following methods:
 
 ``` ruby
 myReplication.logger       # Returns the current state of the server's replication logger
@@ -898,7 +882,7 @@ myReplication.modify  # modify the Configuration of the Replication (you can mod
 
 ## Arango::Batch
 
-To create a batch request, you can use ArangoRB::Batch object. This permit to do multiple requests with one single call to the API.
+To create a batch request, you can use arangodb-driver::Batch object. This permit to do multiple requests with one single call to the API.
 
 To create a batch use one of the following way:
 
@@ -1019,7 +1003,7 @@ myFoxx.commit body: body
 <a name="ArangoCache"></a>
 ## Arango::Cache
 
-Arango::Cache is to manage ArangoRB Cache (NOT ArangoDB cache) and it helps you to manage your documents around your code. In this way if you update an Arango::Document in your code, it will updated everywhere.
+Arango::Cache is to manage arangodb-driver Cache (NOT ArangoDB cache) and it helps you to manage your documents around your code. In this way if you update an Arango::Document in your code, it will updated everywhere.
 An Arango::Cache instance is created together with the initialization of a server instance with active_cache true.
 
 ``` ruby
@@ -1038,15 +1022,15 @@ If the limit of the Cache for one type is reached, then the first element cached
 <a name="ArangoError"></a>
 ## Arango::Error
 
-Error from ArangoRB are managed by Arango::Error.
-Each ArangoRB error is provided of a code and a message. The list of code can be find in the file lib/Error.rb
+Error from arangodb-driver are managed by Arango::Error.
+Each arangodb-driver error is provided of a code and a message. The list of code can be find in the file lib/Error.rb
 
 ``` ruby
 begin
   Arango::Collection.new name: "Test", database: not_a_database
 rescue Arango::Error => e
   e.message # Message of the error
-  e.code    # ArangoRB code, each ArangoRB errors provides a list of errors
+  e.code    # arangodb-driver code, each arangodb-driver errors provides a list of errors
   e.data    # More information about the error
   e.to_h    # Hash version of the error
 end
@@ -1072,7 +1056,7 @@ end
 <a name="testing"></a>
 ## Testing
 
-To test ArangoRB you can use:
+To test arangodb-driver you can use:
 
 ``` ruby
 rspec spec/arangoRB_helper.rb
@@ -1085,18 +1069,3 @@ Remember however the following:
 * The test examples/year2.rb should run much after the test examples/year.rb, since the last test is dependent from the conclusion of the first test (that is running in async).
 
 <a name="differences"></a>
-## Differences between version 1.4 and 2.0
-
-ArangoRB 1.4 and ArangoRB 2.0 are not compatible.
-The new version provide different improvements.
-* Now all the instances are in a module Arango. This means that previous classes like ArangoServer will become Arango::Server.
-* Arango::Server is now an instance. This means that ArangoRB 2.0 will permits to use different servers.
-* ArangoRB has implemented connection_pool.
-* ArangoRB has now a better implementation of Cache.
-* The returned values are returned with symbols as keys.
-* Oj is used for parsing instead of JSON.
-* Add supports for View and Foxx. The least is untested.
-* Better hierarchy handling between the different instances. For example now myDocument.database will return the database instance that includes the document.
-* Better handling of replication (untested).
-* Clean in general the code (for future maintainer).
-* Now errors are handled by Arango::Error.

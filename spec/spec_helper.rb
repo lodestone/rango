@@ -6,7 +6,7 @@ require "arangorb"
 RSpec.configure do |config|
 	config.color = true
 	config.before(:all) do
-		@server = Arango::Server.new username: "root", password: "root",
+		@server = Arango::Server.new username: "root", password: "",
 			server: "localhost", port: "8529", pool: true
 		@myDatabase    = @server.database(name: "MyDatabase")
 		@myDatabase.create

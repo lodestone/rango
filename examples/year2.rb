@@ -3,7 +3,7 @@
 # require_relative File.expand_path('../../lib/arangorb', __FILE__)
 require "arangorb"
 
-server = Arango::Server.new username: "root", password: "root", server: "localhost", port: "8529"
+server = Arango::Server.new username: "root", password: "", server: "localhost", port: "8529"
 yearDatabase = server.database name: "year"
 yearDatabase.retrieve
 

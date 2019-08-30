@@ -59,7 +59,7 @@ describe Arango::AQL do
       rescue Arango::ErrorDB => e
         error = e.errorNum
       end
-      expect(error.class).to be Fixnum
+      expect(error.class).to be Integer
     end
 
     it "changeProperties" do
