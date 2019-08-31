@@ -1,11 +1,11 @@
 require_relative 'lib/arango/version.rb'
 
 Gem::Specification.new do |s|
-  s.name        = 'arango'
+  s.name        = 'arango-driver'
   s.version	    = '3.0.0'
   s.authors     = ['Stefano Martin', 'Jan Biedermann']
   s.email       = ['stefano@seluxit.com', 'jan@kursator.de']
-  s.homepage    = 'https://github.com/isomorfeus/arango'
+  s.homepage    = 'https://github.com/isomorfeus/arango-driver'
   s.license     = 'MIT'
   s.summary     = 'A simple ruby client for ArangoDB >= 3.5'
   s.description = "Ruby driver for ArangoDB's HTTP API"

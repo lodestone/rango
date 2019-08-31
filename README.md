@@ -1,23 +1,23 @@
-arangodb-driver
+arango-driver
 ===============================
 
 [ArangoDatabase](https://www.arangodb.com/) is a native multi-model database with flexible data models for document, graphs, and key-values.
-arangodb-driver is a Gem to use ArangoDB with Ruby. arangodb-driver is based on the [HTTP API of ArangoDB](https://docs.arangodb.com/3.5/HTTP/index.html)
+arango-driver is a Gem to use ArangoDB with Ruby. arango-driver is based on the [HTTP API of ArangoDB](https://docs.arangodb.com/3.5/HTTP/index.html)
 and its [Error Codes](https://www.arangodb.com/docs/3.5/appendix-error-codes.html).
 
-The version of arangodb-driver follows the ArangoDB version, version 3.5.x of the driver is meant to be used with ArangoDB 3.5.y, where x and y may differ. 
+The version of arango-driver follows the ArangoDB version, version 3.5.x of the driver is meant to be used with ArangoDB 3.5.y, where x and y may differ. 
 
 It requires the gems "HTTParty", "Oj" and "connection_pool"</br>
 
-To install arangodb-driver: `gem install arangodb-driver`
-To use it in your application: `require "arangodb-driver"`
+To install arango-driver: `gem install arango-driver`
+To use it in your application: `require "arango-driver"`
 
 ## Community and Support
 At the [Isomorfeus Framework Project](http://isomorfeus.com) 
 
 ## Classes used
 
-arangodb-driver has the two type of classes.
+arango-driver has the two type of classes.
 
 Classes relative to ArangoDB elements:
 * [Arango::Server](#ArangoServer): to manage a Server
@@ -38,9 +38,9 @@ Classes relative to ArangoDB elements:
 * [Arango::Foxx](#ArangoFoxx): to manage a Foxx instance
 * [Arango::View](#ArangoView): to manage a View instance
 
-Classes relative to the Gem arangodb-driver
+Classes relative to the Gem arango-driver
 * [Arango::Cache](#ArangoCache): to manage internal Cache
-* [Arango::Error](#ArangoError): to handle arangodb-driver errors
+* [Arango::Error](#ArangoError): to handle arango-driver errors
 
 All the instances of these classes can be transformed in Hash with the method to_h.
 
@@ -69,7 +69,7 @@ Password is a mandatory field.
 
 ### Returning results
 
-arangodb-driver try always to store the information obtained from ArangoDB in an instance.
+arango-driver try always to store the information obtained from ArangoDB in an instance.
 If you need to receive the output, you can return it with:
 
 ``` ruby
@@ -94,7 +94,7 @@ server.warning = false # Default true
 
 ### Connection Pool
 
-arangodb-driver supports connection pool, to activate it you can setup pool to true during the initialization or the proceedings. To do so use:
+arango-driver supports connection pool, to activate it you can setup pool to true during the initialization or the proceedings. To do so use:
 
 ``` ruby
 server = Arango::Server.new username: "MyUsername", password: "MyPassword",
@@ -109,16 +109,16 @@ NB: ConnectionPool is not heavily tested.
 
 ### Cache
 
-Often arangodb-driver returns multiple time the same object (for example for lists or for retrieving). It can happens thus that a document instance updated somewhere in your code, it is not update somewhere even if you are refering the same ArangoDB document.
-To avoid this, arangodb-driver provides its own cache.
+Often arango-driver returns multiple time the same object (for example for lists or for retrieving). It can happens thus that a document instance updated somewhere in your code, it is not update somewhere even if you are refering the same ArangoDB document.
+To avoid this, arango-driver provides its own cache.
 
-You can activate the arangodb-driver cache by using:
+You can activate the arango-driver cache by using:
 
 ``` ruby
 server.active_cache = true # Default false
 ```
 
-If active_cache is true, then a previous document or collection instance will be stored in the arangodb-driver cache. In case a new instance of the same document is created, then a new instance will NOT be created but, instead, the old one will be returned.
+If active_cache is true, then a previous document or collection instance will be stored in the arango-driver cache. In case a new instance of the same document is created, then a new instance will NOT be created but, instead, the old one will be returned.
 
 With an example:
 
@@ -187,7 +187,7 @@ server.async = true   # fire and forget
 server.async = :store # fire and store
 ```
 
-If Async is "store", then the commands of arangodb-driver will return the id of the Async requests.
+If Async is "store", then the commands of arango-driver will return the id of the Async requests.
 Arango::Server provides different methods to manage these Async requests.
 
 ``` ruby
@@ -229,7 +229,7 @@ server.execute body: body # Execute a script on the server.
 
 ### Cluster (UNTESTED)
 
-ArangoDB permits the sharding of the database. Although these methods has not been tested with arangodb-driver.
+ArangoDB permits the sharding of the database. Although these methods has not been tested with arango-driver.
 
 ``` ruby
 server.clusterHealth port: port # Allows to check whether a given port is usable
@@ -408,7 +408,7 @@ myCollection.documents type: "path"
 myCollection.next # Retrieve other documents if the first request is not finished
 ```
 
-Type can be "path", "id" or "key" in relation what we wish to have. If not specified arangodb-driver will return an array of Arango::Document instances.
+Type can be "path", "id" or "key" in relation what we wish to have. If not specified arango-driver will return an array of Arango::Document instances.
 
 ``` ruby
 myCollection.allDocuments skip: 3, limit: 100, batchSize: 10
@@ -563,7 +563,7 @@ myDocument = Arango::Document.new body: {value:  17}, name: "MyDocument"
 
 ### Main methods
 
-arangodb-driver provides several way to create a single Document.
+arango-driver provides several way to create a single Document.
 
 ``` ruby
 myDocument.create                      # Create a new document
@@ -852,7 +852,7 @@ Than to do a simple syncronization uses;
 myReplication.sync    # Sync master - slave database
 ```
 
-To retrieve other information arangodb-driver provides the following methods:
+To retrieve other information arango-driver provides the following methods:
 
 ``` ruby
 myReplication.logger       # Returns the current state of the server's replication logger
@@ -882,7 +882,7 @@ myReplication.modify  # modify the Configuration of the Replication (you can mod
 
 ## Arango::Batch
 
-To create a batch request, you can use arangodb-driver::Batch object. This permit to do multiple requests with one single call to the API.
+To create a batch request, you can use arango-driver::Batch object. This permit to do multiple requests with one single call to the API.
 
 To create a batch use one of the following way:
 
@@ -1003,7 +1003,7 @@ myFoxx.commit body: body
 <a name="ArangoCache"></a>
 ## Arango::Cache
 
-Arango::Cache is to manage arangodb-driver Cache (NOT ArangoDB cache) and it helps you to manage your documents around your code. In this way if you update an Arango::Document in your code, it will updated everywhere.
+Arango::Cache is to manage arango-driver Cache (NOT ArangoDB cache) and it helps you to manage your documents around your code. In this way if you update an Arango::Document in your code, it will updated everywhere.
 An Arango::Cache instance is created together with the initialization of a server instance with active_cache true.
 
 ``` ruby
@@ -1022,15 +1022,15 @@ If the limit of the Cache for one type is reached, then the first element cached
 <a name="ArangoError"></a>
 ## Arango::Error
 
-Error from arangodb-driver are managed by Arango::Error.
-Each arangodb-driver error is provided of a code and a message. The list of code can be find in the file lib/Error.rb
+Error from arango-driver are managed by Arango::Error.
+Each arango-driver error is provided of a code and a message. The list of code can be find in the file lib/Error.rb
 
 ``` ruby
 begin
   Arango::Collection.new name: "Test", database: not_a_database
 rescue Arango::Error => e
   e.message # Message of the error
-  e.code    # arangodb-driver code, each arangodb-driver errors provides a list of errors
+  e.code    # arango-driver code, each arango-driver errors provides a list of errors
   e.data    # More information about the error
   e.to_h    # Hash version of the error
 end
@@ -1056,7 +1056,7 @@ end
 <a name="testing"></a>
 ## Testing
 
-To test arangodb-driver you can use:
+To test arango-driver you can use:
 
 ``` ruby
 rspec spec/arangoRB_helper.rb
