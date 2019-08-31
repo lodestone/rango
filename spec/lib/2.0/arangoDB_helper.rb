@@ -55,11 +55,11 @@ describe Arango::Database do
     end
 
     it "current" do
-      expect(@myDatabase.current_query).to eq []
+      expect(@myDatabase.current_query.empty?).to be true
     end
 
     it "slow" do
-      expect(@myDatabase.slow_queries).to eq []
+      expect(@myDatabase.slow_queries.empty?).to be true
     end
   end
 

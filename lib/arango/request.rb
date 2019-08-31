@@ -88,29 +88,25 @@ module Arango
       end
 
       begin
-        result = unless response.response_body.empty?
+        json_result = unless response.response_body.empty?
                    Oj.load(response.response_body, mode: :json, symbol_keys: true)
                  else
-                   nil
+                   {}
                  end
+        result = Arango::Result.new(json_result)
       rescue Exception => e
         raise Arango::Error.new err: :impossible_to_parse_arangodb_response,
-          data: {response: response.response_body, action: action, url: send_url,
-            request: JSON.pretty_generate(options)}
+          data: { response: response.response_body, action: action, url: send_url, request: JSON.pretty_generate(options) }
       end
 
       if @verbose
-        case result
-        when Hash, Array
-          puts JSON.pretty_generate(result)
-        else
-          puts "#{result}\n"
-        end
+        puts JSON.pretty_generate(result.to_h)
         puts "==============="
       end
 
-      case result
-      when Hash
+      if result.empty? || result.is_array?
+        return result
+      else
         if result[:error]
           raise Arango::ErrorDB.new message: result[:errorMessage],
             code: result[:code], data: result, error_num: result[:errorNum],
@@ -118,13 +114,8 @@ module Arango
         elsif return_direct_result
           return result
         end
-      when Array, NilClass
-        return result
-      else
-        raise Arango::Error.new err: :arangodb_did_not_return_a_valid_result,
-          data: {response: response, action: action, url: send_url, request: JSON.pretty_generate(options)}
       end
-      return key.nil? ? result.delete_if{|k,v| k == :error || k == :code} : result[key]
+      return key.nil? ? result.delete_if { |k,v| k == :error || k == :code } : result[key]
     end
 
     def download(url:, path:, body: {}, headers: {}, query: {})
