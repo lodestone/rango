@@ -2,9 +2,9 @@
 
 module Arango
   class User
-    include Arango::Helper::Error
+    include Arango::Helper::Satisfaction
     include Arango::Helper::Return
-    include Arango::Server::Return
+    include Arango::Helper::ServerAssignment
 
     def self.new(*args)
       hash = args[0]
@@ -63,11 +63,11 @@ module Arango
 
     def to_h
       {
-        "user": @name,
-        "extra": @extra,
-        "active": @active,
-        "cache_name": @cache_name,
-        "server": @server.base_uri
+        user: @name,
+        extra: @extra,
+        active: @active,
+        cache_name: @cache_name,
+        server: @server.base_uri
       }.delete_if{|k,v| v.nil?}
     end
 
@@ -84,10 +84,10 @@ module Arango
 
     def create(password: @password, active: @active, extra: @extra)
       body = {
-        "user": @name,
-        "passwd": password,
-        "extra": extra,
-        "active": active
+        user: @name,
+        passwd: password,
+        extra: extra,
+        active: active
       }
       result = @server.request("POST", "_api/user", body: body)
       return_element(result)
@@ -100,9 +100,9 @@ module Arango
 
     def replace(password: @password, active: @active, extra: @extra)
       body = {
-        "passwd": password,
-        "active": active,
-        "extra": extra
+        passwd: password,
+        active: active,
+        extra: extra
       }
       result = @server.request("PUT", "_api/user/#{@name}", body: body)
       @password = password
@@ -111,9 +111,9 @@ module Arango
 
     def update(password: @password, active: @active, extra: @extra)
       body = {
-        "passwd": password,
-        "active": active,
-        "extra": extra
+        passwd: password,
+        active: active,
+        extra: extra
       }
       result = @server.request("PATCH", "_api/user/#{@name}", body: body)
       @password = password
@@ -131,7 +131,7 @@ module Arango
       satisfy_category?(grant, ["rw", "ro", "none"])
       satisfy_class?(database, [Arango::Database, String])
       database = database.name if database.is_a?(Arango::Database)
-      body = {"grant": grant}
+      body = {grant: grant}
       result = @server.request("PUT", "_api/user/#{@name}/database/#{database}",
         body: body)
       return return_directly?(result) ? result : result[database.to_sym]
@@ -147,7 +147,7 @@ module Arango
       satisfy_class?(collection, [Arango::Collection, String])
       database = database.name     if database.is_a?(Arango::Database)
       collection = collection.name if collection.is_a?(Arango::Collection)
-      body = {"grant": grant}
+      body = {grant: grant}
       result = @server.request("PUT", "_api/user/#{@name}/database/#{database}/#{collection}",
         body: body)
       return return_directly?(result) ? result : result[:"#{database}/#{collection}"]
@@ -171,7 +171,7 @@ module Arango
     end
 
     def listAccess(full: nil)
-      query = {"full": full}
+      query = {full: full}
       result = @server.request("GET", "_api/user/#{@name}/database", query: query)
       return return_directly?(result) ? result : result[:result]
     end

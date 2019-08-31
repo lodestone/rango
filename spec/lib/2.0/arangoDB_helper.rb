@@ -70,10 +70,10 @@ describe Arango::Database do
 
     # it "kill" do
     #   @myCollection.create
-    #   @myCollection.createDocuments document: [{"num": 1, "_key": "FirstKey"},
-    #     {"num": 1}, {"num": 1}, {"num": 1}, {"num": 1}, {"num": 1},
-    #     {"num": 1}, {"num": 2}, {"num": 2}, {"num": 2}, {"num": 3},
-    #     {"num": 2}, {"num": 5}, {"num": 2}]
+    #   @myCollection.createDocuments document: [{num: 1, _key: "FirstKey"},
+    #     {num: 1}, {num: 1}, {num: 1}, {num: 1}, {num: 1},
+    #     {num: 1}, {num: 2}, {num: 2}, {num: 2}, {num: 3},
+    #     {num: 2}, {num: 5}, {num: 2}]
     #   myAQL = @myDatabase.aql query: 'FOR i IN 1..1000000
     # INSERT { name: CONCAT("test", i) } IN MyCollection'
     #   myAQL.size = 3

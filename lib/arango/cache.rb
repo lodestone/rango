@@ -31,8 +31,8 @@ module Arango
 
     def to_h
       hash = {
-        "max": @max,
-        "cache": {}
+        max: @max,
+        cache: {}
       }
       @cache.each do |key, hash2|
         next if hash2.empty?

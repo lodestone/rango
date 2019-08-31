@@ -2,9 +2,9 @@
 
 module Arango
   class Transaction
-    include Arango::Helper::Error
+    include Arango::Helper::Satisfaction
     include Arango::Helper::Return
-    include Arango::Database::Return
+    include Arango::Helper::DatabaseAssignment
 
     def initialize(database:, action:, write: [], read: [], params: nil,
       maxTransactionSize: nil, lockTimeout: nil, waitForSync: nil, intermediateCommitCount: nil, intermedateCommitSize: nil)
@@ -57,7 +57,7 @@ module Arango
       when NilClass
         return []
       else
-        raise Arango::Error.new err: :read_or_write_should_be_string_or_collections, data: {"wrong_value": value, "wrong_class": value.class}
+        raise Arango::Error.new err: :read_or_write_should_be_string_or_collections, data: {wrong_value: value, wrong_class: value.class}
       end
     end
     private :return_write_or_read
@@ -77,12 +77,12 @@ module Arango
 
     def to_h
       {
-        "action": @action,
-        "result": @result,
-        "params": @params,
-        "read": @read.map{|x| x.name},
-        "write": @write.map{|x| x.name},
-        "database": @database.name
+        action: @action,
+        result: @result,
+        params: @params,
+        read: @read.map{|x| x.name},
+        write: @write.map{|x| x.name},
+        database: @database.name
       }.delete_if{|k,v| v.nil?}
     end
 
@@ -94,17 +94,17 @@ module Arango
       intermediateCommitCount: @intermediateCommitCount,
       intermedateCommitSize: @intermedateCommitSize)
       body = {
-        "collections": {
-          "read": @read.map{|x| x.name},
-          "write": @write.map{|x| x.name}
+        collections: {
+          read: @read.map{|x| x.name},
+          write: @write.map{|x| x.name}
         },
-        "action": action,
-        "params": params,
-        "lockTimeout": lockTimeout,
-        "waitForSync": waitForSync,
-        "maxTransactionSize": maxTransactionSize,
-        "intermediateCommitCount": intermediateCommitCount,
-        "intermedateCommitSize": intermedateCommitSize
+        action: action,
+        params: params,
+        lockTimeout: lockTimeout,
+        waitForSync: waitForSync,
+        maxTransactionSize: maxTransactionSize,
+        intermediateCommitCount: intermediateCommitCount,
+        intermedateCommitSize: intermedateCommitSize
       }
       result = @database.request("POST", "_api/transaction", body: body)
       return result if @server.async != false

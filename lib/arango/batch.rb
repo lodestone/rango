@@ -1,8 +1,8 @@
 module Arango
   class Batch
-    include Arango::Helper::Error
+    include Arango::Helper::Satisfaction
     include Arango::Helper::Return
-    include Arango::Server::Return
+    include Arango::Helper::ServerAssignment
 
     def initialize(server:, boundary: "XboundaryX", queries: [])
       @id = 1
@@ -10,7 +10,7 @@ module Arango
       assign_queries(queries)
       @headers = {
         "Content-Type": "multipart/form-data",
-        "boundary":     boundary
+        boundary:     boundary
       }
       @boundary = boundary
     end
@@ -34,7 +34,7 @@ module Arango
           end
         rescue
           raise Arango::Error.new(err: :batch_query_not_valid,
-            data: {wrong_query: query})
+            data: { wrong_query: query })
         end
         satisfy_class?(query, [Hash])
         if query[:id].nil?
@@ -51,9 +51,9 @@ module Arango
 
     def to_h
       {
-        "boundary": @boundary,
-        "queries":  @queries,
-        "database": @database.name
+        boundary: @boundary,
+        queries:  @queries,
+        database: @database.name
       }.delete_if{|k,v| v.nil?}
     end
 
@@ -62,10 +62,10 @@ module Arango
     def addQuery(id: @id, method:, address:, body: nil)
       id = id.to_s
       @queries[id] = {
-        "id":      id,
-        "method":  method,
-        "address": address,
-        "body":    body
+        id:      id,
+        method:  method,
+        address: address,
+        body:    body
       }.delete_if{|k,v| v.nil?}
       @id += 1
       return @queries

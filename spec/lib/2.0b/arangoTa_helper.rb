@@ -5,7 +5,7 @@ describe Arango::Task do
     it "create new instance" do
       myArangoTask = Arango::Task.new id: "mytaskid", name: "MyTaskID",
         command: "(function(params) { require('@arangodb').print(params); })(params)",
-        params: {"foo": "bar", "bar": "foo"}, period: 2, database: @myDatabase
+        params: {foo: "bar", bar: "foo"}, period: 2, database: @myDatabase
       expect(myArangoTask.params[:foo]).to eq "bar"
     end
   end
@@ -14,7 +14,7 @@ describe Arango::Task do
     it "create a new Task instance" do
       myArangoTask = Arango::Task.new name: "MyTaskID",
         command: "(function(params) { require('@arangodb').print(params); })(params)",
-        params: {"foo": "bar", "bar": "foo"}, period: 2, database: @myDatabase
+        params: {foo: "bar", bar: "foo"}, period: 2, database: @myDatabase
       expect([BigDecimal, Float].include?(myArangoTask.create.created.class)).to eq true
     end
 

@@ -57,7 +57,7 @@ module Arango
         end
       rescue Exception => e
         raise Arango::Error.new err: :impossible_to_connect_with_database,
-          data: {"error": e.message}
+          data: {error: e.message}
       end
 
       if @verbose
@@ -95,8 +95,8 @@ module Arango
                  end
       rescue Exception => e
         raise Arango::Error.new err: :impossible_to_parse_arangodb_response,
-          data: {"response": response.response_body, "action": action, "url": send_url,
-            "request": JSON.pretty_generate(options)}
+          data: {response: response.response_body, action: action, url: send_url,
+            request: JSON.pretty_generate(options)}
       end
 
       if @verbose
@@ -122,7 +122,7 @@ module Arango
         return result
       else
         raise Arango::Error.new message: "ArangoRB didn't return a valid result",
-          data: {"response": response, "action": action, "url": send_url, "request": JSON.pretty_generate(options)}
+          data: {response: response, action: action, url: send_url, request: JSON.pretty_generate(options)}
       end
       return key.nil? ? result.delete_if{|k,v| k == :error || k == :code} : result[key]
     end

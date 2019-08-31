@@ -22,7 +22,7 @@ module Arango
       satisfy_class?(collection, [Arango::Collection])
       if collection.graph.nil?
         raise Arango::Error.new err: :collection_does_not_have_a_graph, data:
-          {"name_collection": collection.name, "graph": nil}
+          {name_collection: collection.name, graph: nil}
       end
       @collection = collection
       @graph = @collection.graph
@@ -45,7 +45,7 @@ module Arango
 
     def create(body: {}, waitForSync: nil)
       body = @body.merge(body)
-      query = {"waitForSync": waitForSync}
+      query = {waitForSync: waitForSync}
       result = @graph.request("POST", "vertex/#{@collection.name}", body: body,
         query: query, key: :vertex)
       return result if @server.async != false
@@ -59,8 +59,8 @@ module Arango
 
     def replace(body: {}, waitForSync: nil, keepNull: nil, if_match: false)
       query = {
-        "waitForSync": waitForSync,
-        "keepNull": keepNull
+        waitForSync: waitForSync,
+        keepNull: keepNull
       }
       headers = {}
       headers[:"If-Match"] = @body[:_rev] if if_match
@@ -74,7 +74,7 @@ module Arango
     end
 
     def update(body: {}, waitForSync: nil, if_match: false, keepNull: nil)
-      query = {"waitForSync": waitForSync, "keepNull": keepNull}
+      query = {waitForSync: waitForSync, keepNull: keepNull}
       headers = {}
       headers[:"If-Match"] = @body[:_rev] if if_match
       result = @graph.request("PATCH", "vertex/#{@collection.name}/#{@body[:_key]}", body: body,
@@ -90,7 +90,7 @@ module Arango
 # === DELETE ===
 
     def destroy(waitForSync: nil, if_match: false)
-      query = {"waitForSync": waitForSync}
+      query = {waitForSync: waitForSync}
       headers = {}
       headers[:"If-Match"] = @body[:_rev] if if_match
       result = @graph.request("DELETE", "vertex/#{@collection.name}/#{@body[:_key]}",
@@ -110,7 +110,7 @@ module Arango
         vertex: self, visitor: visitor,itemOrder: itemOrder,
         strategy: strategy, filter: filter, init: init,
         maxIterations: maxIterations, maxDepth: maxDepth,
-        uniqueness: uniqueness, order: order, 
+        uniqueness: uniqueness, order: order,
         expander: expander, edgeCollection: edgeCollection)
     end
 

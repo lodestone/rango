@@ -2,9 +2,9 @@
 
 module Arango
   class Collection
-    include Arango::Helper::Error
+    include Arango::Helper::Satisfaction
     include Arango::Helper::Return
-    include Arango::Database::Return
+    include Arango::Helper::DatabaseAssignment
 
     def self.new(*args)
       hash = args[0]
@@ -54,8 +54,7 @@ module Arango
       satisfy_class?(graph, [Arango::Graph, NilClass])
       if !graph.nil? && graph.database.name != @database.name
         raise Arango::Error.new err: :database_graph_no_same_as_collection_database,
-        data: {"graph_database_name": graph.database.name,
-          "collection_database_name":  @database.name}
+        data: { graph_database_name: graph.database.name, collection_database_name:  @database.name}
       end
       @graph = graph
     end
@@ -100,14 +99,14 @@ module Arango
 
     def to_h
       {
-        "name":     @name,
-        "type":     @type,
-        "status":   @status,
-        "id":       @id,
-        "isSystem": @isSystem,
-        "body":     @body,
-        "cache_name": @cache_name,
-        "database": @database.name
+        name:     @name,
+        type:     @type,
+        status:   @status,
+        id:       @id,
+        isSystem: @isSystem,
+        body:     @body,
+        cache_name: @cache_name,
+        database: @database.name
       }.delete_if{|k,v| v.nil?}
     end
 
@@ -136,8 +135,8 @@ module Arango
 
     def checksum(withRevisions: nil, withData: nil)
       query = {
-        "withRevisions": withRevisions,
-        "withData": withData
+        withRevisions: withRevisions,
+        withData: withData
       }
       @database.request("GET", "_api/collection/#{@name}/checksum",  query: query,
         key: :checksum)
@@ -154,34 +153,32 @@ module Arango
       satisfy_category?(type, ["Edge", "Document", 2, 3, nil, :edge, :document])
       satisfy_category?(shardingStrategy, [nil, "community-compat", "enterprise-compat", "enterprise-smart-edge-compat", "hash", "enterprise-hash-smart-edge"])
       keyOptions = {
-        "allowUserKeys":      allowUserKeys,
-        "type":               typeKeyGenerator,
-        "increment":          incrementKeyGenerator,
-        "offset":             offsetKeyGenerator
+        allowUserKeys:      allowUserKeys,
+        type:               typeKeyGenerator,
+        increment:          incrementKeyGenerator,
+        offset:             offsetKeyGenerator
       }
       keyOptions.delete_if{|k,v| v.nil?}
       keyOptions = nil if keyOptions.empty?
       type = case type
-      when 2, "Document", nil, :document
-        2
-      when 3, "Edge", :edge
-        3
+      when 2, "Document", nil, :document then 2
+      when 3, "Edge", :edge then 3
       end
       body = {
-        "name": @name,
-        "type": type,
-        "replicationFactor": replicationFactor,
-        "journalSize":       journalSize,
-        "keyOptions":        keyOptions,
-        "waitForSync":       waitForSync,
-        "doCompact":         doCompact,
-        "isVolatile":        isVolatile,
-        "shardKeys":         shardKeys,
-        "numberOfShards":    numberOfShards,
-        "isSystem":          isSystem,
-        "indexBuckets":      indexBuckets,
-        "distributeShardsLike": distributeShardsLike,
-        "shardingStrategy":  shardingStrategy
+        name: @name,
+        type: type,
+        replicationFactor: replicationFactor,
+        journalSize:       journalSize,
+        keyOptions:        keyOptions,
+        waitForSync:       waitForSync,
+        doCompact:         doCompact,
+        isVolatile:        isVolatile,
+        shardKeys:         shardKeys,
+        numberOfShards:    numberOfShards,
+        isSystem:          isSystem,
+        indexBuckets:      indexBuckets,
+        distributeShardsLike: distributeShardsLike,
+        shardingStrategy:  shardingStrategy
       }
       body = @body.merge(body)
       result = @database.request("POST", "_api/collection", body: body)
@@ -223,15 +220,15 @@ module Arango
 
     def change(waitForSync: nil, journalSize: nil)
       body = {
-        "journalSize": journalSize,
-        "waitForSync": waitForSync
+        journalSize: journalSize,
+        waitForSync: waitForSync
       }
       result = @database.request("PUT", "_api/collection/#{@name}/properties", body: body)
       return_element(result)
     end
 
     def rename(newName:)
-      body = { "name": newName }
+      body = { name: newName }
       result = @database.request("PUT", "_api/collection/#{@name}/rename", body: body)
       return_element(result)
     end
@@ -264,7 +261,7 @@ module Arango
         type = "key"
       end
       satisfy_category?(type, ["path", "id", "key", "document"])
-      body = { "type": type, "collection": @name }
+      body = { type: type, collection: @name }
       result = @database.request("PUT", "_api/simple/all-keys", body: body)
       @hasMoreSimple = result[:hasMore]
       @idSimple = result[:id]
@@ -286,7 +283,7 @@ module Arango
           result[:result].map{|key| Arango::Document.new(name: key, collection: self)}
         end
       else
-        raise Arango::Error.new err: :no_other_simple_next, data: {"hasMoreSimple": @hasMoreSimple}
+        raise Arango::Error.new err: :no_other_simple_next, data: {hasMoreSimple: @hasMoreSimple}
       end
     end
 
@@ -298,13 +295,13 @@ module Arango
       when Arango::Edge
         if type == :vertex
           raise Arango::Error.new err: :wrong_type_instead_of_expected_one, data:
-            {"expected_value":  type, "received_value": x.type, "wrong_object":  x}
+            { expected_value: type, received_value: x.type, wrong_object: x }
         end
         x.body
       when Arango::Vertex
         if type == :edge
           raise Arango::Error.new err: :wrong_type_instead_of_expected_one, data:
-            {"expected_value":  type, "received_value": x.type, "wrong_object":  x}
+            { expected_value: type, received_value: x.type, wrong_object: x }
         end
         x.body
       when Arango::Document
@@ -312,7 +309,7 @@ module Arango
            (type == :edge && x.collection.type == :document) ||
            (type == :edge && x.collection.type == :vertex)
           raise Arango::Error.new err: :wrong_type_instead_of_expected_one, data:
-            {"expected_value":  type, "received_value":  x.collection.type, "wrong_object":  x}
+            { expected_value: type, received_value: x.collection.type, wrong_object: x}
         end
         x.body
       end
@@ -331,9 +328,9 @@ module Arango
       document = [document] unless document.is_a? Array
       document = document.map{|x| return_body(x)}
       query = {
-        "waitForSync": waitForSync,
-        "returnNew":   returnNew,
-        "silent":      silent
+        waitForSync: waitForSync,
+        returnNew:   returnNew,
+        silent:      silent
       }
       results = @database.request("POST", "_api/document/#{@name}", body: document,
         query: query)
@@ -375,10 +372,10 @@ module Arango
       returnOld: nil, returnNew: nil)
       document.each{|x| x = x.body if x.is_a?(Arango::Document)}
       query = {
-        "waitForSync": waitForSync,
-        "returnNew":   returnNew,
-        "returnOld":   returnOld,
-        "ignoreRevs":  ignoreRevs
+        waitForSync: waitForSync,
+        returnNew:   returnNew,
+        returnOld:   returnOld,
+        ignoreRevs:  ignoreRevs
       }
       result = @database.request("PUT", "_api/document/#{@name}", body: document,
         query: query)
@@ -399,12 +396,12 @@ module Arango
       returnOld: nil, returnNew: nil, keepNull: nil, mergeObjects: nil)
       document.each{|x| x = x.body if x.is_a?(Arango::Document)}
       query = {
-        "waitForSync": waitForSync,
-        "returnNew":   returnNew,
-        "returnOld":   returnOld,
-        "ignoreRevs":  ignoreRevs,
-        "keepNull":    keepNull,
-        "mergeObject": mergeObjects
+        waitForSync: waitForSync,
+        returnNew:   returnNew,
+        returnOld:   returnOld,
+        ignoreRevs:  ignoreRevs,
+        keepNull:    keepNull,
+        mergeObject: mergeObjects
       }
       result = @database.request("PATCH", "_api/document/#{@name}", body: document,
         query: query, keepNull: keepNull)
@@ -426,9 +423,9 @@ module Arango
       ignoreRevs: nil)
       document.each{|x| x = x.body if x.is_a?(Arango::Document)}
       query = {
-        "waitForSync": waitForSync,
-        "returnOld":   returnOld,
-        "ignoreRevs":  ignoreRevs
+        waitForSync: waitForSync,
+        returnOld:   returnOld,
+        ignoreRevs:  ignoreRevs
       }
       @database.request("DELETE", "_api/document/#{@id}", query: query, body: document)
     end
@@ -453,29 +450,29 @@ module Arango
 
     def allDocuments(skip: nil, limit: nil, batchSize: nil)
       body = {
-        "collection": @name,
-        "skip":       skip,
-        "limit":      limit,
-        "batchSize":  batchSize
+        collection: @name,
+        skip:       skip,
+        limit:      limit,
+        batchSize:  batchSize
       }
       generic_document_search("_api/simple/all", body)
     end
 
     def documentsMatch(match:, skip: nil, limit: nil, batchSize: nil)
       body = {
-        "collection": @name,
-        "example":    match,
-        "skip":       skip,
-        "limit":      limit,
-        "batchSize":  batchSize
+        collection: @name,
+        example:    match,
+        skip:       skip,
+        limit:      limit,
+        batchSize:  batchSize
       }
       generic_document_search("_api/simple/by-example", body)
     end
 
     def documentMatch(match:)
       body = {
-        "collection": @name,
-        "example":    match
+        collection: @name,
+        example:    match
       }
       generic_document_search("_api/simple/first-example", body, true)
     end
@@ -483,7 +480,7 @@ module Arango
     def documentByKeys(keys:)
       keys = [keys] unless keys.is_a?(Array)
       keys = keys.map{|x| x.is_a?(Arango::Document) ? x.name : x}
-      body = { "collection":  @name, "keys":  keys }
+      body = { collection:  @name, keys:  keys }
       result = @database.request("PUT", "_api/simple/lookup-by-keys", body: body)
       return result if return_directly?(result)
       result[:documents].map do |x|
@@ -496,22 +493,22 @@ module Arango
     end
 
     def random
-      body = { "collection":  @name }
+      body = { collection:  @name }
       generic_document_search("_api/simple/any", body, true)
     end
 
     def removeByKeys(keys:, returnOld: nil, silent: nil, waitForSync: nil)
       options = {
-        "returnOld":   returnOld,
-        "silent":      silent,
-        "waitForSync": waitForSync
+        returnOld:   returnOld,
+        silent:      silent,
+        waitForSync: waitForSync
       }
       options.delete_if{|k,v| v.nil?}
       options = nil if options.empty?
       if keys.is_a? Array
         keys = keys.map{|x| x.is_a?(String) ? x : x.key}
       end
-      body = { "collection": @name, "keys": keys, "options": options}
+      body = { collection: @name, keys: keys, options: options}
       result = @database.request("PUT", "_api/simple/remove-by-keys", body: body)
       return result if return_directly?(result)
       if returnOld == true && silent != true
@@ -523,6 +520,7 @@ module Arango
       end
     end
 
+    # TODO
     def documentByName(names:, returnOld: nil, silent: nil, waitForSync: nil)
       documentByKeys(keys: names, returnOld: returnOld, silent: silent,
         waitForSync: waitForSync)
@@ -530,13 +528,13 @@ module Arango
 
     def removeMatch(match:, limit: nil, waitForSync: nil)
       options = {
-        "limit":        limit,
-        "waitForSync":  waitForSync
+        limit:        limit,
+        waitForSync:  waitForSync
       }
       options.delete_if{|k,v| v.nil?}
       options = nil if options.empty?
       body = {
-        "collection":  @name,
+        collection:  @name,
         "example"    => match,
         "options"    => options
       }
@@ -545,16 +543,16 @@ module Arango
 
     def replaceMatch(match:, newValue:, limit: nil, waitForSync: nil)
       options = {
-        "limit":        limit,
-        "waitForSync":  waitForSync
+        limit:        limit,
+        waitForSync:  waitForSync
       }
       options.delete_if{|k,v| v.nil?}
       options = nil if options.empty?
       body = {
-        "collection": @name,
-        "example":    match,
-        "options":    options,
-        "newValue":   newValue
+        collection: @name,
+        example:    match,
+        options:    options,
+        newValue:   newValue
       }
       @database.request("PUT", "_api/simple/replace-by-example", body: body, key: :replaced)
     end
@@ -562,18 +560,18 @@ module Arango
     def updateMatch(match:, newValue:, keepNull: nil, mergeObjects: nil,
       limit: nil, waitForSync: nil)
       options = {
-        "keepNull":     keepNull,
-        "mergeObjects": mergeObjects,
-        "limit":        limit,
-        "waitForSync":  waitForSync
+        keepNull:     keepNull,
+        mergeObjects: mergeObjects,
+        limit:        limit,
+        waitForSync:  waitForSync
       }
       options.delete_if{|k,v| v.nil?}
       options = nil if options.empty?
       body = {
-        "collection": @name,
-        "example":    match,
-        "options":    options,
-        "newValue":   newValue
+        collection: @name,
+        example:    match,
+        options:    options,
+        newValue:   newValue
       }
       @database.request("PUT", "_api/simple/update-by-example", body: body, key: :updated)
     end
@@ -584,13 +582,13 @@ module Arango
       warning: @server.warning)
       warning_deprecated(warning, "range")
       body = {
-        "right":      right,
-        "attribute":  attribute,
-        "collection": @name,
-        "limit":  limit,
-        "closed": closed,
-        "skip":   skip,
-        "left":   left
+        right:      right,
+        attribute:  attribute,
+        collection: @name,
+        limit:  limit,
+        closed: closed,
+        skip:   skip,
+        left:   left
       }
       result = @database.request("PUT", "_api/simple/range", body: body)
       return result if return_directly?(result)
@@ -603,13 +601,13 @@ module Arango
       skip: nil, warning: @server.warning)
       warning_deprecated(warning, "near")
       body = {
-        "distance":   distance,
-        "longitude":  longitude,
-        "collection": @name,
-        "limit":      limit,
-        "latitude":   latitude,
-        "skip":       skip,
-        "geo":        geo
+        distance:   distance,
+        longitude:  longitude,
+        collection: @name,
+        limit:      limit,
+        latitude:   latitude,
+        skip:       skip,
+        geo:        geo
       }
       result = @database.request("PUT", "_api/simple/near", body: body)
       return result if return_directly?(result)
@@ -622,14 +620,14 @@ module Arango
       limit: nil, skip: nil, warning: @server.warning)
       warning_deprecated(warning, "within")
       body = {
-        "distance":   distance,
-        "longitude":  longitude,
-        "collection": @name,
-        "limit":      limit,
-        "latitude":   latitude,
-        "skip":       skip,
-        "geo":        geo,
-        "radius":     radius
+        distance:   distance,
+        longitude:  longitude,
+        collection: @name,
+        limit:      limit,
+        latitude:   latitude,
+        skip:       skip,
+        geo:        geo,
+        radius:     radius
       }
       result = @database.request("PUT", "_api/simple/within", body: body)
       return result if return_directly?(result)
@@ -646,11 +644,11 @@ module Arango
         "latitude1":  latitude1,
         "longitude2": longitude2,
         "latitude2":  latitude2,
-        "collection": @name,
-        "limit":      limit,
-        "skip":       skip,
-        "geo":        geo,
-        "radius":     radius
+        collection: @name,
+        limit:      limit,
+        skip:       skip,
+        geo:        geo,
+        radius:     radius
       }
       result = @database.request("PUT", "_api/simple/within-rectangle", body: body)
       return result if return_directly?(result)
@@ -662,11 +660,11 @@ module Arango
     def fulltext(index:, attribute:, query:, limit: nil, skip: nil, warning: @server.warning)
       warning_deprecated(warning, "fulltext")
       body = {
-        "index":     index,
-        "attribute": attribute,
-        "query":     query,
-        "limit":     limit,
-        "skip":      skip
+        index:     index,
+        attribute: attribute,
+        query:     query,
+        limit:     limit,
+        skip:      skip
       }
       result = @database.request("PUT", "_api/simple/fulltext", body: body)
       return result if return_directly?(result)
@@ -685,14 +683,14 @@ module Arango
       satisfy_category?(complete, [nil, "yes", "true", true])
       satisfy_category?(details, [nil, "yes", "true", true])
       query = {
-        "collection":  @name,
-        "fromPrefix":  fromPrefix,
-        "toPrefix":    toPrefix,
-        "overwrite":   overwrite,
-        "waitForSync": waitForSync,
-        "onDuplicate": onDuplicate,
-        "complete":    complete,
-        "details":     details
+        collection:  @name,
+        fromPrefix:  fromPrefix,
+        toPrefix:    toPrefix,
+        overwrite:   overwrite,
+        waitForSync: waitForSync,
+        onDuplicate: onDuplicate,
+        complete:    complete,
+        details:     details
       }
       body = "#{attributes}\n"
       values[0].is_a?(Array) ? values.each{|x| body += "#{x}\n"} : body += "#{values}\n"
@@ -709,15 +707,15 @@ module Arango
       satisfy_category?(complete, [nil, "yes", "true", true])
       satisfy_category?(details, [nil, "yes", "true", true])
       query = {
-        "collection":  @name,
-        "type":        type,
-        "fromPrefix":  fromPrefix,
-        "toPrefix":    toPrefix,
-        "overwrite":   overwrite,
-        "waitForSync": waitForSync,
-        "onDuplicate": onDuplicate,
-        "complete":    complete,
-        "details":     details
+        collection:  @name,
+        type:        type,
+        fromPrefix:  fromPrefix,
+        toPrefix:    toPrefix,
+        overwrite:   overwrite,
+        waitForSync: waitForSync,
+        onDuplicate: onDuplicate,
+        complete:    complete,
+        details:     details
       }
       @database.request("POST", "_api/import", query: query,
         body: body)
@@ -727,15 +725,15 @@ module Arango
 
     def export(count: nil, restrict: nil, batchSize: nil,
       flush: nil, flushWait: nil, limit: nil, ttl: nil)
-      query = { "collection":  @name }
+      query = { collection:  @name }
       body = {
-        "count":     count,
-        "restrict":  restrict,
-        "batchSize": batchSize,
-        "flush":     flush,
-        "flushWait": flushWait,
-        "limit":     limit,
-        "ttl":       ttl
+        count:     count,
+        restrict:  restrict,
+        batchSize: batchSize,
+        flush:     flush,
+        flushWait: flushWait,
+        limit:     limit,
+        ttl:       ttl
       }
       result = @database.request("POST", "_api/export", body: body, query: query)
       return reuslt if @server.async != false
@@ -753,9 +751,9 @@ module Arango
 
     def exportNext
       unless @hasMoreExport
-        raise Arango::Error.new err: :no_other_export_next, data: {"hasMoreExport":  @hasMoreExport}
+        raise Arango::Error.new err: :no_other_export_next, data: {hasMoreExport:  @hasMoreExport}
       else
-        query = { "collection":  @name }
+        query = { collection:  @name }
         result = @database.request("PUT", "_api/export/#{@idExport}", query: query)
         return result if @server.async != false
         @countExport   = result[:count]
@@ -781,7 +779,7 @@ module Arango
     end
 
     def indexes
-      query = { "collection":  @name }
+      query = { collection:  @name }
       result = @database.request("GET", "_api/index", query: query)
       return result if return_directly?(result)
       result[:indexes].map do |x|
@@ -796,15 +794,15 @@ module Arango
     def data(batchId:, from: nil, to: nil, chunkSize: nil,
       includeSystem: nil, failOnUnknown: nil, ticks: nil, flush: nil)
       query = {
-        "collection": @name,
-        "batchId":    batchId,
-        "from":       from,
-        "to":         to,
-        "chunkSize":  chunkSize,
-        "includeSystem":  includeSystem,
-        "failOnUnknown":  failOnUnknown,
-        "ticks": ticks,
-        "flush": flush
+        collection: @name,
+        batchId:    batchId,
+        from:       from,
+        to:         to,
+        chunkSize:  chunkSize,
+        includeSystem:  includeSystem,
+        failOnUnknown:  failOnUnknown,
+        ticks: ticks,
+        flush: flush
       }
       @database.request("GET", "_api/replication/dump", query: query)
     end
@@ -837,7 +835,7 @@ module Arango
 
     def vertex(name: nil, body: {}, rev: nil, from: nil, to: nil)
       if @type == :edge
-        raise Arango::Error.new err: :is_a_edge_collection, data: {"type":  @type}
+        raise Arango::Error.new err: :is_a_edge_collection, data: {type:  @type}
       end
       if @graph.nil?
         Arango::Document.new(name: name, body: body, rev: rev, collection: self)
@@ -848,7 +846,7 @@ module Arango
 
     def edge(name: nil, body: {}, rev: nil, from: nil, to: nil)
       if @type == :document
-        raise Arango::Error.new err: :is_a_document_collection, data: {"type":  @type}
+        raise Arango::Error.new err: :is_a_document_collection, data: {type:  @type}
       end
       if @graph.nil?
         Arango::Document.new(name: name, body: body, rev: rev, collection: self)

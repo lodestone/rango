@@ -2,9 +2,9 @@
 
 module Arango
   class Index
-    include Arango::Helper::Error
+    include Arango::Helper::Satisfaction
     include Arango::Helper::Return
-    include Arango::Collection::Return
+    include Arango::Helper::CollectionAssignment
 
     def self.new(*args)
       hash = args[0]
@@ -81,18 +81,18 @@ module Arango
 
     def to_h
       {
-        "key": @key,
-        "id": @id,
-        "body": @body,
-        "type": @type,
-        "sparse": @sparse,
-        "unique": @unique,
-        "fields": @fields,
-        "idCache": @idCache,
-        "geoJson": @geoJson,
-        "minLength": @minLength,
-        "deduplicate": @deduplicate,
-        "collection": @collection.name
+        key: @key,
+        id: @id,
+        body: @body,
+        type: @type,
+        sparse: @sparse,
+        unique: @unique,
+        fields: @fields,
+        idCache: @idCache,
+        geoJson: @geoJson,
+        minLength: @minLength,
+        deduplicate: @deduplicate,
+        collection: @collection.name
       }.delete_if{|k,v| v.nil?}
     end
 
@@ -105,15 +105,15 @@ module Arango
 
     def create
       body = {
-        "fields":      @fields,
-        "unique":      @unique,
-        "type":        @type,
-        "id":          @id,
-        "geoJson":     @geoJson,
-        "minLength":   @minLength,
-        "deduplicate": @deduplicate
+        fields:      @fields,
+        unique:      @unique,
+        type:        @type,
+        id:          @id,
+        geoJson:     @geoJson,
+        minLength:   @minLength,
+        deduplicate: @deduplicate
       }
-      query = { "collection": @collection.name }
+      query = { collection: @collection.name }
       result = @database.request("POST", "_api/index", body: body, query: query)
       return_element(result)
     end

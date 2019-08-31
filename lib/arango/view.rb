@@ -2,9 +2,9 @@
 
 module Arango
   class View
-    include Arango::Helper::Error
+    include Arango::Helper::Satisfaction
     include Arango::Helper::Return
-    include Arango::Database::Return
+    include Arango::Helper::DatabaseAssignment
 
     def self.new(*args)
       hash = args[0]
@@ -66,12 +66,12 @@ module Arango
 
     def to_h
       {
-        "name": @name,
-        "id": @id,
-        "type": @type,
-        "links": @links,
-        "cache_name": @cache_name,
-        "database": @database.name
+        name: @name,
+        id: @id,
+        type: @type,
+        links: @links,
+        cache_name: @cache_name,
+        database: @database.name
       }.delete_if{|k,v| v.nil?}
     end
 

@@ -2,7 +2,7 @@
 
 module Arango
   class Replication
-    include Arango::Helper::Error
+    include Arango::Helper::Satisfaction
 
     def initialize(master:, slave:, includeSystem: true,
       initialSyncMaxWaitTime: nil, incremental: nil,
@@ -81,34 +81,34 @@ module Arango
     def to_h
       master
       {
-        "master": {
-          "database": @master.name,
-          "username": @master_server.username,
-          "endpoint": @master_server.endpoint
+        master: {
+          database: @master.name,
+          username: @master_server.username,
+          endpoint: @master_server.endpoint
         },
-        "slave": {
-          "database": @slave.name,
-          "username": @slave_server.username,
-          "endpoint": @slave_server.endpoint
+        slave: {
+          database: @slave.name,
+          username: @slave_server.username,
+          endpoint: @slave_server.endpoint
         },
-        "options": {
-          "includeSytem": @includeSystem,
-          "initialSyncMaxWaitTime": @initialSyncMaxWaitTime,
-          "restrictType": @restrictType,
-          "incremental": @incremental,
-          "restrictCollections": @restrictCollections,
-          "verbose": @verbose,
-          "connectTimeout": @connectTimeout,
-          "autoResync": @autoResync,
-          "idleMinWaitTime": @idleMinWaitTime,
-          "requestTimeout": @requestTimeout,
-          "requireFromPresent": @requireFromPresent,
-          "idleMaxWaitTime": @idleMaxWaitTime,
-          "maxConnectRetries": @maxConnectRetries,
-          "adaptivePolling": @adaptivePolling,
-          "connectionRetryWaitTime": @connectionRetryWaitTime,
-          "autoResyncRetries": @autoResyncRetries,
-          "chunkSize": @chunkSize
+        options: {
+          includeSytem: @includeSystem,
+          initialSyncMaxWaitTime: @initialSyncMaxWaitTime,
+          restrictType: @restrictType,
+          incremental: @incremental,
+          restrictCollections: @restrictCollections,
+          verbose: @verbose,
+          connectTimeout: @connectTimeout,
+          autoResync: @autoResync,
+          idleMinWaitTime: @idleMinWaitTime,
+          requestTimeout: @requestTimeout,
+          requireFromPresent: @requireFromPresent,
+          idleMaxWaitTime: @idleMaxWaitTime,
+          maxConnectRetries: @maxConnectRetries,
+          adaptivePolling: @adaptivePolling,
+          connectionRetryWaitTime: @connectionRetryWaitTime,
+          autoResyncRetries: @autoResyncRetries,
+          chunkSize: @chunkSize
         }.delete_if{|k,v| v.nil?}
       }
     end
@@ -117,15 +117,15 @@ module Arango
 
     def sync
       body = {
-        "username": @master_server.username,
-        "password": @master_server.password,
-        "endpoint": @master_server.endpoint,
-        "database": @master.name,
-        "restrictType":  @restrictType,
-        "incremental":   @incremental,
-        "includeSystem": @includeSystem,
-        "restrictCollections":    @restrictCollections,
-        "initialSyncMaxWaitTime": @initialSyncMaxWaitTime
+        username: @master_server.username,
+        password: @master_server.password,
+        endpoint: @master_server.endpoint,
+        database: @master.name,
+        restrictType:  @restrictType,
+        incremental:   @incremental,
+        includeSystem: @includeSystem,
+        restrictCollections:    @restrictCollections,
+        initialSyncMaxWaitTime: @initialSyncMaxWaitTime
       }
       @slave.request("PUT", "_api/replication/sync", body: body)
     end
@@ -134,26 +134,26 @@ module Arango
 
     def enslave
       body = {
-        "username": @master_server.username,
-        "password": @master_server.password,
-        "includeSystem": @includeSystem,
-        "endpoint":      @server.endpoint,
-        "initialSyncMaxWaitTime": @initialSyncMaxWaitTime,
-        "database":        @database.name,
-        "verbose":         verbose,
-        "connectTimeout":  @connectTimeout,
-        "autoResync":      @autoResync,
-        "idleMinWaitTime": @idleMinWaitTime,
-        "requestTimeout":  @requestTimeout,
-        "requireFromPresent": @requireFromPresent,
-        "idleMaxWaitTime":   @idleMaxWaitTime,
-        "restrictType":      @restrictType,
-        "maxConnectRetries": @maxConnectRetries,
-        "adaptivePolling":   @adaptivePolling,
-        "connectionRetryWaitTime": @connectionRetryWaitTime,
-        "restrictCollections":     @restrictCollections,
-        "autoResyncRetries": @autoResyncRetries,
-        "chunkSize":          @chunkSize
+        username: @master_server.username,
+        password: @master_server.password,
+        includeSystem: @includeSystem,
+        endpoint:      @server.endpoint,
+        initialSyncMaxWaitTime: @initialSyncMaxWaitTime,
+        database:        @database.name,
+        verbose:         verbose,
+        connectTimeout:  @connectTimeout,
+        autoResync:      @autoResync,
+        idleMinWaitTime: @idleMinWaitTime,
+        requestTimeout:  @requestTimeout,
+        requireFromPresent: @requireFromPresent,
+        idleMaxWaitTime:   @idleMaxWaitTime,
+        restrictType:      @restrictType,
+        maxConnectRetries: @maxConnectRetries,
+        adaptivePolling:   @adaptivePolling,
+        connectionRetryWaitTime: @connectionRetryWaitTime,
+        restrictCollections:     @restrictCollections,
+        autoResyncRetries: @autoResyncRetries,
+        chunkSize:          @chunkSize
       }
       @slave.request("PUT", "_api/replication/make-slave", body: body)
     end
@@ -178,27 +178,27 @@ module Arango
 
     def modify
       body = {
-        "username": @master_server.username,
-        "password": @master_server.password,
-        "endpoint": @master_server.endpoint,
-        "database": @master.name,
-        "verbose":  @verbose,
-        "autoResync": @autoResync,
-        "autoStart":  @autoStart,
-        "chunkSize":  @chunkSize,
-        "includeSystem":   @includeSystem,
-        "connectTimeout":  @connectTimeout,
-        "idleMinWaitTime": @idleMinWaitTime,
-        "requestTimeout":  @requestTimeout,
-        "restrictType":    @restrictType,
-        "requireFromPresent":      @requireFromPresent,
-        "idleMaxWaitTime":         @idleMaxWaitTime,
-        "maxConnectRetries":       @maxConnectRetries,
-        "adaptivePolling":         @adaptivePolling,
-        "initialSyncMaxWaitTime":  @initialSyncMaxWaitTime,
-        "connectionRetryWaitTime": @connectionRetryWaitTime,
-        "restrictCollections":     @restrictCollections,
-        "autoResyncRetries":       @autoResyncRetries
+        username: @master_server.username,
+        password: @master_server.password,
+        endpoint: @master_server.endpoint,
+        database: @master.name,
+        verbose:  @verbose,
+        autoResync: @autoResync,
+        autoStart:  @autoStart,
+        chunkSize:  @chunkSize,
+        includeSystem:   @includeSystem,
+        connectTimeout:  @connectTimeout,
+        idleMinWaitTime: @idleMinWaitTime,
+        requestTimeout:  @requestTimeout,
+        restrictType:    @restrictType,
+        requireFromPresent:      @requireFromPresent,
+        idleMaxWaitTime:         @idleMaxWaitTime,
+        maxConnectRetries:       @maxConnectRetries,
+        adaptivePolling:         @adaptivePolling,
+        initialSyncMaxWaitTime:  @initialSyncMaxWaitTime,
+        connectionRetryWaitTime: @connectionRetryWaitTime,
+        restrictCollections:     @restrictCollections,
+        autoResyncRetries:       @autoResyncRetries
       }
       @slave.request("PUT", "_api/replication/applier-config", body: body)
     end
@@ -212,10 +212,10 @@ module Arango
 
     def loggerFollow(from: nil, to: nil, chunkSize: nil, includeSystem: nil)
       query = {
-        "from": from,
-        "to":   to,
-        "chunkSize":     chunkSize,
-        "includeSystem": includeSystem
+        from: from,
+        to:   to,
+        chunkSize:     chunkSize,
+        includeSystem: includeSystem
       }
       @slave.request("GET", "_api/replication/logger-follow", query: query)
     end

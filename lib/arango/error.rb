@@ -87,10 +87,10 @@ module Arango
 
     def to_h
       {
-        "message": @message,
-        "code": @code,
-        "data": @data,
-        "internal_code": @internal_code
+        message: @message,
+        code: @code,
+        data: @data,
+        internal_code: @internal_code
       }.delete_if{|k,v| v.nil?}
     end
   end

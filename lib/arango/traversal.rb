@@ -2,9 +2,9 @@
 
 module Arango
   class Traversal
-    include Arango::Helper::Error
+    include Arango::Helper::Satisfaction
     include Arango::Helper::Return
-    include Arango::Database::Return
+    include Arango::Helper::DatabaseAssignment
 
     def initialize(body: {}, edgeCollection: nil,
       sort: nil, direction: nil, minDepth: nil,
@@ -147,31 +147,31 @@ module Arango
 
     def to_h
       {
-        "sort": @sort,
-        "direction": @direction,
-        "maxDepth": @maxDepth,
-        "minDepth": @minDepth,
-        "visitor": @visitor,
-        "itemOrder": @itemOrder,
-        "strategy": @strategy,
-        "filter": @filter,
-        "init": @init,
-        "maxiterations": @maxiterations,
-        "uniqueness": @uniqueness,
-        "order": @order,
-        "expander": @expander,
-        "vertices": @vertices&.map{|x| x.id},
-        "paths": @paths&.map do |x|
+        sort: @sort,
+        direction: @direction,
+        maxDepth: @maxDepth,
+        minDepth: @minDepth,
+        visitor: @visitor,
+        itemOrder: @itemOrder,
+        strategy: @strategy,
+        filter: @filter,
+        init: @init,
+        maxiterations: @maxiterations,
+        uniqueness: @uniqueness,
+        order: @order,
+        expander: @expander,
+        vertices: @vertices&.map{|x| x.id},
+        paths: @paths&.map do |x|
           {
-            "edges": x[:edges]&.map{|e| e.id},
-            "vertices": x[:vertices]&.map{|v| v.id}
+            edges: x[:edges]&.map{|e| e.id},
+            vertices: x[:vertices]&.map{|v| v.id}
           }
         end,
-        "idCache": @idCache,
-        "startVertex": @vertex&.id,
-        "graph": @graph&.name,
-        "edgeCollection": @edgeCollection&.name,
-        "database": @database.name
+        idCache: @idCache,
+        startVertex: @vertex&.id,
+        graph: @graph&.name,
+        edgeCollection: @edgeCollection&.name,
+        database: @database.name
       }.delete_if{|k,v| v.nil?}
     end
 
@@ -179,22 +179,22 @@ module Arango
 
     def execute
       body = {
-        "sort": @sort,
-        "direction": @direction,
-        "maxDepth": @maxDepth,
-        "minDepth": @minDepth,
-        "startVertex": @vertex&.id,
-        "visitor": @visitor,
-        "itemOrder": @itemOrder,
-        "strategy": @strategy,
-        "filter": @filter,
-        "init": @init,
-        "maxiterations": @maxiterations,
-        "uniqueness": @uniqueness,
-        "order": @order,
-        "graphName": @graph&.name,
-        "expander": @expander,
-        "edgeCollection": @edgeCollection&.name
+        sort: @sort,
+        direction: @direction,
+        maxDepth: @maxDepth,
+        minDepth: @minDepth,
+        startVertex: @vertex&.id,
+        visitor: @visitor,
+        itemOrder: @itemOrder,
+        strategy: @strategy,
+        filter: @filter,
+        init: @init,
+        maxiterations: @maxiterations,
+        uniqueness: @uniqueness,
+        order: @order,
+        graphName: @graph&.name,
+        expander: @expander,
+        edgeCollection: @edgeCollection&.name
       }
       result = @database.request("POST", "_api/traversal", body: body)
       return result if @server.async != false
@@ -205,13 +205,13 @@ module Arango
       end
       @paths = result[:result][:visited][:paths].map do |x|
         {
-          "edges": x[:edges].map do |e|
+          edges: x[:edges].map do |e|
             collection_edge = Arango::Collection.new(name: e[:_id].split("/")[0],
               database:  @database, type: :edge)
             Arango::Document.new(name: e[:_key], collection: collection_edge,
               body: e, from: e[:_from], to: e[:_to])
           end,
-          "vertices": x[:vertices].map do |v|
+          vertices: x[:vertices].map do |v|
             collection_vertex = Arango::Collection.new(name: v[:_id].split("/")[0],
               database:  @database)
             Arango::Document.new(name: v[:_key], collection: collection_vertex, body: v)

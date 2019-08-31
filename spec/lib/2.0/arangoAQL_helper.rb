@@ -8,8 +8,8 @@ describe Arango::AQL do
     end
 
     it "instantiate size" do
-      @myAQL.size = 5
-      expect(@myAQL.size).to eq 5
+      @myAQL.batch_size = 5
+      expect(@myAQL.batch_size).to eq 5
     end
   end
 

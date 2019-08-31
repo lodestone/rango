@@ -2,9 +2,9 @@
 
 module Arango
   class Task
-    include Arango::Helper::Error
+    include Arango::Helper::Satisfaction
     include Arango::Helper::Return
-    include Arango::Database::Return
+    include Arango::Helper::DatabaseAssignment
 
     def self.new(*args)
       hash = args[0]
@@ -65,15 +65,15 @@ module Arango
 
     def to_h
       {
-        "id": @id,
-        "name": @name,
-        "type": @type,
-        "period": @period,
-        "command": @command,
-        "params": @params,
-        "created": @created,
-        "cache_name": @cache_name,
-        "database": @database.name
+        id: @id,
+        name: @name,
+        type: @type,
+        period: @period,
+        command: @command,
+        params: @params,
+        created: @created,
+        cache_name: @cache_name,
+        database: @database.name
       }.delete_if{|k,v| v.nil?}
     end
 
@@ -86,13 +86,13 @@ module Arango
 
     def create(command: @command, period: @period, offset: @offset, params: @params)
       body = {
-        "id": @id,
-        "name": @name,
-        "command": command,
-        "period": period,
-        "offset": offset,
-        "params": params,
-        "database": @database.name
+        id: @id,
+        name: @name,
+        command: command,
+        period: period,
+        offset: offset,
+        params: params,
+        database: @database.name
       }
       result = @database.request("POST", "_api/tasks", body: body)
       return return_element(result)
@@ -101,12 +101,12 @@ module Arango
     def update(command: @command, period: @period, offset: @offset,
       params: @params)
       body = {
-        "id": @id,
-        "name": @name,
-        "command": command,
-        "period": period,
-        "offset": offset,
-        "params": params
+        id: @id,
+        name: @name,
+        command: command,
+        period: period,
+        offset: offset,
+        params: params
       }
       result = @database.request("PUT", "_api/tasks/#{@id}", body: body)
       return return_element(result)

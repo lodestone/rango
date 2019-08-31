@@ -105,15 +105,15 @@ describe Arango::Server do
     it "batch" do
       @server.async = false
       queries = [{
-        "method": "POST",
-        "address": "/_db/MyDatabase/_api/collection",
-        "body": {"name": "newCOLLECTION"},
-        "id": "1"
+        method: "POST",
+        address: "/_db/MyDatabase/_api/collection",
+        body: {name: "newCOLLECTION"},
+        id: "1"
       },
       {
-        "method": "GET",
-        "address": "/_api/database",
-        "id": "2"
+        method: "GET",
+        address: "/_api/database",
+        id: "2"
       }]
       val = @server.batch queries: queries
       expect(val.class).to be Arango::Batch

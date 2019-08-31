@@ -419,8 +419,8 @@ It means that we skip the first three Documents, we can retrieve the next 100 Do
 To retrieve specific Document you can use:
 
 ``` ruby
-myCollection.documentsMatch match: {"value":  4}   # All Documents of the Collection with value equal to 4
-myCollection.documentMatch match: {"value":  4}    # The first Document of the Collection with value equal to 4
+myCollection.documentsMatch match: {value:  4}   # All Documents of the Collection with value equal to 4
+myCollection.documentMatch match: {value:  4}    # The first Document of the Collection with value equal to 4
 myCollection.documentByKeys keys: ["4546", "4646"] # Documents of the Collection with the keys in the Array
 myCollection.documentByName names: ["4546", "4646"] # Documents of the Collection with the name in the Array
 myCollection.random # A random Document of the Collection
@@ -431,11 +431,11 @@ myCollection.random # A random Document of the Collection
 From a collection is it possible to create, remove and modify multiple documents.
 
 ``` ruby
-myCollection.createDocuments document: [myDocumentA, myDocumentB, {"value":  17}] # Array of Arango::Document instances and Hashes
+myCollection.createDocuments document: [myDocumentA, myDocumentB, {value:  17}] # Array of Arango::Document instances and Hashes
 myCollection.removeByKeys keys: ["4546", "4646"] # Documents of the Collection with the keys in the Array will be removed
-myCollection.removeMatch match: {"value":  4} # All Documents of the Collection with value equal to 4 will be removed
-myCollection.replaceMatch match: {"value":  4}, newValue: {"value":  6} # All Documents of the Collection with value equal to 4 will be replaced with the new Value
-myCollection.updateMatch match: {"value":  4}, newValue: {"value":  6} # All Documents of the Collection with value equal to 4 will be updated with the new Value
+myCollection.removeMatch match: {value:  4} # All Documents of the Collection with value equal to 4 will be removed
+myCollection.replaceMatch match: {value:  4}, newValue: {value:  6} # All Documents of the Collection with value equal to 4 will be replaced with the new Value
+myCollection.updateMatch match: {value:  4}, newValue: {value:  6} # All Documents of the Collection with value equal to 4 will be updated with the new Value
 ```
 
 #### Create multiple Edges at once
@@ -492,7 +492,7 @@ Another way to create multiple documents in a Collection with only one request i
 
 #### Import one Document with Array
 
-We can import one document with the following structure {"value": "uno", "num": 1, "name": "ONE"}.
+We can import one document with the following structure {value: "uno", num: 1, name: "ONE"}.
 
 ``` ruby
 attributes = ["value", "num", "name"]
@@ -502,7 +502,7 @@ myCollection.import attributes: attributes, values: values
 
 #### Import more Documents with Array
 
-We can import three Documents with the following structure {"value": "uno", "num": 1, "name": "ONE"}, {"value": "due", "num": 2, "name": "TWO"}, {"value": "tre", "num": 3, "name": "THREE"}.
+We can import three Documents with the following structure {value: "uno", num: 1, name: "ONE"}, {value: "due", num: 2, name: "TWO"}, {value: "tre", num: 3, name: "THREE"}.
 
 ``` ruby
 attributes = ["value", "num", "name"]
@@ -512,10 +512,10 @@ myCollection.import attributes: attributes, values: values
 
 #### Import more Documents with JSON
 
-I import two Documents with the following structure {"value": "uno", "num": 1, "name": "ONE"}, {"value": "due", "num": 2, "name": "TWO"}.
+I import two Documents with the following structure {value: "uno", num: 1, name: "ONE"}, {value: "due", num: 2, name: "TWO"}.
 
 ``` ruby
-body = [{"value": "uno", "num": 1, "name": "ONE"}, {"value": "due", "num": 2, "name": "DUE"}]
+body = [{value: "uno", num: 1, name: "ONE"}, {value: "due", num: 2, name: "DUE"}]
 myCollection.importJSON body: body
 ```
 
@@ -558,7 +558,7 @@ where myDocA and myDocB are the IDs of two Documents or are two Arango::Document
 During the creation of an Arango::Document instance, it is possible to define the body for the Document.
 
 ``` ruby
-myDocument = Arango::Document.new body: {"value":  17}, name: "MyDocument"
+myDocument = Arango::Document.new body: {value:  17}, name: "MyDocument"
 ```
 
 ### Main methods
@@ -568,8 +568,8 @@ arangodb-driver provides several way to create a single Document.
 ``` ruby
 myDocument.create                      # Create a new document
 myDocument.retrieve                    # Retrieve Document
-myDocument.update body: {"value":  3}  # We update or add a value
-myDocument.replace body: {"value":  3} # We replace a value
+myDocument.update body: {value:  3}  # We update or add a value
+myDocument.replace body: {value:  3} # We replace a value
 myDocument.destroy                     # Destroy document
 ```
 
@@ -665,8 +665,8 @@ To use Arango::Vertex, the Collection of the Vertex needs to be added either to 
 
 ``` ruby
 myCollection.graph = myGraph # Be sure that the collection is assigned to a Graph
-myVertex = myCollection.vertex name: "newVertex", body: {"value":  3} # If graph is not assigned, an Arango::Document will be created
-myVertex = Arango::Vertex.new name: "newVertex", body: {"value":  3},
+myVertex = myCollection.vertex name: "newVertex", body: {value:  3} # If graph is not assigned, an Arango::Document will be created
+myVertex = Arango::Vertex.new name: "newVertex", body: {value:  3},
   collection: myCollection # create a new instance
 ```
 
@@ -674,8 +674,8 @@ myVertex = Arango::Vertex.new name: "newVertex", body: {"value":  3},
 myVertex.create    # create a new Document in the Graph
 myVertex.retrieve  # retrieve a Document
 myVertex.graph     # retrieve Graph of the Document
-myVertex.replace body: {"value":  6} # replace the Document
-myVertex.update  body: {"value":  6} # update the Document
+myVertex.replace body: {value:  6} # replace the Document
+myVertex.update  body: {value:  6} # update the Document
 myVertex.destroy   # delete the Document
 ```
 
@@ -686,15 +686,15 @@ To use Arango::Edge, the Collection of the Edge needs to be added to the EdgeCol
 
 ``` ruby
 myEdgeCollection.graph = myGraph
-myEdge = myCollection.edge name: "newEdge", body: {"value":  3}, from: myArangoDocument1, to: myArangoDocument2 # If graph is not assigned, an Arango::Document will be created
+myEdge = myCollection.edge name: "newEdge", body: {value:  3}, from: myArangoDocument1, to: myArangoDocument2 # If graph is not assigned, an Arango::Document will be created
 ```
 
 ```   ruby
 myEdge.create   # create a new Document of type Edge in the Graph
 myEdge.retrieve # retrieve a Document
 myEdge.graph    # Retrieve Graph  of the Document
-myEdge.replace body: {"value":  6} # replace the Document
-myEdge.update  body: {"value":  6} # update the Document
+myEdge.replace body: {value:  6} # replace the Document
+myEdge.update  body: {value:  6} # update the Document
 myEdge.destroy  # delete the Document
 ```
 
@@ -819,8 +819,8 @@ Tasks are managed by ArangoTask.
 
 ``` ruby
 command = "(function(params) { require('@arangodb').print(params); })(params)"
-myTask = myDatabase.task id: "mytaskid", name: "MyTaskID", command: command, params: {"foo":  "bar", "bar":  "foo"}, period: 2
-myTask = Arango::Task.new id: "mytaskid", name: "MyTaskID", command: command, params: {"foo":  "bar", "bar":  "foo"}, period: 2, database: myDatabase
+myTask = myDatabase.task id: "mytaskid", name: "MyTaskID", command: command, params: {foo:  "bar", bar:  "foo"}, period: 2
+myTask = Arango::Task.new id: "mytaskid", name: "MyTaskID", command: command, params: {foo:  "bar", bar:  "foo"}, period: 2, database: myDatabase
 ```
 
 ``` ruby
@@ -896,15 +896,15 @@ To add a queries to the batch request you can use the brutal way:
 ``` ruby
 batch.queries = [
   {
-    "type": "POST",
-    "address": "/_db/MyDatabase/_api/collection",
-    "body": {"name": "newCOLLECTION"},
-    "id": "1"
+    type: "POST",
+    address: "/_db/MyDatabase/_api/collection",
+    body: {name: "newCOLLECTION"},
+    id: "1"
   },
   {
-    "type": "GET",
-    "address": "/_api/database",
-    "id": "2"
+    type: "GET",
+    address: "/_api/database",
+    id: "2"
   }
 ]
 ```
@@ -914,7 +914,7 @@ Or the Ruby way (the id will be handled by the system, if not specified):
 ``` ruby
 batch = server.batch
 batch.addQuery(method: "POST", address: "/_db/MyDatabase/_api/collection",
-  body: {"name": "newCOLLECTION"})
+  body: {name: "newCOLLECTION"})
 batch.addQuery(method: "GET", address: "/_api/database")
 ```
 

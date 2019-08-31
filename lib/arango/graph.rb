@@ -2,9 +2,9 @@
 
 module Arango
   class Graph
-    include Arango::Helper::Error
+    include Arango::Helper::Satisfaction
     include Arango::Helper::Return
-    include Arango::Database::Return
+    include Arango::Helper::DatabaseAssignment
 
     def self.new(*args)
       hash = args[0]
@@ -91,9 +91,9 @@ module Arango
       @edgeDefinitions ||= []
       @edgeDefinitions.map do |edgedef|
         {
-          "collection": edgedef[:collection].name,
-          "from": edgedef[:from].map{|t| t.name},
-          "to": edgedef[:to].map{|t| t.name}
+          collection: edgedef[:collection].name,
+          from: edgedef[:from].map{|t| t.name},
+          to: edgedef[:to].map{|t| t.name}
         }
       end
     end
@@ -149,7 +149,7 @@ module Arango
           names |= ed[:to].map{|t| t&.name}
           names.include?(orphanCollection.name)
         end
-        raise Arango::Error.new err: :orphan_collection_used_by_edge_definition, data: {"collection": orphanCollection.name}
+        raise Arango::Error.new err: :orphan_collection_used_by_edge_definition, data: {collection: orphanCollection.name}
       end
       return orphanCollection
     end
@@ -200,17 +200,17 @@ module Arango
 
     def to_h
       {
-        "name": @name,
-        "id": @id,
-        "rev": @rev,
-        "isSmart": @isSmart,
-        "numberOfShards": @numberOfShards,
-        "replicationFactor": @replicationFactor,
-        "smartGraphAttribute": @smartGraphAttribute,
-        "edgeDefinitions": edgeDefinitionsRaw,
-        "orphanCollections": orphanCollectionsRaw,
-        "cache_name": @cache_name,
-        "database": @database.name
+        name: @name,
+        id: @id,
+        rev: @rev,
+        isSmart: @isSmart,
+        numberOfShards: @numberOfShards,
+        replicationFactor: @replicationFactor,
+        smartGraphAttribute: @smartGraphAttribute,
+        edgeDefinitions: edgeDefinitionsRaw,
+        orphanCollections: orphanCollectionsRaw,
+        cache_name: @cache_name,
+        database: @database.name
       }.delete_if{|k,v| v.nil?}
     end
 
@@ -226,13 +226,13 @@ module Arango
     def create(isSmart: @isSmart, smartGraphAttribute: @smartGraphAttribute,
       numberOfShards: @numberOfShards)
       body = {
-        "name": @name,
-        "edgeDefinitions":   edgeDefinitionsRaw,
-        "orphanCollections": orphanCollectionsRaw,
-        "isSmart": isSmart,
-        "options": {
-          "smartGraphAttribute": smartGraphAttribute,
-          "numberOfShards": numberOfShards
+        name: @name,
+        edgeDefinitions:   edgeDefinitionsRaw,
+        orphanCollections: orphanCollectionsRaw,
+        isSmart: isSmart,
+        options: {
+          smartGraphAttribute: smartGraphAttribute,
+          numberOfShards: numberOfShards
         }
       }
       body[:options].delete_if{|k,v| v.nil?}
@@ -244,7 +244,7 @@ module Arango
 # === DELETE ===
 
     def destroy(dropCollections: nil)
-      query = { "dropCollections": dropCollections }
+      query = { dropCollections: dropCollections }
       result = @database.request("DELETE", "_api/gharial/#{@name}", query: query,
         key: :removed)
       return_delete(result)
@@ -264,13 +264,13 @@ module Arango
     def addVertexCollection(collection:)
       satisfy_class?(collection, [String, Arango::Collection])
       collection = collection.is_a?(String) ? collection : collection.name
-      body = { "collection": collection }
+      body = { collection: collection }
       result = request("POST", "vertex", body: body, key: :graph)
       return_element(result)
     end
 
     def removeVertexCollection(collection:, dropCollection: nil)
-      query = {"dropCollection": dropCollection}
+      query = {dropCollection: dropCollection}
       satisfy_class?(collection, [String, Arango::Collection])
       collection = collection.is_a?(String) ? collection : collection.name
       result = request("DELETE", "vertex/#{collection}", query: query, key: :graph)
@@ -316,7 +316,7 @@ module Arango
 
     def removeEdgeDefinition(collection:, dropCollection: nil)
       satisfy_class?(collection, [String, Arango::Collection])
-      query = {"dropCollection": dropCollection}
+      query = {dropCollection: dropCollection}
       collection = collection.is_a?(String) ? collection : collection.name
       result = request("DELETE", "edge/#{collection}", query: query, key: :graph)
       return_element(result)

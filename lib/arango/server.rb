@@ -2,7 +2,7 @@
 
 module Arango
   class Server
-    include Arango::Helper::Error
+    include Arango::Helper::Satisfaction
 
     def initialize(username: "root", password:, server: "localhost",
       warning: true, port: "8529", verbose: false, return_output: false,
@@ -138,15 +138,15 @@ module Arango
 
     def to_h
       hash = {
-        "base_uri": @base_uri,
-        "server":   @server,
-        "port":     @port,
-        "username": @username,
-        "async":    @async,
-        "verbose":  @verbose,
-        "return_output": @return_output,
-        "warning": @warning,
-        "tls": @tls
+        base_uri: @base_uri,
+        server:   @server,
+        port:     @port,
+        username: @username,
+        async:    @async,
+        verbose:  @verbose,
+        return_output: @return_output,
+        warning: @warning,
+        tls: @tls
       }.delete_if{|k,v| v.nil?}
       hash
     end
@@ -320,13 +320,13 @@ module Arango
     end
 
     def destroyAsync(id:, stamp: nil)
-      query = {"stamp": stamp}
+      query = {stamp: stamp}
       request("DELETE", "_api/job/#{id}", query: query, key: :result)
     end
 
     def destroyAsyncByType(type:, stamp: nil)
       satisfy_category?(type, ["all", "expired"])
-      query = {"stamp": stamp}
+      query = {stamp: stamp}
       request("DELETE", "_api/job/#{type}", query: query)
     end
 
@@ -407,12 +407,12 @@ module Arango
 
 # === MISCELLANEOUS FUNCTIONS ===
     def force_version(details: nil)
-      query = {"details": details}
+      query = {details: details}
       request("GET", "_api/version", query: query)
     end
 
     def version(details: nil)
-      query = {"details": details}
+      query = {details: details}
       @version ||= request("GET", "_api/version", query: query)
     end
 
@@ -422,8 +422,8 @@ module Arango
 
     def flushWAL(waitForSync: nil, waitForCollector: nil)
       body = {
-        "waitForSync": waitForSync,
-        "waitForCollector": waitForCollector
+        waitForSync: waitForSync,
+        waitForCollector: waitForCollector
       }
       result = request("PUT", "_admin/wal/flush", body: body)
       return return_directly?(result) ? result: true
@@ -437,12 +437,12 @@ module Arango
       historicLogfiles: nil, reserveLogfiles: nil, throttleWait: nil,
       throttleWhenPending: nil)
       body = {
-        "allowOversizeEntries": allowOversizeEntries,
-        "logfileSize": allowOversizeEntries,
-        "historicLogfiles": historicLogfiles,
-        "reserveLogfiles": reserveLogfiles,
-        "throttleWait": throttleWait,
-        "throttleWhenPending": throttleWhenPending
+        allowOversizeEntries: allowOversizeEntries,
+        logfileSize: allowOversizeEntries,
+        historicLogfiles: historicLogfiles,
+        reserveLogfiles: reserveLogfiles,
+        throttleWait: throttleWait,
+        throttleWhenPending: throttleWhenPending
       }
       request("PUT", "_admin/wal/properties", body: body)
     end

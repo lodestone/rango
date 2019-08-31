@@ -2,9 +2,9 @@
 
 module Arango
   class Database
-    include Arango::Helper::Error
+    include Arango::Helper::Satisfaction
     include Arango::Helper::Return
-    include Arango::Server::Return
+    include Arango::Helper::ServerAssignment
 
     def self.new(*args)
       hash = args[0]
@@ -45,12 +45,12 @@ module Arango
 
     def to_h
       {
-        "name":     @name,
-        "isSystem": @isSystem,
-        "path":     @path,
-        "id":       @id,
-        "cache_name": @cache_name,
-        "server": @server.base_uri
+        name:     @name,
+        isSystem: @isSystem,
+        path:     @path,
+        id:       @id,
+        cache_name: @cache_name,
+        server: @server.base_uri
       }.delete_if{|k,v| v.nil?}
     end
 
@@ -91,8 +91,8 @@ module Arango
 
     def create(name: @name, users: nil)
       body = {
-        "name":  name,
-        "users": users
+        name:  name,
+        users: users
       }
       result = @server.request("POST", "_api/database", body: body, key: :result)
       return return_directly?(result) ? result : self
@@ -115,7 +115,7 @@ module Arango
     end
 
     def collections(excludeSystem: true)
-      query = { "excludeSystem": excludeSystem }
+      query = { excludeSystem: excludeSystem }
       result = request("GET", "_api/collection", query: query)
       return result if return_directly?(result)
       result[:result].map do |x|
@@ -149,12 +149,12 @@ module Arango
     def changeQueryProperties(slowQueryThreshold: nil, enabled: nil, maxSlowQueries: nil,
       trackSlowQueries: nil, maxQueryStringLength: nil, trackBindVars: nil)
       body = {
-        "slowQueryThreshold":   slowQueryThreshold,
-        "enabled":              enabled,
-        "maxSlowQueries":       maxSlowQueries,
-        "trackSlowQueries":     trackSlowQueries,
-        "maxQueryStringLength": maxQueryStringLength,
-        "trackBindVars":        trackBindVars
+        slowQueryThreshold:   slowQueryThreshold,
+        enabled:              enabled,
+        maxSlowQueries:       maxSlowQueries,
+        trackSlowQueries:     trackSlowQueries,
+        maxQueryStringLength: maxQueryStringLength,
+        trackBindVars:        trackBindVars
       }
       request("PUT", "_api/query/properties", body: body)
     end
@@ -189,7 +189,7 @@ module Arango
 
     def changePropertyQueryCache(mode:, maxResults: nil)
       satisfy_category?(mode, ["off", "on", "demand"])
-      body = { "mode": mode, "maxResults": maxResults }
+      body = { mode: mode, maxResults: maxResults }
       database.request("PUT", "_api/query-cache/properties", body: body)
     end
 
@@ -197,30 +197,30 @@ module Arango
 
   def aql(query:, count: nil, batchSize: nil, cache: nil, memoryLimit: nil,
     ttl: nil, bindVars: nil, failOnWarning: nil, profile: nil,
-    maxTransactionSize: nil, skipInaccessibleCollections: nil,
-    maxWarningCount: nil, intermediateCommitCount: nil,
-    satelliteSyncWait: nil, fullCount: nil, intermediateCommitSize: nil,
-    optimizer_rules: nil, maxPlans: nil)
+    maxTransactionSize: nil, skip_inaccessible_collections: nil,
+    max_warning_count: nil, intermediate_commit_count: nil,
+    satellite_sync_wait: nil, full_count: nil, intermediate_commit_size: nil,
+    optimizer_rules: nil, max_plans: nil)
     Arango::AQL.new(query: query, database: self, count: count,
-      batch_size: batchSize, cache: cache, memoryLimit: memoryLimit, ttl: ttl,
-      bind_vars: bindVars, failOnWarning: failOnWarning, profile: profile,
-      maxTransactionSize: maxTransactionSize,
-      skipInaccessibleCollections: skipInaccessibleCollections,
-      maxWarningCount: maxWarningCount,
-      intermediateCommitCount: intermediateCommitCount,
-      satelliteSyncWait: satelliteSyncWait, fullCount: fullCount,
-      intermediateCommitSize: intermediateCommitSize,
-      optimizer_rules: optimizer_rules, maxPlans: maxPlans)
+                    batch_size: batchSize, cache: cache, memory_limit: memoryLimit, ttl: ttl,
+                    bind_vars: bindVars, fail_on_warning: failOnWarning, profile: profile,
+                    max_transaction_size: maxTransactionSize,
+                    skip_inaccessible_collections: skip_inaccessible_collections,
+                    max_warning_count: max_warning_count,
+                    intermediate_commit_count: intermediate_commit_count,
+                    satellite_sync_wait: satellite_sync_wait, full_count: full_count,
+                    intermediate_commit_size: intermediate_commit_size,
+                    optimizer_rules: optimizer_rules, max_plans: max_plans)
   end
 
 # === AQL FUNCTION ===
 
     def aqlFunctions(namespace: nil)
-      request("GET", "_api/aqlfunction", query: {"namespace": namespace}, key: :result)
+      request("GET", "_api/aqlfunction", query: { namespace: namespace }, key: :result)
     end
 
     def createAqlFunction(code:, name:, isDeterministic: nil)
-      body = { "code": code, "name": name, "isDeterministic": isDeterministic }
+      body = { code: code, name: name, isDeterministic: isDeterministic }
       request("POST", "_api/aqlfunction", body: body)
     end
 
@@ -233,15 +233,15 @@ module Arango
 
     def inventory(includeSystem: nil, global: nil, batchId:)
       query = {
-        "includeSystem": includeSystem,
-        "global": global,
-        "batchId": batchId
+        includeSystem: includeSystem,
+        global: global,
+        batchId: batchId
       }
       request("GET", "_api/replication/inventory", query: query)
     end
 
     def clusterInventory(includeSystem: nil)
-      query = { "includeSystem": includeSystem }
+      query = { includeSystem: includeSystem }
       request("GET", "_api/replication/clusterInventory", query: query)
     end
 
@@ -251,10 +251,10 @@ module Arango
 
     def loggerFollow(from: nil, to: nil, chunkSize: nil, includeSystem: nil)
       query = {
-        "from": from,
-        "to":   to,
-        "chunkSize":     chunkSize,
-        "includeSystem": includeSystem
+        from: from,
+        to:   to,
+        chunkSize:     chunkSize,
+        includeSystem: includeSystem
       }
       request("GET", "_api/replication/logger-follow", query: query)
     end

@@ -46,12 +46,12 @@ describe Arango::Vertex do
 
   context "#modify" do
     it "replace" do
-      myVertex = @myVertex.replace body: {"value": 3}
+      myVertex = @myVertex.replace body: {value: 3}
       expect(myVertex.body[:value]).to eq 3
     end
 
     it "update" do
-      myVertex = @myVertex.update body: {"time": 13}
+      myVertex = @myVertex.update body: {time: 13}
       expect(myVertex.body[:value]).to eq 3
     end
   end

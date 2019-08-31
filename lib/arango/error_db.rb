@@ -14,13 +14,13 @@ module Arango
 
     def to_h
       {
-        "action": @action,
-        "url": @url,
-        "request": @request,
-        "message": @message,
-        "code": @code,
-        "data": @data,
-        "errorNum": @errorNum
+        action: @action,
+        url: @url,
+        request: @request,
+        message: @message,
+        code: @code,
+        data: @data,
+        errorNum: @errorNum
       }.delete_if{|k,v| v.nil?}
     end
   end

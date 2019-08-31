@@ -2,9 +2,9 @@
 
 module Arango
   class Document
-    include Arango::Helper::Error
+    include Arango::Helper::Satisfaction
     include Arango::Helper::Return
-    include Arango::Collection::Return
+    include Arango::Helper::CollectionAssignment
 
     def self.new(*args)
       hash = args[0]
@@ -88,11 +88,11 @@ module Arango
       @body ||= {}
       # binding.pry if @body[:_key] == "Second_Key"
       hash = {
-        "_key":  @body[:_key],
-        "_id":   @body[:_id],
-        "_rev":  @body[:_rev],
-        "_from": @body[:_from],
-        "_to":   @body[:_to]
+        _key:  @body[:_key],
+        _id:   @body[:_id],
+        _rev:  @body[:_rev],
+        _from: @body[:_from],
+        _to:   @body[:_to]
       }
       @body = hash.merge(result)
       if @body[:_id].nil? && !@body[:_key].nil?
@@ -111,15 +111,15 @@ module Arango
 
     def to_h
       {
-        "name":  @body[:_key],
-        "id":    @body[:_id],
-        "rev":   @body[:_rev],
-        "from":  @body[:_from],
-        "to":    @body[:_to],
-        "body":  @body,
-        "cache_name":  @cache_name,
-        "collection": @collection.name,
-        "graph": @graph&.name
+        name:  @body[:_key],
+        id:    @body[:_id],
+        rev:   @body[:_rev],
+        from:  @body[:_from],
+        to:    @body[:_to],
+        body:  @body,
+        cache_name:  @cache_name,
+        collection: @collection.name,
+        graph: @graph&.name
       }.delete_if{|k,v| v.nil?}
     end
 
@@ -130,7 +130,7 @@ module Arango
       when String
         unless var.include?("/")
           raise Arango::Error.new err: :attribute_is_not_valid, data:
-            {"attribute": attrs, "wrong_value": var}
+            {attribute: attrs, wrong_value: var}
         end
         @body[:"_#{attrs}"] = var
       when Arango::Document
@@ -139,7 +139,7 @@ module Arango
         @to   = var if attrs == "to"
       else
         raise Arango::Error.new err: :attribute_is_not_valid, data:
-          {"attribute": attrs, "wrong_value": var}
+          {attribute: attrs, wrong_value: var}
       end
     end
     private :set_up_from_or_to
@@ -197,9 +197,9 @@ module Arango
     def create(body: {}, waitForSync: nil, returnNew: nil, silent: nil)
       body = @body.merge(body)
       query = {
-        "waitForSync": waitForSync,
-        "returnNew":   returnNew,
-        "silent":      silent
+        waitForSync: waitForSync,
+        returnNew:   returnNew,
+        silent:      silent
       }
       result = @database.request("POST", "_api/document/#{@collection.name}", body: body,
         query: query)
@@ -219,11 +219,11 @@ module Arango
     def replace(body: {}, waitForSync: nil, ignoreRevs: nil, returnOld: nil,
       returnNew: nil, silent: nil, if_match: false)
       query = {
-        "waitForSync": waitForSync,
-        "returnNew":   returnNew,
-        "returnOld":   returnOld,
-        "ignoreRevs":  ignoreRevs,
-        "silent":      silent
+        waitForSync: waitForSync,
+        returnNew:   returnNew,
+        returnOld:   returnOld,
+        ignoreRevs:  ignoreRevs,
+        silent:      silent
       }
       headers = {}
       headers[:"If-Match"] = @body[:_rev] if if_match
@@ -244,13 +244,13 @@ module Arango
       returnOld: nil, returnNew: nil, keepNull: nil,
       mergeObjects: nil, silent: nil, if_match: false)
       query = {
-        "waitForSync":  waitForSync,
-        "returnNew":    returnNew,
-        "returnOld":    returnOld,
-        "ignoreRevs":   ignoreRevs,
-        "keepNull":     keepNull,
-        "mergeObjects": mergeObjects,
-        "silent":       silent
+        waitForSync:  waitForSync,
+        returnNew:    returnNew,
+        returnOld:    returnOld,
+        ignoreRevs:   ignoreRevs,
+        keepNull:     keepNull,
+        mergeObjects: mergeObjects,
+        silent:       silent
       }
       headers = {}
       headers[:"If-Match"] = @body[:_rev] if if_match
@@ -276,9 +276,9 @@ module Arango
 
     def destroy(waitForSync: nil, silent: nil, returnOld: nil, if_match: false)
       query = {
-        "waitForSync": waitForSync,
-        "returnOld":   returnOld,
-        "silent":      silent
+        waitForSync: waitForSync,
+        returnOld:   returnOld,
+        silent:      silent
       }
       headers = {}
       headers[:"If-Match"] = @body[:_rev] if if_match
@@ -302,8 +302,8 @@ module Arango
       satisfy_class?(collection, [Arango::Collection, String])
       collection = collection.is_a?(Arango::Collection) ? collection.name : collection
       query = {
-        "vertex":    @body[:_id],
-        "direction": direction
+        vertex:    @body[:_id],
+        direction: direction
       }
       result = @database.request("GET", "_api/edges/#{collection}", query: query)
       return result if return_directly?(result)

@@ -21,7 +21,7 @@ module Arango
       satisfy_class?(collection, [Arango::Collection])
       if collection.graph.nil?
         raise Arango::Error.new err: :collection_does_not_have_a_graph, data:
-          {"name_collection": collection.name, "graph": nil}
+          {name_collection: collection.name, graph: nil}
       end
       @collection = collection
       @graph      = @collection.graph
@@ -45,9 +45,9 @@ module Arango
     def create(body: {}, waitForSync: nil)
       body = @body.merge(body)
       query = {
-        "waitForSync": waitForSync,
-        "_from":      @body[:_from],
-        "_to":        @body[:_to]
+        waitForSync: waitForSync,
+        _from:      @body[:_from],
+        _to:        @body[:_to]
       }
       result = @graph.request("POST", "edge/#{@collection.name}", body: body,
         query: query, key: :edge)
@@ -62,8 +62,8 @@ module Arango
 
     def replace(body: {}, waitForSync: nil, keepNull: nil, if_match: false)
       query = {
-        "waitForSync": waitForSync,
-        "keepNull":    keepNull
+        waitForSync: waitForSync,
+        keepNull:    keepNull
       }
       headers = {}
       headers[:"If-Match"] = @body[:_rev] if if_match
@@ -77,7 +77,7 @@ module Arango
     end
 
     def update(body: {}, waitForSync: nil, if_match: false)
-      query = {"waitForSync": waitForSync}
+      query = {waitForSync: waitForSync}
       headers = {}
       headers[:"If-Match"] = @body[:_rev] if if_match
       result = @graph.request("PATCH", "edge/#{@collection.name}/#{@body[:_key]}",
@@ -93,7 +93,7 @@ module Arango
 # === DELETE ===
 
     def destroy(waitForSync: nil, if_match: false)
-      query = {"waitForSync": waitForSync}
+      query = {waitForSync: waitForSync}
       headers = {}
       headers[:"If-Match"] = @body[:_rev] if if_match
       result = @graph.request("DELETE", "edge/#{@collection.name}/#{@body[:_key]}",

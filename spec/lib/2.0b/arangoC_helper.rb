@@ -27,7 +27,7 @@ describe Arango::Collection do
     end
 
     it "importJSON" do
-      body = [{"value": "uno", "num": 1, "name": "ONE"}, {"value": "due", "num": 2, "name": "DUE"}]
+      body = [{value: "uno", num: 1, name: "ONE"}, {value: "due", num: 2, name: "DUE"}]
       result = @myCollection.importJSON body: body
       expect(result[:created]).to eq 2
     end
