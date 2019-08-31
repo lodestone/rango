@@ -35,17 +35,17 @@ describe Arango::User do
 
   context "#database" do
     it "grant" do
-      result = @myUser.addDatabaseAccess grant: "rw", database: @myDatabase
+      result = @myUser.add_database_access grant: "rw", database: @myDatabase
       expect(result).to eq "rw"
     end
 
     it "databases" do
-      result = @myUser.listAccess
+      result = @myUser.list_access
       expect(result[:MyDatabase]).to eq "rw"
     end
 
     it "revoke" do
-      result = @myUser.revokeDatabaseAccess database: @myDatabase
+      result = @myUser.revoke_database_access database: @myDatabase
       expect(result).to be true
     end
   end

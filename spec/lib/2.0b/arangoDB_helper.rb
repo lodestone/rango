@@ -38,11 +38,11 @@ describe Arango::Database do
 
   context "#user" do
     it "grant" do
-      expect(@myDatabase.addUserAccess(grant: "ro", user: @myUser)).to eq "ro"
+      expect(@myDatabase.add_user_access(grant: "ro", user: @myUser)).to eq "ro"
     end
 
     it "revoke" do
-      expect(@myDatabase.revokeUserAccess user: @myUser).to be true
+      expect(@myDatabase.revoke_user_access user: @myUser).to be true
     end
   end
 end

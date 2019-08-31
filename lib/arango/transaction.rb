@@ -1,4 +1,4 @@
-  # === TRANSACTION ===
+# === TRANSACTION ===
 
 module Arango
   class Transaction
@@ -6,33 +6,31 @@ module Arango
     include Arango::Helper::Return
     include Arango::Helper::DatabaseAssignment
 
-    def initialize(database:, action:, write: [], read: [], params: nil,
-      maxTransactionSize: nil, lockTimeout: nil, waitForSync: nil, intermediateCommitCount: nil, intermedateCommitSize: nil)
+    def initialize(action:, database:, intermediate_commit_size: nil, intermediate_commit_count: nil, lock_timeout: nil, max_transaction_size: nil,
+                   params: nil, read: [], wait_for_sync: nil, write: [])
       assign_database(database)
       @action = action
-      @write  = return_write_or_read(write)
-      @read   = return_write_or_read(read)
+      @intermediate_commit_count = intermediate_commit_count
+      @intermediate_commit_size   = intermediate_commit_size
+      @lock_timeout             = lock_timeout
+      @max_transaction_size      = max_transaction_size
       @params = params
-      @maxTransactionSize      = maxTransactionSize
-      @lockTimeout             = lockTimeout
-      @waitForSync             = waitForSync
-      @intermediateCommitCount = intermediateCommitCount
-      @intermedateCommitSize   = intermedateCommitSize
+      @read   = return_write_or_read(read)
       @result = nil
+      @wait_for_sync             = wait_for_sync
+      @write  = return_write_or_read(write)
     end
 
 # === DEFINE ===
 
-    attr_reader :read, :write, :result, :server, :database
-    attr_accessor :action, :params, :maxTransactionSize,
-      :lockTimeout, :waitForSync, :intermediateCommitCount,
-      :intermedateCommitSize
+    attr_reader :database, :read, :result, :server, :write
+    attr_accessor :action, :intermediate_commit_count, :intermediate_commit_size, :lock_timeout, :max_transaction_size, :params, :wait_for_sync
 
     def write=(write)
       @write = return_write_or_read(write)
     end
 
-    def addWrite(write)
+    def add_write(write)
       write = return_write_or_read(write)
       @write ||= []
       @write << write
@@ -42,7 +40,7 @@ module Arango
       @read = return_write_or_read(read)
     end
 
-    def addRead(read)
+    def add_read(read)
       read = return_write_or_read(read)
       @read ||= []
       @read << read
@@ -78,33 +76,33 @@ module Arango
     def to_h
       {
         action: @action,
-        result: @result,
+        database: @database.name,
         params: @params,
         read: @read.map{|x| x.name},
-        write: @write.map{|x| x.name},
-        database: @database.name
+        result: @result,
+        write: @write.map{|x| x.name}
       }.delete_if{|k,v| v.nil?}
     end
 
 # === EXECUTE ===
 
     def execute(action: @action, params: @params,
-      maxTransactionSize: @maxTransactionSize,
-      lockTimeout: @lockTimeout, waitForSync: @waitForSync,
-      intermediateCommitCount: @intermediateCommitCount,
-      intermedateCommitSize: @intermedateCommitSize)
+      max_transaction_size: @max_transaction_size,
+      lock_timeout: @lock_timeout, wait_for_sync: @wait_for_sync,
+      intermediate_commit_count: @intermediate_commit_count,
+      intermediate_commit_size: @intermediate_commit_size)
       body = {
         collections: {
           read: @read.map{|x| x.name},
           write: @write.map{|x| x.name}
         },
         action: action,
+        intermediate_commit_size: intermediate_commit_size,
+        intermediateCommitCount: intermediate_commit_count,
+        lockTimeout: lock_timeout,
+        maxTransactionSize: max_transaction_size,
         params: params,
-        lockTimeout: lockTimeout,
-        waitForSync: waitForSync,
-        maxTransactionSize: maxTransactionSize,
-        intermediateCommitCount: intermediateCommitCount,
-        intermedateCommitSize: intermedateCommitSize
+        waitForSync: wait_for_sync
       }
       result = @database.request("POST", "_api/transaction", body: body)
       return result if @server.async != false

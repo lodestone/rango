@@ -11,8 +11,8 @@ describe Arango::Graph do
   context "#create" do
     it "create new graph" do
       @myGraph.destroy
-      @myGraph.edgeDefinitions = []
-      @myGraph.orphanCollections = [@myCollection]
+      @myGraph.edge_definitions = []
+      @myGraph.orphan_collections = [@myCollection]
       myGraph = @myGraph.create
       expect(myGraph.name).to eq "MyGraph"
     end
@@ -29,56 +29,56 @@ describe Arango::Graph do
     it "add VertexCollection" do
       errors = []
       begin
-        @myGraph.removeEdgeDefinition collection: "MyEdgeCollection"
+        @myGraph.remove_edge_definition collection: "MyEdgeCollection"
       rescue Arango::Error => e
-        errors << e.errorNum
+        errors << e.error_num
       end
       error = ""
       begin
-        myGraph = @myGraph.addVertexCollection collection: "MyCollection"
+        myGraph = @myGraph.add_vertex_collection collection: "MyCollection"
       rescue Arango::ErrorDB => e
-        errors << e.errorNum
+        errors << e.error_num
       end
-      @myGraph.removeVertexCollection collection: "MyCollection"
-      myGraph = @myGraph.addVertexCollection collection: "MyCollection"
-      expect([myGraph.orphanCollections[0].name, errors]).to eq ["MyCollection", [1930, 1938]]
+      @myGraph.remove_vertex_collection collection: "MyCollection"
+      myGraph = @myGraph.add_vertex_collection collection: "MyCollection"
+      expect([myGraph.orphan_collections[0].name, errors]).to eq ["MyCollection", [1930, 1938]]
     end
 
     it "retrieve VertexCollection" do
-      myGraph = @myGraph.vertexCollections
+      myGraph = @myGraph.vertex_collections
       expect(myGraph[0].name).to eq "MyCollection"
     end
 
     it "remove VertexCollection" do
-      myGraph = @myGraph.removeVertexCollection collection: "MyCollection"
-      expect(myGraph.orphanCollections[0]).to eq nil
+      myGraph = @myGraph.remove_vertex_collection collection: "MyCollection"
+      expect(myGraph.orphan_collections[0]).to eq nil
     end
   end
 
   context "#manageEdgeCollections" do
     it "add EdgeCollection" do
-      myGraph = @myGraph.addEdgeDefinition collection: "MyEdgeCollection", from: "MyCollection", to: @myCollectionB
-      expect(myGraph.edgeDefinitions[0][:from][0].name).to eq "MyCollection"
+      myGraph = @myGraph.add_edge_definition collection: "MyEdgeCollection", from: "MyCollection", to: @myCollectionB
+      expect(myGraph.edge_definitions[0][:from][0].name).to eq "MyCollection"
     end
 
     it "retrieve EdgeCollection" do
-      myGraph = @myGraph.getEdgeCollections
+      myGraph = @myGraph.get_edge_collections
       expect(myGraph[0].name).to eq "MyEdgeCollection"
     end
 
     it "retrieve EdgeCollection" do
-      myGraph = @myGraph.edgeDefinitions
+      myGraph = @myGraph.edge_definitions
       expect(myGraph[0][:collection].name).to eq "MyEdgeCollection"
     end
 
     it "replace EdgeCollection" do
-      myGraph = @myGraph.replaceEdgeDefinition collection: @myEdgeCollection, from: "MyCollection", to: "MyCollection"
-      expect(myGraph.edgeDefinitions[0][:to][0].name).to eq "MyCollection"
+      myGraph = @myGraph.replace_edge_definition collection: @myEdgeCollection, from: "MyCollection", to: "MyCollection"
+      expect(myGraph.edge_definitions[0][:to][0].name).to eq "MyCollection"
     end
 
     it "remove EdgeCollection" do
-      myGraph = @myGraph.removeEdgeDefinition collection: "MyEdgeCollection"
-      expect(myGraph.edgeDefinitions[0]).to eq nil
+      myGraph = @myGraph.remove_edge_definition collection: "MyEdgeCollection"
+      expect(myGraph.edge_definitions[0]).to eq nil
     end
   end
 

@@ -17,10 +17,10 @@ RSpec.configure do |config|
 			body: {Hello: "World", num: 1}).create
 		@myEdgeCollection = @myDatabase.collection(
 			name: "MyEdgeCollection", type: "Edge").create
-		@myGraph.addVertexCollection collection: "MyCollection"
-		@myGraph.addEdgeDefinition collection: "MyEdgeCollection", from: "MyCollection", to: "MyCollection"
+		@myGraph.add_vertex_collection collection: "MyCollection"
+		@myGraph.add_edge_definition collection: "MyEdgeCollection", from: "MyCollection", to: "MyCollection"
 		@myAQL = @myDatabase.aql query: "FOR u IN MyCollection RETURN u.num"
-		@myDoc = @myCollection.createDocuments document: [{num: 1, _key: "FirstKey"},
+		@myDoc = @myCollection.create_documents document: [{num: 1, _key: "FirstKey"},
 			{num: 1}, {num: 1}, {num: 1}, {num: 1}, {num: 1},
 			{num: 1}, {num: 2}, {num: 2}, {num: 2}, {num: 3},
 			{num: 2}, {num: 5}, {num: 2}]

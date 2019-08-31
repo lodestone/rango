@@ -51,21 +51,21 @@ describe Arango::Database do
 
   context "#query" do
     it "properties" do
-      expect(@myDatabase.queryProperties[:enabled]).to be true
+      expect(@myDatabase.query_properties[:enabled]).to be true
     end
 
     it "current" do
-      expect(@myDatabase.currentQuery).to eq []
+      expect(@myDatabase.current_query).to eq []
     end
 
     it "slow" do
-      expect(@myDatabase.slowQueries).to eq []
+      expect(@myDatabase.slow_queries).to eq []
     end
   end
 
   context "#delete query" do
     it "stopSlow" do
-      expect(@myDatabase.stopSlowQueries).to be true
+      expect(@myDatabase.stop_slow_queries).to be true
     end
 
     # it "kill" do
@@ -88,36 +88,36 @@ describe Arango::Database do
     # end
 
     it "changeProperties" do
-      result = @myDatabase.changeQueryProperties maxSlowQueries: 65
+      result = @myDatabase.change_query_properties max_slow_queries: 65
       expect(result[:maxSlowQueries]).to eq 65
     end
   end
 
   context "#cache" do
     it "clear" do
-      expect(@myDatabase.clearQueryCache).to be true
+      expect(@myDatabase.clear_query_cache).to be true
     end
 
     it "change Property Cache" do
-      @myDatabase.changeQueryProperties maxSlowQueries: 130
-      expect(@myDatabase.queryProperties[:maxSlowQueries]).to eq 130
+      @myDatabase.change_query_properties max_slow_queries: 130
+      expect(@myDatabase.query_properties[:maxSlowQueries]).to eq 130
     end
   end
 
   context "#function" do
     it "create Function" do
-      result = @myDatabase.createAqlFunction name: "myfunctions::temperature::celsiustofahrenheit",
+      result = @myDatabase.create_aql_function name: "myfunctions::temperature::celsiustofahrenheit",
       code: "function (celsius) { return celsius * 1.8 + 32; }"
       expect(result.class).to eq Hash
     end
 
     it "list Functions" do
-      result = @myDatabase.aqlFunctions
+      result = @myDatabase.aql_functions
       expect(result[0][:name]).to eq "myfunctions::temperature::celsiustofahrenheit"
     end
 
     it "delete Function" do
-      result = @myDatabase.deleteAqlFunction name: "myfunctions::temperature::celsiustofahrenheit"
+      result = @myDatabase.delete_aql_function name: "myfunctions::temperature::celsiustofahrenheit"
       expect(result).to be true
     end
   end

@@ -2,7 +2,7 @@
 
 module Arango
   class Error < StandardError
-    @@list_arango_rb_errors = {
+    ARANGODB_ERRORS = {
       no_other_aql_next: {
         code: 10001, message: "No other values with AQL next"
       },
@@ -72,12 +72,12 @@ module Arango
       edge_collection_should_be_of_type_edge: {
         code: 10022, message: "Database undefined for traversal"
       }
-    }
+    }.freeze
 
     def initialize(err:, data: nil, skip_assignment: false)
       unless skip_assignment
-        @message = @@list_arango_rb_errors[err][:message]
-        @code = @@list_arango_rb_errors[err][:code]
+        @message = ARANGODB_ERRORS[err][:message]
+        @code = ARANGODB_ERRORS[err][:code]
         @internal_code = err
         @data = data
       end

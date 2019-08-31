@@ -5,6 +5,7 @@ module Arango
     include Arango::Helper::Satisfaction
     include Arango::Helper::Return
     include Arango::Helper::CollectionAssignment
+    include Arango::Helper::Traversal
 
     def self.new(*args)
       hash = args[0]
@@ -194,18 +195,18 @@ module Arango
 
 # == POST ==
 
-    def create(body: {}, waitForSync: nil, returnNew: nil, silent: nil)
+    def create(body: {}, wait_for_sync: nil, return_new: nil, silent: nil)
       body = @body.merge(body)
       query = {
-        waitForSync: waitForSync,
-        returnNew:   returnNew,
+        waitForSync: wait_for_sync,
+        returnNew:   return_new,
         silent:      silent
       }
       result = @database.request("POST", "_api/document/#{@collection.name}", body: body,
         query: query)
       return result if @server.async != false || silent
       body2 = result.clone
-      if returnNew
+      if return_new
         body2.delete(:new)
         body2 = body2.merge(result[:new])
       end
@@ -216,13 +217,13 @@ module Arango
 
 # == PUT ==
 
-    def replace(body: {}, waitForSync: nil, ignoreRevs: nil, returnOld: nil,
-      returnNew: nil, silent: nil, if_match: false)
+    def replace(body: {}, wait_for_sync: nil, ignore_revs: nil, return_old: nil,
+      return_new: nil, silent: nil, if_match: false)
       query = {
-        waitForSync: waitForSync,
-        returnNew:   returnNew,
-        returnOld:   returnOld,
-        ignoreRevs:  ignoreRevs,
+        waitForSync: wait_for_sync,
+        returnNew:   return_new,
+        returnOld:   return_old,
+        ignoreRevs:  ignore_revs,
         silent:      silent
       }
       headers = {}
@@ -231,7 +232,7 @@ module Arango
         query: query, headers: headers)
       return result if @server.async != false || silent
       body2 = result.clone
-      if returnNew
+      if return_new
         body2.delete(:new)
         body2 = body2.merge(result[:new])
       end
@@ -240,30 +241,30 @@ module Arango
       return return_directly?(result) ? result : self
     end
 
-    def update(body: {}, waitForSync: nil, ignoreRevs: nil,
-      returnOld: nil, returnNew: nil, keepNull: nil,
-      mergeObjects: nil, silent: nil, if_match: false)
+    def update(body: {}, wait_for_sync: nil, ignore_revs: nil,
+      return_old: nil, return_new: nil, keep_null: nil,
+      merge_objects: nil, silent: nil, if_match: false)
       query = {
-        waitForSync:  waitForSync,
-        returnNew:    returnNew,
-        returnOld:    returnOld,
-        ignoreRevs:   ignoreRevs,
-        keepNull:     keepNull,
-        mergeObjects: mergeObjects,
+        waitForSync:  wait_for_sync,
+        returnNew:    return_new,
+        returnOld:    return_old,
+        ignoreRevs:   ignore_revs,
+        keepNull:     keep_null,
+        mergeObjects: merge_objects,
         silent:       silent
       }
       headers = {}
       headers[:"If-Match"] = @body[:_rev] if if_match
       result = @database.request("PATCH", "_api/document/#{@body[:_id]}", body: body,
-        query: query, headers: headers, keepNull: keepNull)
+        query: query, headers: headers, keep_null: keep_null)
       return result if @server.async != false || silent
       body2 = result.clone
-      if returnNew
+      if return_new
         body2.delete(:new)
         body2 = body2.merge(result[:new])
       end
       body = body.merge(body2)
-      if mergeObjects
+      if merge_objects
         @body = @body.merge(body)
       else
         body.each{|key, value| @body[key] = value}
@@ -274,10 +275,10 @@ module Arango
 
   # === DELETE ===
 
-    def destroy(waitForSync: nil, silent: nil, returnOld: nil, if_match: false)
+    def destroy(wait_for_sync: nil, silent: nil, return_old: nil, if_match: false)
       query = {
-        waitForSync: waitForSync,
-        returnOld:   returnOld,
+        waitForSync: wait_for_sync,
+        returnOld:   return_old,
         silent:      silent
       }
       headers = {}
@@ -286,7 +287,7 @@ module Arango
         headers: headers)
       return result if @server.async != false || silent
       body2 = result.clone
-      if returnOld
+      if return_old
         body2.delete(:old)
         body2 = body2.merge(result[:old])
       else
@@ -325,22 +326,6 @@ module Arango
 
     def in(collection)
       edges(collection: collection, direction: "in")
-    end
-
-# === TRAVERSAL ===
-
-    def traversal(body: {}, sort: nil, direction: nil, minDepth: nil,
-      visitor: nil, itemOrder: nil, strategy: nil,
-      filter: nil, init: nil, maxIterations: nil, maxDepth: nil,
-      uniqueness: nil, order: nil, expander: nil,
-      edgeCollection: nil)
-      Arango::Traversal.new(body: body,
-        sort: sort, direction: direction, minDepth: minDepth,
-        vertex: self, visitor: visitor,itemOrder: itemOrder,
-        strategy: strategy, filter: filter, init: init,
-        maxIterations: maxIterations, maxDepth: maxDepth,
-        uniqueness: uniqueness, order: order,
-        expander: expander, edgeCollection: edgeCollection)
     end
   end
 end

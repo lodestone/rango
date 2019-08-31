@@ -28,7 +28,7 @@ describe Arango::Collection do
 
     it "importJSON" do
       body = [{value: "uno", num: 1, name: "ONE"}, {value: "due", num: 2, name: "DUE"}]
-      result = @myCollection.importJSON body: body
+      result = @myCollection.import_json body: body
       expect(result[:created]).to eq 2
     end
   end
@@ -40,8 +40,8 @@ describe Arango::Collection do
     end
 
     it "exportNext" do
-      result = @myCollection.export batchSize: 3, flush: true
-      result = @myCollection.exportNext
+      result = @myCollection.export batch_size: 3, flush: true
+      result = @myCollection.export_next
       expect(result[0].class).to be Arango::Document
     end
   end

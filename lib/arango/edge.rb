@@ -15,7 +15,7 @@ module Arango
 
 # === DEFINE ===
 
-    attr_reader :collection, :database, :server, :graph
+    attr_reader :collection, :database, :graph, :server
 
     def collection=(collection)
       satisfy_class?(collection, [Arango::Collection])
@@ -42,10 +42,10 @@ module Arango
 
 # == POST ==
 
-    def create(body: {}, waitForSync: nil)
+    def create(body: {}, wait_for_sync: nil)
       body = @body.merge(body)
       query = {
-        waitForSync: waitForSync,
+        waitForSync: wait_for_sync,
         _from:      @body[:_from],
         _to:        @body[:_to]
       }
@@ -60,10 +60,10 @@ module Arango
 
 # == PUT ==
 
-    def replace(body: {}, waitForSync: nil, keepNull: nil, if_match: false)
+    def replace(body: {}, wait_for_sync: nil, keep_null: nil, if_match: false)
       query = {
-        waitForSync: waitForSync,
-        keepNull:    keepNull
+        waitForSync: wait_for_sync,
+        keepNull:    keep_null
       }
       headers = {}
       headers[:"If-Match"] = @body[:_rev] if if_match
@@ -76,8 +76,8 @@ module Arango
       return return_directly?(result) ? result : self
     end
 
-    def update(body: {}, waitForSync: nil, if_match: false)
-      query = {waitForSync: waitForSync}
+    def update(body: {}, wait_for_sync: nil, if_match: false)
+      query = {waitForSync: wait_for_sync}
       headers = {}
       headers[:"If-Match"] = @body[:_rev] if if_match
       result = @graph.request("PATCH", "edge/#{@collection.name}/#{@body[:_key]}",
@@ -92,8 +92,8 @@ module Arango
 
 # === DELETE ===
 
-    def destroy(waitForSync: nil, if_match: false)
-      query = {waitForSync: waitForSync}
+    def destroy(wait_for_sync: nil, if_match: false)
+      query = {waitForSync: wait_for_sync}
       headers = {}
       headers[:"If-Match"] = @body[:_rev] if if_match
       result = @graph.request("DELETE", "edge/#{@collection.name}/#{@body[:_key]}",

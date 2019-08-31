@@ -18,8 +18,7 @@ module Arango
           return super
         else
           body = hash[:body] || {}
-          [:isSmart, :edgeDefinitions, :orphanCollections, :numberOfShards,
-            :replicationFactor, :smartGraphAttribute].each{|k| body[k] ||= hash[k]}
+          %i[isSmart edgeDefinitions orphanDollections numberOfShards replicationFactor smartGraphAttribute].each{|k| body[k] ||= hash[k]}
           cached.assign_attributes(body)
           return cached
         end
@@ -27,9 +26,8 @@ module Arango
       super
     end
 
-    def initialize(name:, database:, edgeDefinitions: [],
-      orphanCollections: [], body: {}, numberOfShards: nil, isSmart: nil,
-      smartGraphAtttribute: nil, replicationFactor: nil, cache_name: nil)
+    def initialize(name:, database:, body: {}, cache_name: nil, edge_definitions: [], is_smart: nil, number_of_shards: nil, orphan_collections: [],
+                   replication_factor: nil, smart_graph_attribute: nil)
       assign_database(database)
       unless cache_name.nil?
         @cache_name = cache_name
@@ -37,33 +35,33 @@ module Arango
       end
       body[:_key]    ||= name
       body[:_id]     ||= "_graphs/#{name}"
-      body[:isSmart] ||= isSmart
-      body[:edgeDefinitions]     ||= edgeDefinitions
-      body[:orphanCollections]   ||= orphanCollections
-      body[:numberOfShards]      ||= numberOfShards
-      body[:replicationFactor]   ||= replicationFactor
-      body[:smartGraphAttribute] ||= smartGraphAttribute
+      body[:edgeDefinitions]     ||= edge_definitions
+      body[:isSmart]             ||= is_smart
+      body[:numberOfShards]      ||= number_of_shards
+      body[:orphanCollections]   ||= orphan_collections
+      body[:replicationFactor]   ||= replication_factor
+      body[:smartGraphAttribute] ||= smart_graph_attribute
       assign_attributes(body)
     end
 
 # === DEFINE ===
 
-    attr_reader :name, :database, :server, :id, :body, :rev, :isSmart, :cache_name
-    attr_accessor :numberOfShards, :replicationFactor, :smartGraphAttribute
+    attr_reader :body, :cache_name, :database, :id, :is_smart, :name, :rev, :server
+    attr_accessor :number_of_shards, :replication_factor, :smart_graph_attribute
     alias key name
 
     def body=(result)
       @body = result
-      assign_edgeDefinitions(result[:edgeDefinitions] || @edgeDefinitions)
-      assign_orphanCollections(result[:orphanCollections] || @orphanCollections)
+      assign_edge_definitions(result[:edgeDefinitions] || @edge_definitions)
+      assign_orphan_collections(result[:orphanCollections] || @orphan_collections)
       @name    = result[:_key]    || @name
       @id      = result[:_id]     || @id
       @id      = "_graphs/#{@name}" if @id.nil? && !@name.nil?
       @rev     = result[:_rev]    || @rev
-      @isSmart = result[:isSmart] || @isSmart
-      @numberOfShards = result[:numberOfShards] || @numberOfShards
-      @replicationFactor = result[:replicationFactor] || @replicationFactor
-      @smartGraphAttribute = result[:smartGraphAttribute] || @smartGraphAttribute
+      @is_smart = result[:isSmart] || @is_smart
+      @number_of_shards = result[:numberOfShards] || @number_of_shards
+      @replication_factor = result[:replicationFactor] || @replication_factor
+      @smart_graph_attribute = result[:smartGraphAttribute] || @smart_graph_attribute
       if @server.active_cache && @cache_name.nil?
         @cache_name = "#{@database.name}/#{@name}"
         @server.cache.save(:graph, @cache_name, self)
@@ -87,9 +85,9 @@ module Arango
       end
     end
 
-    def edgeDefinitionsRaw
-      @edgeDefinitions ||= []
-      @edgeDefinitions.map do |edgedef|
+    def edge_definitions_raw
+      @edge_definitions ||= []
+      @edge_definitions.map do |edgedef|
         {
           collection: edgedef[:collection].name,
           from: edgedef[:from].map{|t| t.name},
@@ -97,53 +95,53 @@ module Arango
         }
       end
     end
-    private :edgeDefinitionsRaw
+    private :edge_definitions_raw
 
-    def edgeDefinitions(raw=false)
-      return edgeDefinitionsRaw if raw
-      return @edgeDefinitions
+    def edge_definitions(raw=false)
+      return edge_definitions_raw if raw
+      return @edge_definitions
     end
 
-    def edgeDefinitions=(edgeDefinitions)
-      @edgeDefinitions = []
-      edgeDefinitions ||= []
-      edgeDefinitions = [edgeDefinitions] unless edgeDefinitions.is_a?(Array)
-      edgeDefinitions.each do |edgeDefinition|
+    def edge_definitions=(edge_definitions)
+      @edge_definitions = []
+      edge_definitions ||= []
+      edge_definitions = [edge_definitions] unless edge_definitions.is_a?(Array)
+      edge_definitions.each do |edge_definition|
         hash = {}
-        hash[:collection] = return_collection(edgeDefinition[:collection], :edge)
-        edgeDefinition[:from] ||= []
-        edgeDefinition[:to]   ||= []
-        hash[:from] = edgeDefinition[:from].map{|t| return_collection(t)}
-        hash[:to]   = edgeDefinition[:to].map{|t| return_collection(t)}
-        setup_orphaCollection_after_adding_edge_definitions(hash)
-        @edgeDefinitions << hash
+        hash[:collection] = return_collection(edge_definition[:collection], :edge)
+        edge_definition[:from] ||= []
+        edge_definition[:to]   ||= []
+        hash[:from] = edge_definition[:from].map{|t| return_collection(t)}
+        hash[:to]   = edge_definition[:to].map{|t| return_collection(t)}
+        setup_orphan_collection_after_adding_edge_definitions(hash)
+        @edge_definitions << hash
       end
     end
-    alias assign_edgeDefinitions edgeDefinitions=
+    alias assign_edge_definitions edge_definitions=
 
-    def orphanCollections=(orphanCollections)
-      orphanCollections ||= []
-      orphanCollections = [orphanCollections] unless orphanCollections.is_a?(Array)
-      @orphanCollections = orphanCollections.map{|oc| add_orphan_collection(oc)}
+    def orphan_collections=(orphan_collections)
+      orphan_collections ||= []
+      orphan_collections = [orphan_collections] unless orphan_collections.is_a?(Array)
+      @orphan_collections = orphan_collections.map{|oc| add_orphan_collection(oc)}
     end
-    alias assign_orphanCollections orphanCollections=
+    alias assign_orphan_collections orphan_collections=
 
-    def orphanCollectionsRaw
-      @orphanCollections ||= []
-      @orphanCollections.map{|oc| oc.name}
+    def orphan_collections_raw
+      @orphan_collections ||= []
+      @orphan_collections.map{|oc| oc.name}
     end
-    private :orphanCollectionsRaw
+    private :orphan_collections_raw
 
-    def orphanCollections(raw=false)
-      return orphanCollectionsRaw if raw
-      return @orphanCollections
+    def orphan_collections(raw=false)
+      return orphan_collections_raw if raw
+      return @orphan_collections
     end
 
 # === HANDLE ORPHAN COLLECTION ===
 
     def add_orphan_collection(orphanCollection)
       orphanCollection = return_collection(orphanCollection)
-      if @edgeDefinitions.any? do |ed|
+      if @edge_definitions.any? do |ed|
           names = []
           names |= ed[:from].map{|f| f&.name}
           names |= ed[:to].map{|t| t&.name}
@@ -155,21 +153,21 @@ module Arango
     end
     private :add_orphan_collection
 
-    def setup_orphaCollection_after_adding_edge_definitions(edgeDefinition)
+    def setup_orphan_collection_after_adding_edge_definitions(edge_definition)
       collection = []
-      collection |= edgeDefinition[:from]
-      collection |= edgeDefinition[:to]
-      @orphanCollections.delete_if{|c| collection.include?(c.name)}
+      collection |= edge_definition[:from]
+      collection |= edge_definition[:to]
+      @orphan_collections.delete_if{|c| collection.include?(c.name)}
     end
-    private :setup_orphaCollection_after_adding_edge_definitions
+    private :setup_orphan_collection_after_adding_edge_definitions
 
-    def setup_orphaCollection_after_removing_edge_definitions(edgeDefinition)
-      edgeCollection = edgeDefinition[:collection].name
+    def setup_orphan_collection_after_removing_edge_definitions(edge_definition)
+      edgeCollection = edge_definition[:collection].name
       collections |= []
-      collections |= edgeDefinition[:from]
-      collections |= edgeDefinition[:to]
+      collections |= edge_definition[:from]
+      collections |= edge_definition[:to]
       collections.each do |collection|
-        unless @edgeDefinitions.any? do |ed|
+        unless @edge_definitions.any? do |ed|
             if ed[:collection].name != edgeCollection
               names = []
               names |= ed[:from].map{|f| f&.name}
@@ -179,13 +177,13 @@ module Arango
               false
             end
           end
-          unless @orphanCollections.map{|oc| oc.name}.include?(collection.name)
-            @orphanCollections << collection
+          unless @orphan_collections.map{|oc| oc.name}.include?(collection.name)
+            @orphan_collections << collection
           end
         end
       end
     end
-    private :setup_orphaCollection_after_removing_edge_definitions
+    private :setup_orphan_collection_after_removing_edge_definitions
 
 # === REQUEST ===
 
@@ -203,12 +201,12 @@ module Arango
         name: @name,
         id: @id,
         rev: @rev,
-        isSmart: @isSmart,
-        numberOfShards: @numberOfShards,
-        replicationFactor: @replicationFactor,
-        smartGraphAttribute: @smartGraphAttribute,
-        edgeDefinitions: edgeDefinitionsRaw,
-        orphanCollections: orphanCollectionsRaw,
+        isSmart: @is_smart,
+        numberOfShards: @number_of_shards,
+        replicationFactor: @replication_factor,
+        smartGraphAttribute: @smart_graph_attribute,
+        edgeDefinitions: edge_definitions_raw,
+        orphanCollections: orphan_collections_raw,
         cache_name: @cache_name,
         database: @database.name
       }.delete_if{|k,v| v.nil?}
@@ -223,16 +221,16 @@ module Arango
 
 # === POST ===
 
-    def create(isSmart: @isSmart, smartGraphAttribute: @smartGraphAttribute,
-      numberOfShards: @numberOfShards)
+    def create(is_smart: @is_smart, smart_graph_attribute: @smart_graph_attribute,
+      number_of_shards: @number_of_shards)
       body = {
         name: @name,
-        edgeDefinitions:   edgeDefinitionsRaw,
-        orphanCollections: orphanCollectionsRaw,
-        isSmart: isSmart,
+        edgeDefinitions:   edge_definitions_raw,
+        orphanCollections: orphan_collections_raw,
+        isSmart: is_smart,
         options: {
-          smartGraphAttribute: smartGraphAttribute,
-          numberOfShards: numberOfShards
+          smartGraphAttribute: smart_graph_attribute,
+          numberOfShards: number_of_shards
         }
       }
       body[:options].delete_if{|k,v| v.nil?}
@@ -252,16 +250,16 @@ module Arango
 
 # === VERTEX COLLECTION  ===
 
-    def getVertexCollections
+    def get_vertex_collections
       result = request("GET", "vertex", key: :collections)
       return result if return_directly?(result)
       result.map do |x|
         Arango::Collection.new(name: x, database: @database, graph: self)
       end
     end
-    alias vertexCollections getVertexCollections
+    alias vertex_collections get_vertex_collections
 
-    def addVertexCollection(collection:)
+    def add_vertex_collection(collection:)
       satisfy_class?(collection, [String, Arango::Collection])
       collection = collection.is_a?(String) ? collection : collection.name
       body = { collection: collection }
@@ -269,7 +267,7 @@ module Arango
       return_element(result)
     end
 
-    def removeVertexCollection(collection:, dropCollection: nil)
+    def remove_vertex_collection(collection:, dropCollection: nil)
       query = {dropCollection: dropCollection}
       satisfy_class?(collection, [String, Arango::Collection])
       collection = collection.is_a?(String) ? collection : collection.name
@@ -279,14 +277,14 @@ module Arango
 
   # === EDGE COLLECTION ===
 
-    def getEdgeCollections
+    def get_edge_collections
       result = request("GET", "edge", key: :collections)
       return result if @database.server.async != false
       return result if return_directly?(result)
       result.map{|r| Arango::Collection.new(database: @database, name: r, type: :edge)}
     end
 
-    def addEdgeDefinition(collection:, from:, to:)
+    def add_edge_definition(collection:, from:, to:)
       satisfy_class?(collection, [String, Arango::Collection])
       satisfy_class?(from, [String, Arango::Collection], true)
       satisfy_class?(to, [String, Arango::Collection], true)
@@ -300,7 +298,7 @@ module Arango
       return_element(result)
     end
 
-    def replaceEdgeDefinition(collection:, from:, to:)
+    def replace_edge_definition(collection:, from:, to:)
       satisfy_class?(collection, [String, Arango::Collection])
       satisfy_class?(from, [String, Arango::Collection], true)
       satisfy_class?(to, [String, Arango::Collection], true)
@@ -314,7 +312,7 @@ module Arango
       return_element(result)
     end
 
-    def removeEdgeDefinition(collection:, dropCollection: nil)
+    def remove_edge_definition(collection:, dropCollection: nil)
       satisfy_class?(collection, [String, Arango::Collection])
       query = {dropCollection: dropCollection}
       collection = collection.is_a?(String) ? collection : collection.name

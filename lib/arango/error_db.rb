@@ -1,16 +1,16 @@
 module Arango
   class ErrorDB < Arango::Error
-    def initialize(message:, code:, data:, errorNum:, action:, url:, request:)
-      @message  = message
-      @code     = code
-      @data     = data
-      @errorNum = errorNum
-      @action   = action
-      @url      = url
-      @request  = request
+    def initialize(message:, code:, data:, error_num:, action:, url:, request:)
+      @message   = message
+      @code      = code
+      @data      = data
+      @error_num = error_num
+      @action    = action
+      @url       = url
+      @request   = request
       super(err: nil, skip_assignment: true)
     end
-    attr_reader :message, :code, :data, :errorNum, :action, :url, :request
+    attr_reader :action, :code, :data, :error_num, :message, :request, :url
 
     def to_h
       {
@@ -20,7 +20,7 @@ module Arango
         message: @message,
         code: @code,
         data: @data,
-        errorNum: @errorNum
+        errorNum: @error_num
       }.delete_if{|k,v| v.nil?}
     end
   end

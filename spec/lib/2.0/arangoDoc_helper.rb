@@ -28,13 +28,13 @@ describe Arango::Document do
       begin
         myDocument = @myDocument.create
       rescue Arango::ErrorDB => e
-        error = e.errorNum
+        error = e.error_num
       end
       expect(error).to eq 1210
     end
 
     it "create a new Edge" do
-      myDoc = @myCollection.createDocuments document: [{A: "B", num: 1}, {C: "D", num: 3}]
+      myDoc = @myCollection.create_documents document: [{A: "B", num: 1}, {C: "D", num: 3}]
       myEdge = @myEdgeCollection.document from: myDoc[0].id, to: myDoc[1].id
       myEdge = myEdge.create
       expect(myEdge.body[:_from]).to eq myDoc[0].id
@@ -57,7 +57,7 @@ describe Arango::Document do
     end
 
     it "retrieve Edges" do
-      @myEdgeCollection.createEdges from: ["MyCollection/myA", "MyCollection/myB"],
+      @myEdgeCollection.create_edges from: ["MyCollection/myA", "MyCollection/myB"],
         to: @myDocument
       myEdges = @myDocument.edges(collection: @myEdgeCollection)
       expect(myEdges.length).to eq 2

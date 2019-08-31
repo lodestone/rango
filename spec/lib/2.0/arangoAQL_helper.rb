@@ -35,21 +35,21 @@ describe Arango::AQL do
     end
 
     it "properties" do
-      expect(@myDatabase.queryProperties[:enabled]).to be true
+      expect(@myDatabase.query_properties[:enabled]).to be true
     end
 
     it "current" do
-      expect(@myDatabase.currentQuery).to eq []
+      expect(@myDatabase.current_query).to eq []
     end
 
     it "slow" do
-      expect(@myDatabase.slowQueries).to eq []
+      expect(@myDatabase.slow_queries).to eq []
     end
   end
 
   context "#delete" do
     it "stopSlow" do
-      expect(@myDatabase.stopSlowQueries).to be true
+      expect(@myDatabase.stop_slow_queries).to be true
     end
 
     it "kill" do
@@ -57,13 +57,13 @@ describe Arango::AQL do
       begin
         @myAQL.kill
       rescue Arango::ErrorDB => e
-        error = e.errorNum
+        error = e.error_num
       end
       expect(error.class).to be Integer
     end
 
     it "changeProperties" do
-      result = @myDatabase.changeQueryProperties maxSlowQueries: 65
+      result = @myDatabase.change_query_properties max_slow_queries: 65
       expect(result[:maxSlowQueries]).to eq 65
     end
   end

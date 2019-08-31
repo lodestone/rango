@@ -60,9 +60,9 @@ module Arango
         @internal_request = nil
       end
     end
-    alias changePoolStatus pool=
+    alias change_pool_status pool=
 
-    def restartPool
+    def restart_pool
       changePoolStatus(false)
       changePoolStatus(true)
     end
@@ -191,7 +191,7 @@ module Arango
 
   # == CLUSTER ==
 
-    def checkPort(port: @port)
+    def check_port(port: @port)
       request("GET", "_admin/clusterCheckPort", query: {port: port.to_s})
     end
 
@@ -211,7 +211,7 @@ module Arango
       request("GET", "_admin/log/level")
     end
 
-    def updateLoglevel(body:)
+    def update_loglevel(body:)
       request("PUT", "_admin/log/level", body: body)
     end
 
@@ -228,7 +228,7 @@ module Arango
       request("GET", "_admin/statistics")
     end
 
-    def statisticsDescription
+    def statistics_description
       request("GET", "_admin/statistics-description")
     end
 
@@ -240,7 +240,7 @@ module Arango
       request("GET", "_admin/server/role", key: :role)
     end
 
-    def serverData
+    def server_data
       request("GET", "_admin/server/id")
     end
 
@@ -248,22 +248,22 @@ module Arango
       request("GET", "_admin/server/mode")
     end
 
-    def updateMode(mode:)
+    def update_mode(mode:)
       satisfy_category?(mode, ["default", "readonly"])
       body = {mode: mode}
       request("PUT", "_admin/server/mode", body: mode)
     end
 
-    def clusterHealth
+    def cluster_health
       request("GET", "_admin/health")
     end
 
-    def clusterStatistics dbserver:
+    def cluster_statistics dbserver:
       query = {DBserver: dbserver}
       request("GET", "_admin/clusterStatistics", query: query)
     end
 
-    def serverId
+    def server_id
       request("GET", "_api/replication/server-id", key: :serverId)
     end
 
@@ -277,7 +277,7 @@ module Arango
       request("GET", "_api/cluster/endpoints")
     end
 
-    def allEndpoints(warning: @warning)
+    def all_endpoints(warning: @warning)
       warning_deprecated(warning, "allEndpoints")
       request("GET", "_api/endpoint")
     end
@@ -311,48 +311,48 @@ module Arango
 
 # === ASYNC ===
 
-    def fetchAsync(id:)
+    def fetch_async(id:)
       request("PUT", "_api/job/#{id}")
     end
 
-    def cancelAsync(id:)
+    def cancel_async(id:)
       request("PUT", "_api/job/#{id}/cancel", key: :result)
     end
 
-    def destroyAsync(id:, stamp: nil)
+    def destroy_async(id:, stamp: nil)
       query = {stamp: stamp}
       request("DELETE", "_api/job/#{id}", query: query, key: :result)
     end
 
-    def destroyAsyncByType(type:, stamp: nil)
+    def destroy_async_by_type(type:, stamp: nil)
       satisfy_category?(type, ["all", "expired"])
       query = {stamp: stamp}
       request("DELETE", "_api/job/#{type}", query: query)
     end
 
-    def destroyAllAsync
+    def destroy_all_async
       destroyAsyncByType(type: "all")
     end
 
-    def destroyExpiredAsync
+    def destroy_expired_async
       destroyAsyncByType(type: "expired")
     end
 
-    def retrieveAsync(id:)
+    def retrieve_async(id:)
       request("GET", "_api/job/#{id}")
     end
 
-    def retrieveAsyncByType(type:, count: nil)
+    def retrieve_async_by_type(type:, count: nil)
       satisfy_category?(type, ["done", "pending"])
       request("GET", "_api/job/#{type}", query: {count: count})
     end
 
-    def retrieveDoneAsync(count: nil)
-      retrieveAsyncByType(type: "done", count: count)
+    def retrieve_done_async(count: nil)
+      retrieve_async_by_type(type: "done", count: count)
     end
 
-    def retrievePendingAsync(count: nil)
-      retrieveAsyncByType(type: "pending", count: count)
+    def retrieve_pending_async(count: nil)
+      retrieve_async_by_type(type: "pending", count: count)
     end
 
   # === BATCH ===
@@ -361,7 +361,7 @@ module Arango
       Arango::Batch.new(server: self, boundary: boundary, queries: queries)
     end
 
-    def createDumpBatch(ttl:, dbserver: nil)
+    def create_dump_batch(ttl:, dbserver: nil)
       query = { DBserver: dbserver }
       body = { ttl: ttl }
       result = request("POST", "_api/replication/batch",
@@ -370,13 +370,13 @@ module Arango
       return result[:id]
     end
 
-    def destroyDumpBatch(id:, dbserver: nil)
+    def destroy_dump_batch(id:, dbserver: nil)
       query = {DBserver: dbserver}
       result = request("DELETE", "_api/replication/batch/#{id}", query: query)
       return_delete(result)
     end
 
-    def prolongDumpBatch(id:, ttl:, dbserver: nil)
+    def prolong_dump_batch(id:, ttl:, dbserver: nil)
       query = { DBserver: dbserver }
       body  = { ttl: ttl }
       result = request("PUT", "_api/replication/batch/#{id}",
@@ -387,18 +387,18 @@ module Arango
 
   # === AGENCY ===
 
-    def agencyConfig
+    def agency_config
       request("GET", "_api/agency/config")
     end
 
-    def agencyWrite(body:, agency_mode: nil)
+    def agency_write(body:, agency_mode: nil)
       satisfy_category?(agency_mode, ["waitForCommmitted", "waitForSequenced", "noWait", nil])
       headers = {"X-ArangoDB-Agency-Mode": agency_mode}
       request("POST", "_api/agency/write", headers: headers,
         body: body)
     end
 
-    def agencyRead(body:, agency_mode: nil)
+    def agency_read(body:, agency_mode: nil)
       satisfy_category?(agency_mode, ["waitForCommmitted", "waitForSequenced", "noWait", nil])
       headers = {"X-ArangoDB-Agency-Mode": agency_mode}
       request("POST", "_api/agency/read", headers: headers,
@@ -420,7 +420,7 @@ module Arango
       @engine ||= request("GET", "_api/engine")
     end
 
-    def flushWAL(waitForSync: nil, waitForCollector: nil)
+    def flush_wal(waitForSync: nil, waitForCollector: nil)
       body = {
         waitForSync: waitForSync,
         waitForCollector: waitForCollector
@@ -429,11 +429,11 @@ module Arango
       return return_directly?(result) ? result: true
     end
 
-    def propertyWAL
+    def property_wal
       request("GET", "_admin/wal/properties")
     end
 
-    def changePropertyWAL(allowOversizeEntries: nil, logfileSize: nil,
+    def change_property_wal(allowOversizeEntries: nil, logfileSize: nil,
       historicLogfiles: nil, reserveLogfiles: nil, throttleWait: nil,
       throttleWhenPending: nil)
       body = {
@@ -459,7 +459,7 @@ module Arango
       request("POST", "_admin/echo", body: {})
     end
 
-    def databaseVersion
+    def database_version
       request("GET", "_admin/database/target-version", key: :version)
     end
 

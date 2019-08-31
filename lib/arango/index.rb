@@ -27,9 +27,8 @@ module Arango
       super
     end
 
-    def initialize(collection:, body: {}, id: nil, type: "hash", unique: nil,
-      fields:, sparse: nil, geoJson: nil, minLength: nil, deduplicate: nil,
-      cache_name: nil)
+    def initialize(collection:, fields:, body: {}, cache_name: nil, deduplicate: nil, geo_json: nil, id: nil, min_length: nil, sparse: nil,
+                   type: "hash", unique: nil)
       assign_collection(collection)
       unless cache_name.nil?
         @cache_name = cache_name
@@ -41,20 +40,19 @@ module Arango
       body[:unique]      ||= unique
       body[:fields]      ||= fields.is_a?(String) ? [fields] : fields
       body[:deduplicate] ||= deduplicate
-      body[:geoJson]     ||= geoJson
-      body[:minLength]   ||= minLength
+      body[:geoJson]     ||= geo_json
+      body[:minLength]   ||= min_length
 
       assign_attributes(body)
     end
 
 # === DEFINE ===
 
-    attr_accessor :id, :unique, :fields, :key, :sparse, :geoJson, :minLenght,
-      :deduplicate, :cache_name
-    attr_reader :type, :database, :collection, :server
+    attr_accessor :cache_name, :deduplicate, :fields, :geo_json, :id, :key, :min_length, :sparse, :unique
+    attr_reader :collection, :database, :server, :type
 
     def type=(type)
-      satisfy_category?(type, ["hash", "skiplist", "persistent", "geo", "fulltext", "primary"])
+      satisfy_category?(type, %w[hash skiplist persistent geo fulltext primary])
       @type = type
     end
     alias assign_type type=
@@ -67,8 +65,8 @@ module Arango
       @unique      = result[:unique]      || @unique
       @fields      = result[:fields]      || @fields
       @sparse      = result[:sparse]      || @sparse
-      @geoJson     = result[:geoJson]     || @geoJson
-      @minLength   = result[:minLength]   || @minLength
+      @geo_json     = result[:geoJson]     || @geo_json
+      @min_length   = result[:minLength]   || @min_length
       @deduplicate = result[:deduplicate] || @deduplicate
       if @server.active_cache && @cache_name.nil?
         @cache_name = "#{@database.name}/#{@collection.name}/#{@id}"
@@ -89,8 +87,8 @@ module Arango
         unique: @unique,
         fields: @fields,
         idCache: @idCache,
-        geoJson: @geoJson,
-        minLength: @minLength,
+        geoJson: @geo_json,
+        minLength: @min_length,
         deduplicate: @deduplicate,
         collection: @collection.name
       }.delete_if{|k,v| v.nil?}
@@ -109,8 +107,8 @@ module Arango
         unique:      @unique,
         type:        @type,
         id:          @id,
-        geoJson:     @geoJson,
-        minLength:   @minLength,
+        geoJson:     @geo_json,
+        minLength:   @min_length,
         deduplicate: @deduplicate
       }
       query = { collection: @collection.name }

@@ -50,16 +50,16 @@ module Arango
     end
     alias assign_type type=
 
-    def addLink(collection:, analyzers: nil, fields: {}, includeAllFields: nil, trackListPositions: nil, storeValues: nil)
+    def add_link(collection:, analyzers: nil, fields: {}, include_all_fields: nil, track_list_positions: nil, store_values: nil)
       satisfy_class?(collection, [Arango::Collection, String])
       collection_name = collection.is_a?(String) ? collection : collection.name
-      satisfy_category?(storeValues, ["none", "id", nil])
+      satisfy_category?(store_values, ["none", "id", nil])
       @links[collection_name] = {
         analyzers: analyzers,
         fields: fields,
-        includeAllFields: includeAllFields,
-        trackListPositions: trackListPositions,
-        storeValues: storeValues
+        includeAllFields: include_all_fields,
+        trackListPositions: track_list_positions,
+        storeValues: store_values
       }
       @links[collection_name].delete_if{|k,v| v.nil?}
     end
@@ -96,16 +96,16 @@ module Arango
       return_element(result)
     end
 
-    def manage_properties(method, url, consolidationIntervalMsec: nil, threshold: nil, segmentThreshold: nil, cleanupIntervalStep: nil)
+    def manage_properties(method, url, consolidation_interval_msec: nil, threshold: nil, segment_threshold: nil, cleanup_interval_step: nil)
       body = {
         properties: {
           links: @links.empty? ? nil : @links,
-          consolidationIntervalMsec: consolidationIntervalMsec,
+          consolidationIntervalMsec: consolidation_interval_msec,
           consolidationPolicy: {
             threshold: threshold,
-            segmentThreshold: segmentThreshold
+            segmentThreshold: segment_threshold
           },
-          cleanupIntervalStep: cleanupIntervalStep
+          cleanupIntervalStep: cleanup_interval_step
         }
       }
       if method == "POST"
@@ -122,16 +122,16 @@ module Arango
     end
     private :manage_properties
 
-    def create(consolidationIntervalMsec: nil, threshold: nil, segmentThreshold: nil, cleanupIntervalStep: nil)
-      manage_properties("POST", "_api/view", consolidationIntervalMsec: consolidationIntervalMsec, threshold: threshold, segmentThreshold: segmentThreshold, cleanupIntervalStep: cleanupIntervalStep)
+    def create(consolidation_interval_msec: nil, threshold: nil, segment_threshold: nil, cleanup_interval_step: nil)
+      manage_properties("POST", "_api/view", consolidation_interval_msec: consolidation_interval_msec, threshold: threshold, segment_threshold: segment_threshold, cleanup_interval_step: cleanup_interval_step)
     end
 
-    def replaceProperties(consolidationIntervalMsec: nil, threshold: nil, segmentThreshold: nil, cleanupIntervalStep: nil)
-      manage_properties("PUT", "_api/view/#{@name}/properties", consolidationIntervalMsec: consolidationIntervalMsec, threshold: threshold, segmentThreshold: segmentThreshold, cleanupIntervalStep: cleanupIntervalStep)
+    def replace_properties(consolidation_interval_msec: nil, threshold: nil, segment_threshold: nil, cleanup_interval_step: nil)
+      manage_properties("PUT", "_api/view/#{@name}/properties", consolidation_interval_msec: consolidation_interval_msec, threshold: threshold, segment_threshold: segment_threshold, cleanup_interval_step: cleanup_interval_step)
     end
 
-    def updateProperties(consolidationIntervalMsec: nil, threshold: nil, segmentThreshold: nil, cleanupIntervalStep: nil)
-      manage_properties("PATCH", "_api/view/#{@name}/properties", consolidationIntervalMsec: consolidationIntervalMsec, threshold: threshold, segmentThreshold: segmentThreshold, cleanupIntervalStep: cleanupIntervalStep)
+    def update_properties(consolidation_interval_msec: nil, threshold: nil, segment_threshold: nil, cleanup_interval_step: nil)
+      manage_properties("PATCH", "_api/view/#{@name}/properties", consolidation_interval_msec: consolidation_interval_msec, threshold: threshold, segment_threshold: segment_threshold, cleanup_interval_step: cleanup_interval_step)
     end
 
     def rename name:

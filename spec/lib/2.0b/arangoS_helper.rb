@@ -32,7 +32,7 @@ describe Arango::Server do
     end
 
     it "statisticsDescription" do
-      expect(@server.statisticsDescription[:groups][0].nil?).to be false
+      expect(@server.statistics_description[:groups][0].nil?).to be false
     end
 
     it "role" do
@@ -71,7 +71,7 @@ describe Arango::Server do
     it "pendingAsync" do
       @server.async = :store
       @myAQL.execute
-      val = @server.retrievePendingAsync
+      val = @server.retrieve_pending_async
       expect(val.to_i.to_s).to eq val
     end
 
@@ -79,7 +79,7 @@ describe Arango::Server do
       @server.async = :store
       id = @myAQL.execute
       @server.async = false
-      val = @server.fetchAsync(id: id)
+      val = @server.fetch_async(id: id)
       # order is undefined
       expect(val[:result].sort).to eq [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 2, 5, 2, 1, 1, 2].sort
     end
@@ -88,7 +88,7 @@ describe Arango::Server do
       @server.async = :store
       id = @myAQL.execute
       @server.async = false
-      val = @server.cancelAsync(id: id)
+      val = @server.cancel_async(id: id)
       expect(val).to eq true
     end
 
@@ -96,7 +96,7 @@ describe Arango::Server do
       @server.async = :store
       id = @myAQL.execute
       @server.async = false
-      val = @server.destroyAsync id: id
+      val = @server.destroy_async id: id
       expect(val).to be true
     end
   end
@@ -122,18 +122,18 @@ describe Arango::Server do
     end
 
     it "createDumpBatch" do
-      expect((@server.createDumpBatch ttl: 100).to_i).to be > 1
+      expect((@server.create_dump_batch ttl: 100).to_i).to be > 1
     end
 
     it "prolongDumpBatch" do
-      dumpBatchID = @server.createDumpBatch ttl: 100
-      val = @server.prolongDumpBatch ttl: 100, id: dumpBatchID
+      dumpBatchID = @server.create_dump_batch ttl: 100
+      val = @server.prolong_dump_batch ttl: 100, id: dumpBatchID
       expect(val).to be true
     end
 
     it "destroyDumpBatch" do
-      dumpBatchID = @server.createDumpBatch ttl: 100
-      expect(@server.destroyDumpBatch id: dumpBatchID).to be true
+      dumpBatchID = @server.create_dump_batch ttl: 100
+      expect(@server.destroy_dump_batch id: dumpBatchID).to be true
     end
   end
 
@@ -156,7 +156,7 @@ describe Arango::Server do
     # end
 
     it "flushWAL" do
-      expect(@server.flushWAL).to be true
+      expect(@server.flush_wal).to be true
     end
 
     it "transactions" do
@@ -172,7 +172,7 @@ describe Arango::Server do
     end
 
     it "databaseVersion" do
-      expect(@server.databaseVersion.to_i).to be >= 1
+      expect(@server.database_version.to_i).to be >= 1
     end
 
     # it "sleep" do

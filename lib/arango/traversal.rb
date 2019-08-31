@@ -6,30 +6,27 @@ module Arango
     include Arango::Helper::Return
     include Arango::Helper::DatabaseAssignment
 
-    def initialize(body: {}, edgeCollection: nil,
-      sort: nil, direction: nil, minDepth: nil,
-      vertex:, visitor: nil, itemOrder: nil, strategy: nil,
-      filter: nil, init: nil, maxIterations: nil, maxDepth: nil,
-      uniqueness: nil, order: nil, expander: nil)
+    def initialize(body: {}, direction: nil, edge_collection: nil, expander: nil, filter: nil, init: nil, item_order: nil, max_depth: nil,
+                   max_iterations: nil, min_depth: nil, order: nil, sort: nil, strategy: nil, uniqueness: nil, vertex:, visitor: nil)
       satisfy_category?(direction, ["outbound", "inbound", "any", nil])
-      satisfy_category?(itemOrder, ["forward", "backward", nil])
-      satisfy_category?(strategy, ["depthfirst", "breadthfirst", nil])
+      satisfy_category?(item_order, ["forward", "backward", nil])
       satisfy_category?(order, ["preorder", "postorder", "preorder-expander", nil])
-      body[:sort]           ||= sort
-      body[:direction]      ||= direction
-      body[:maxDepth]       ||= maxDepth
-      body[:minDepth]       ||= minDepth
-      body[:startVertex]    ||= vertex
-      body[:visitor]        ||= visitor
-      body[:itemOrder]      ||= itemOrder
-      body[:strategy]       ||= strategy
-      body[:filter]         ||= filter
-      body[:init]           ||= init
-      body[:maxiterations]  ||= maxIterations
-      body[:uniqueness]     ||= uniqueness
-      body[:order]          ||= order
-      body[:expander]       ||= expander
-      body[:edgeCollection] ||= edgeCollection
+      satisfy_category?(strategy, ["depthfirst", "breadthfirst", nil])
+      body[:direction]       ||= direction
+      body[:edge_collection] ||= edge_collection
+      body[:expander]        ||= expander
+      body[:filter]          ||= filter
+      body[:init]            ||= init
+      body[:item_order]      ||= item_order
+      body[:max_depth]       ||= max_depth
+      body[:max_iterations]  ||= max_iterations
+      body[:min_depth]       ||= min_depth
+      body[:order]           ||= order
+      body[:sort]            ||= sort
+      body[:startVertex]     ||= vertex
+      body[:strategy]        ||= strategy
+      body[:uniqueness]      ||= uniqueness
+      body[:visitor]         ||= visitor
       assign_body(body)
       @vertices = nil
       @paths = nil
@@ -37,28 +34,28 @@ module Arango
 
 # === DEFINE ===
 
-    attr_accessor :sort, :maxDepth, :minDepth, :visitor, :filter, :init, :maxiterations, :uniqueness, :expander
-    attr_reader :vertices, :paths, :direction, :itemOrder,
-      :strategy, :order, :database, :server, :vertex, :edgeCollection, :graph, :body, :collection
-    alias startVertex vertex
+    attr_accessor :expander, :filter, :init, :max_depth, :max_iterations, :min_depth, :sort, :uniqueness, :visitor
+    attr_reader :body, :collection, :database, :direction, :edge_collection, :graph, :item_order, :order, :paths, :server, :strategy,
+                :vertex, :vertices
+    alias start_vertex vertex
 
     def body=(body)
       @body = body
-      @sort        = body[:sort] || @sort
-      @direction   = body[:direction] || @direction
-      @maxDepth    = body[:maxDepth] || @maxDepth
-      @minDepth    = body[:minDepth] || @minDepth
-      return_vertex(body[:startVertex] || @vertex)
-      @visitor     = body[:visitor] || @visitor
-      @itemOrder   = body[:itemOrder] || @itemOrder
-      @strategy    = body[:strategy] || @strategy
-      @filter      = body[:filter] || @filter
-      @init        = body[:init] || @init
-      @maxIterations = body[:maxiterations] || @maxIterations
-      @uniqueness  = body[:uniqueness] || @uniqueness
-      @order       = body[:order] || @order
-      @expander    = body[:expander] || @expander
-      return_edgeCollection(body[:edgeCollection] || @edgeCollection)
+      @direction      = body[:direction] || @direction
+      @expander       = body[:expander] || @expander
+      @filter         = body[:filter] || @filter
+      @init           = body[:init] || @init
+      @item_order     = body[:item_order] || @item_order
+      @max_depth      = body[:maxDepth] || @max_depth
+      @max_iterations = body[:max_iterations] || @max_iterations
+      @min_depth      = body[:min_depth] || @min_depth
+      @order          = body[:order] || @order
+      @sort           = body[:sort] || @sort
+      @strategy       = body[:strategy] || @strategy
+      @uniqueness     = body[:uniqueness] || @uniqueness
+      @visitor       = body[:visitor] || @visitor
+      send(:edge_collection=, body[:edge_collection] || @edge_collection)
+      send(:start_vertex=, body[:startVertex] || @vertex)
     end
     alias assign_body body=
 
@@ -67,9 +64,9 @@ module Arango
       @direction = direction
     end
 
-    def itemOrder=(itemOrder)
+    def item_order=(itemOrder)
       satisfy_category?(itemOrder, ["forward", "backward", nil])
-      @itemOrder = itemOrder
+      @item_order = itemOrder
     end
 
     def strategy=(strategy)
@@ -82,7 +79,7 @@ module Arango
       @order = order
     end
 
-    def startVertex=(vertex)
+    def start_vertex=(vertex)
       case vertex
       when Arango::Edge
       when Arango::Document, Arango::Vertex
@@ -104,10 +101,9 @@ module Arango
       end
       raise Arango::Error.new err: :wrong_start_vertex_type
     end
-    alias vertex= startVertex=
-    alias return_vertex startVertex=
+    alias vertex= start_vertex=
 
-    def edgeCollection=(collection)
+    def edge_collection=(collection)
       return nil if collection.nil?
       satisfy_class?(collection, [Arango::Collection, String])
       case collection
@@ -115,21 +111,13 @@ module Arango
         if collection.type != :edge
           raise Arango::Error.new err: :edge_collection_should_be_of_type_edge
         end
-        @edgeCollection = collection
+        @edge_collection = collection
       when String
-        collection_instance = Arango::Collection.new(name: edgedef[:collection],
+        collection_instance = Arango::Collection.new(name: collection,
           database: @database, type: :edge, graph: @graph)
-        @edgeCollection = collection_instance
+        @edge_collection = collection_instance
       end
     end
-    alias return_edgeCollection edgeCollection=
-
-    alias vertex= startVertex=
-    alias vertex startVertex
-    alias max maxDepth
-    alias max= maxDepth=
-    alias min minDepth
-    alias min= minDepth=
 
     def in
       @direction = "inbound"
@@ -147,31 +135,31 @@ module Arango
 
     def to_h
       {
-        sort: @sort,
+        database: @database.name,
         direction: @direction,
-        maxDepth: @maxDepth,
-        minDepth: @minDepth,
-        visitor: @visitor,
-        itemOrder: @itemOrder,
-        strategy: @strategy,
-        filter: @filter,
-        init: @init,
-        maxiterations: @maxiterations,
-        uniqueness: @uniqueness,
-        order: @order,
+        edgeCollection: @edge_collection&.name,
         expander: @expander,
-        vertices: @vertices&.map{|x| x.id},
+        filter: @filter,
+        graph: @graph&.name,
+        idCache: @id_cache,
+        init: @init,
+        itemOrder: @item_order,
+        maxDepth: @max_depth,
+        maxiterations: @max_iterations,
+        minDepth: @min_depth,
+        order: @order,
         paths: @paths&.map do |x|
           {
             edges: x[:edges]&.map{|e| e.id},
             vertices: x[:vertices]&.map{|v| v.id}
           }
         end,
-        idCache: @idCache,
+        sort: @sort,
         startVertex: @vertex&.id,
-        graph: @graph&.name,
-        edgeCollection: @edgeCollection&.name,
-        database: @database.name
+        strategy: @strategy,
+        uniqueness: @uniqueness,
+        vertices: @vertices&.map{|x| x.id},
+        visitor: @visitor
       }.delete_if{|k,v| v.nil?}
     end
 
@@ -179,22 +167,22 @@ module Arango
 
     def execute
       body = {
-        sort: @sort,
         direction: @direction,
-        maxDepth: @maxDepth,
-        minDepth: @minDepth,
-        startVertex: @vertex&.id,
-        visitor: @visitor,
-        itemOrder: @itemOrder,
-        strategy: @strategy,
-        filter: @filter,
-        init: @init,
-        maxiterations: @maxiterations,
-        uniqueness: @uniqueness,
-        order: @order,
-        graphName: @graph&.name,
+        edgeCollection: @edge_collection&.name,
         expander: @expander,
-        edgeCollection: @edgeCollection&.name
+        filter: @filter,
+        graphName: @graph&.name,
+        init: @init,
+        itemOrder: @item_order,
+        maxDepth: @max_depth,
+        maxiterations: @max_iterations,
+        minDepth: @min_depth,
+        order: @order,
+        sort: @sort,
+        startVertex: @vertex&.id,
+        strategy: @strategy,
+        uniqueness: @uniqueness,
+        visitor: @visitor
       }
       result = @database.request("POST", "_api/traversal", body: body)
       return result if @server.async != false

@@ -18,7 +18,7 @@ module Arango
           return super
         else
           body = {}
-          [:password, :extra, :active].each{|k| body[k] ||= hash[k]}
+          %i[password extra active].each{|k| body[k] ||= hash[k]}
           cached.assign_attributes(body)
           return cached
         end
@@ -47,11 +47,11 @@ module Arango
     alias user= name=
 
     def body=(result)
-      @body   = result
+      @body     = result
       @password = result[:password] || @password
-      @name   = result[:user]   || @name
-      @extra  = result[:extra]  || @extra
-      @active = result[:active].nil? ? @active : result[:active]
+      @name     = result[:user]   || @name
+      @extra    = result[:extra]  || @extra
+      @active   = result[:active].nil? ? @active : result[:active]
       if @server.active_cache && @cache_name.nil?
         @cache_name = @name
         @server.cache.save(:user, @cache_name, self)
@@ -63,11 +63,11 @@ module Arango
 
     def to_h
       {
-        user: @name,
-        extra: @extra,
         active: @active,
         cache_name: @cache_name,
-        server: @server.base_uri
+        extra: @extra,
+        server: @server.base_uri,
+        user: @name
       }.delete_if{|k,v| v.nil?}
     end
 
@@ -127,41 +127,39 @@ module Arango
 
   # == ACCESS ==
 
-    def addDatabaseAccess(grant:, database:)
-      satisfy_category?(grant, ["rw", "ro", "none"])
+    def add_database_access(grant:, database:)
+      satisfy_category?(grant, %w[rw ro none])
       satisfy_class?(database, [Arango::Database, String])
       database = database.name if database.is_a?(Arango::Database)
-      body = {grant: grant}
-      result = @server.request("PUT", "_api/user/#{@name}/database/#{database}",
-        body: body)
+      body = { grant: grant }
+      result = @server.request("PUT", "_api/user/#{@name}/database/#{database}", body: body)
       return return_directly?(result) ? result : result[database.to_sym]
     end
 
     def grant(database:)
-      addDatabaseAccess(grant: "rw", database: database)
+      add_database_access(grant: "rw", database: database)
     end
 
-    def addCollectionAccess(grant:, database:, collection:)
-      satisfy_category?(grant, ["rw", "ro", "none"])
+    def add_collection_access(grant:, database:, collection:)
+      satisfy_category?(grant, %w[rw ro none])
       satisfy_class?(database, [Arango::Database, String])
       satisfy_class?(collection, [Arango::Collection, String])
       database = database.name     if database.is_a?(Arango::Database)
       collection = collection.name if collection.is_a?(Arango::Collection)
-      body = {grant: grant}
-      result = @server.request("PUT", "_api/user/#{@name}/database/#{database}/#{collection}",
-        body: body)
+      body = { grant: grant }
+      result = @server.request("PUT", "_api/user/#{@name}/database/#{database}/#{collection}", body: body)
       return return_directly?(result) ? result : result[:"#{database}/#{collection}"]
     end
 
-    def revokeDatabaseAccess(database:)
+    def revoke_database_access(database:)
       satisfy_class?(database, [Arango::Database, String])
       database = database.name if database.is_a?(Arango::Database)
       result = @server.request("DELETE", "_api/user/#{@name}/database/#{database}")
       return return_directly?(result) ? result : true
     end
-    alias revoke revokeDatabaseAccess
+    alias revoke revoke_database_access
 
-    def revokeCollectionAccess(database:, collection:)
+    def revoke_collection_access(database:, collection:)
       satisfy_class?(database, [Arango::Database, String])
       satisfy_class?(collection, [Arango::Collection, String])
       database = database.name     if database.is_a?(Arango::Database)
@@ -170,27 +168,26 @@ module Arango
       return return_directly?(result) ? result : true
     end
 
-    def listAccess(full: nil)
-      query = {full: full}
+    def list_access(full: nil)
+      query = { full: full }
       result = @server.request("GET", "_api/user/#{@name}/database", query: query)
       return return_directly?(result) ? result : result[:result]
     end
-    alias databases listAccess
+    alias databases list_access
 
-    def databaseAccess(database:)
+    def database_access(database:)
       satisfy_class?(database, [Arango::Database, String])
       database = database.name if database.is_a?(Arango::Database)
       result = @server.request("GET", "_api/user/#{@name}/database/#{database}")
       return return_directly?(result) ? result : result[:result]
     end
 
-    def collectionAccess(database:, collection:)
+    def collection_access(database:, collection:)
       satisfy_class?(database, [Arango::Database, String])
       satisfy_class?(collection, [Arango::Collection, String])
       database = database.name     if database.is_a?(Arango::Database)
       collection = collection.name if collection.is_a?(Arango::Collection)
-      result = @server.request("GET", "_api/user/#{@name}/database/#{database}/#{collection}",
-        body: body)
+      result = @server.request("GET", "_api/user/#{@name}/database/#{database}/#{collection}", body: body)
       return return_directly?(result) ? result : result[:result]
     end
   end

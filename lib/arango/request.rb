@@ -8,23 +8,23 @@ module Arango
       @async = async
     end
 
-    attr_accessor :return_output, :base_uri, :options, :verbose, :async
+    attr_accessor :async, :base_uri, :options, :return_output, :verbose
 
     def request(action, url, body: {}, headers: {}, query: {},
       key: nil, return_direct_result: @return_output, skip_to_json: false,
-      keepNull: false, skip_parsing: false)
+      keep_null: false, skip_parsing: false)
       send_url = "#{@base_uri}/"
       send_url += url
 
       if body.is_a?(Hash)
-        body.delete_if{|k,v| v.nil?} unless keepNull
+        body.delete_if{|k,v| v.nil?} unless keep_null
       end
       query.delete_if{|k,v| v.nil?}
       headers.delete_if{|k,v| v.nil?}
       options = @options.merge({body: body, params: query})
       options[:headers].merge!(headers)
 
-      if ["GET", "HEAD", "DELETE"].include?(action)
+      if %w[GET HEAD DELETE].include?(action)
         options.delete(:body)
       end
 
@@ -113,7 +113,7 @@ module Arango
       when Hash
         if result[:error]
           raise Arango::ErrorDB.new message: result[:errorMessage],
-            code: result[:code], data: result, errorNum: result[:errorNum],
+            code: result[:code], data: result, error_num: result[:errorNum],
             action: action, url: send_url, request: options
         elsif return_direct_result
           return result
@@ -121,7 +121,7 @@ module Arango
       when Array, NilClass
         return result
       else
-        raise Arango::Error.new message: "ArangoRB didn't return a valid result",
+        raise Arango::Error.new err: :arangodb_did_not_return_a_valid_result,
           data: {response: response, action: action, url: send_url, request: JSON.pretty_generate(options)}
       end
       return key.nil? ? result.delete_if{|k,v| k == :error || k == :code} : result[key]

@@ -59,7 +59,7 @@ module Arango
 
 # === QUERY ===
 
-    def addQuery(id: @id, method:, address:, body: nil)
+    def add_query(id: @id, method:, address:, body: nil)
       id = id.to_s
       @queries[id] = {
         id:      id,
@@ -70,9 +70,9 @@ module Arango
       @id += 1
       return @queries
     end
-    alias modifyQuery addQuery
+    alias modify_query add_query
 
-    def removeQuery(id:)
+    def remove_query(id:)
       @queries.delete(id)
       return @queries
     end
@@ -87,7 +87,7 @@ module Arango
         body += "Content-Id: #{query[:id]}\n\n"
         body += "#{query[:method]} "
         body += "#{query[:address]} HTTP/1.1\n"
-        body += "\n#{Oj.dump(query[:body])}\n" unless query[:body].nil?
+        body += "\n#{Oj.dump(query[:body], mode: :json)}\n" unless query[:body].nil?
       end
       body += "--#{@boundary}--\n" if @queries.length > 0
       @server.request("POST", "_api/batch", body: body, skip_to_json: true,

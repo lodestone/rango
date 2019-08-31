@@ -2,6 +2,8 @@
 
 module Arango
   class Vertex < Arango::Document
+    include Arango::Helper::Traversal
+
     def initialize(name: nil, collection:, body: {}, rev: nil, cache_name: nil)
       assign_collection(collection)
       unless cache_name.nil?
@@ -36,16 +38,15 @@ module Arango
     def retrieve(if_match: false)
       headers = {}
       headers[:"If-Match"] = @body[:_rev] if if_match
-      result = @graph.request("GET", "vertex/#{@collection.name}/#{@body[:_key]}",
-        headers: headers, key: :vertex)
+      result = @graph.request("GET", "vertex/#{@collection.name}/#{@body[:_key]}", headers: headers, key: :vertex)
       return_element(result)
     end
 
 # == POST ==
 
-    def create(body: {}, waitForSync: nil)
+    def create(body: {}, wait_for_sync: nil)
       body = @body.merge(body)
-      query = {waitForSync: waitForSync}
+      query = { waitForSync: wait_for_sync }
       result = @graph.request("POST", "vertex/#{@collection.name}", body: body,
         query: query, key: :vertex)
       return result if @server.async != false
@@ -57,10 +58,10 @@ module Arango
 
 # == PUT ==
 
-    def replace(body: {}, waitForSync: nil, keepNull: nil, if_match: false)
+    def replace(body: {}, if_match: false, keep_null: nil, wait_for_sync: nil)
       query = {
-        waitForSync: waitForSync,
-        keepNull: keepNull
+        waitForSync: wait_for_sync,
+        keepNull: keep_null
       }
       headers = {}
       headers[:"If-Match"] = @body[:_rev] if if_match
@@ -73,8 +74,8 @@ module Arango
       return return_directly?(result) ? result : self
     end
 
-    def update(body: {}, waitForSync: nil, if_match: false, keepNull: nil)
-      query = {waitForSync: waitForSync, keepNull: keepNull}
+    def update(body: {}, if_match: false, keep_null: nil, wait_for_sync: nil)
+      query = { waitForSync: wait_for_sync, keepNull: keep_null }
       headers = {}
       headers[:"If-Match"] = @body[:_rev] if if_match
       result = @graph.request("PATCH", "vertex/#{@collection.name}/#{@body[:_key]}", body: body,
@@ -89,8 +90,8 @@ module Arango
 
 # === DELETE ===
 
-    def destroy(waitForSync: nil, if_match: false)
-      query = {waitForSync: waitForSync}
+    def destroy(wait_for_sync: nil, if_match: false)
+      query = { waitForSync: wait_for_sync }
       headers = {}
       headers[:"If-Match"] = @body[:_rev] if if_match
       result = @graph.request("DELETE", "vertex/#{@collection.name}/#{@body[:_key]}",
@@ -98,30 +99,14 @@ module Arango
       return_delete(result)
     end
 
-# === TRAVERSAL ===
-
-    def traversal(body: {}, sort: nil, direction: nil, minDepth: nil,
-      visitor: nil, itemOrder: nil, strategy: nil,
-      filter: nil, init: nil, maxIterations: nil, maxDepth: nil,
-      uniqueness: nil, order: nil, expander: nil,
-      edgeCollection: nil)
-      Arango::Traversal.new(body: body,
-        sort: sort, direction: direction, minDepth: minDepth,
-        vertex: self, visitor: visitor,itemOrder: itemOrder,
-        strategy: strategy, filter: filter, init: init,
-        maxIterations: maxIterations, maxDepth: maxDepth,
-        uniqueness: uniqueness, order: order,
-        expander: expander, edgeCollection: edgeCollection)
-    end
-
 # === WRONG ===
 
     def from=(arg)
-      raise Arango::Error.new err: you_cannot_assign_from_or_to_to_a_vertex
+      raise Arango::Error.new err: :you_cannot_assign_from_or_to_to_a_vertex
     end
     alias to= from=
     alias to from=
-    alias toR from=
-    alias fromR from=
+    alias to_r from=
+    alias from_r from=
   end
 end

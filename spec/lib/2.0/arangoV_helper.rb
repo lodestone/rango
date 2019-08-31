@@ -20,7 +20,7 @@ describe Arango::Vertex do
       begin
         myVertex = @myVertex.create
       rescue Arango::ErrorDB => e
-        error = e.errorNum
+        error = e.error_num
       end
       expect(error).to eq 1210
     end
@@ -33,7 +33,7 @@ describe Arango::Vertex do
     end
 
     it "retrieve Edges" do
-      @myEdgeCollection.createEdges from: ["MyCollection/myA", "MyCollection/myB"], to: @myVertex
+      @myEdgeCollection.create_edges from: ["MyCollection/myA", "MyCollection/myB"], to: @myVertex
       myEdges = @myVertex.edges(collection: @myEdgeCollection)
       expect(myEdges.length).to eq 2
     end

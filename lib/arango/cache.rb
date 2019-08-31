@@ -56,7 +56,7 @@ module Arango
       @cache.each_key{|k| @cache[k] = {}}
     end
 
-    def updateMax(type:, val:)
+    def update_max(type:, val:)
       type = type.to_sym rescue type = :error
       unless @max.has_key?(type.to_sym)
         ArangoDB::Error.new :element_in_cache_does_not_exist,

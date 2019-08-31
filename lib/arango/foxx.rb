@@ -18,8 +18,7 @@ module Arango
           return super
         else
           body = hash[:body] || {}
-          [:mount, :development, :legacy, :provides, :name, :version,
-            :type, :setup, :teardown].each{|k| body[k] ||= hash[k]}
+          %i[mount development legacy provides name version type setup teardown].each{|k| body[k] ||= hash[k]}
           cached.assign_attributes(body)
           return cached
         end
@@ -37,31 +36,30 @@ module Arango
       end
       assign_attributes(body)
       assign_type(type)
-      @mount       ||= mount
       @development ||= development
-      @setup       ||= setup
       @legacy      ||= legacy
-      @provides    ||= provides
+      @mount       ||= mount
       @name        ||= name
-      @version     ||= version
+      @provides    ||= provides
+      @setup       ||= setup
       @teardown    ||= teardown
+      @version     ||= version
     end
 
 # === DEFINE ===
 
-    attr_reader :database, :server, :type, :body, :cache_name
-    attr_accessor :name, :development, :legacy, :provides,
-      :version, :mount, :setup, :teardown
+    attr_reader :body, :cache_name, :database, :server, :type
+    attr_accessor :development, :legacy, :mount, :name, :provides, :setup, :teardown, :version
 
     def body=(result)
       if result.is_a?(Hash)
         @body        = result
-        @name        = result[:name]        || @name
-        @version     = result[:version]     || @version
-        @mount       = result[:mount]       || @mount
         @development = result[:development] || @development
         @legacy      = result[:legacy]      || @legacy
+        @mount       = result[:mount]       || @mount
+        @name        = result[:name]        || @name
         @provides    = result[:provides]    || @provides
+        @version     = result[:version]     || @version
         if @server.active_cache && @cache_name.nil?
           @cache_name = "#{@database.name}/#{@mount}"
           @server.cache.save(:task, @cache_name, self)
@@ -71,8 +69,8 @@ module Arango
     alias assign_attributes body=
 
     def type=(type)
-      satisfy_category?(type, ["application/zip", "zip", "application/javascript", "javascript", "application/json", "json", "multipart/form-data", "data"], "type")
-      type = "application/#{type}" if ["zip", "javascript", "json"].include?(type)
+      satisfy_category?(type, %w[application/zip zip application/javascript javascript application/json json multipart/form-data data])
+      type = "application/#{type}" if %w[zip javascript json].include?(type)
       type = "multipart/form-data" if type == "data"
       @type = type
     end
@@ -82,16 +80,16 @@ module Arango
 
     def to_h
       {
-        name: @name,
-        version: @version,
-        mount: @mount,
+        cache_name: @cache_name,
+        database: @database.name,
         development: @development,
         legacy: @legacy,
+        mount: @mount,
+        name: @name,
         provides: @provides,
-        type: @type,
         teardown: @teardown,
-        cache_name: @cache_name,
-        database: @database.name
+        type: @type,
+        version: @version
       }.delete_if{|k,v| v.nil?}
     end
 
@@ -119,12 +117,12 @@ module Arango
 
     def create(body: @body, type: @type, development: @development,
       setup: @setup, legacy: @legacy)
-      headers = {Accept: type}
+      headers = { Accept: type }
       skip_to_json = type != "application/json"
       query = {
         mount:        @mount,
         setup:        setup,
-        "development ": development ,
+        development: development,
         legacy:       legacy
       }
       result = @database.request("POST",
@@ -144,13 +142,13 @@ module Arango
 
     def replace(body: @body, type: @type, teardown: @teardown, setup: @setup,
       legacy: @legacy)
-      headers = {Accept: type}
+      headers = { Accept: type }
       skip_to_json = type != "application/json"
       query = {
-        mount: @mount,
-        setup: setup,
-        "development ": development,
-        legacy: legacy
+        mount:    @mount,
+        setup:    setup,
+        teardown: teardown,
+        legacy:   legacy
       }
       result = @database.request("PUT", "_api/foxx/service", body: body,
         headers: headers, skip_to_json: skip_to_json, query: query)
@@ -160,12 +158,12 @@ module Arango
     def update(body: @body, type: @type, teardown: @teardown,
       setup: @setup, legacy: @legacy)
       assign_type(type)
-      headers = {Accept: type}
+      headers = { Accept: type }
       skip_to_json = @type != "application/json"
       query = {
         mount:        @mount,
         setup:        setup,
-        "development ": development,
+        teardown:     teardown,
         legacy:       legacy
       }
       result = @database.request("PATCH", "_api/foxx/service", body: body,
@@ -175,40 +173,40 @@ module Arango
 
   # === CONFIGURATION ===
 
-    def retrieveConfiguration
-      query = {mount: @mount}
+    def retrieve_configuration
+      query = { mount: @mount }
       result = @database.request("GET", "_api/foxx/configuration", query: query)
       return_foxx(result, :configuration)
     end
 
-    def updateConfiguration(body:)
-      query = {mount: @mount}
+    def update_configuration(body:)
+      query = { mount: @mount }
       result = @database.request("PATCH", "_api/foxx/configuration", query: query, body: body)
       return_foxx(result, :configuration)
     end
 
-    def replaceConfiguration(body:)
-      query = {mount: @mount}
+    def replace_configuration(body:)
+      query = { mount: @mount }
       result = @database.request("PUT", "_api/foxx/configuration", query: query, body: body)
       return_foxx(result, :configuration)
     end
 
     # === DEPENDENCY ===
 
-    def retrieveDependencies
-      query = {mount: @mount}
+    def retrieve_dependencies
+      query = { mount: @mount }
       result = @database.request("GET", "_api/foxx/dependencies", query: query)
       return_foxx(result, :dependencies)
     end
 
-    def updateDependencies(body:)
-      query = {mount: @mount}
+    def update_dependencies(body:)
+      query = { mount: @mount }
       result = @database.request("PATCH", "_api/foxx/dependencies", query: query, body: body)
       return_foxx(result, :dependencies)
     end
 
-    def replaceDependencies(body:)
-      query = {mount: @mount}
+    def replace_dependencies(body:)
+      query = { mount: @mount }
       result = @database.request("PUT", "_api/foxx/dependencies", query: query, body: body)
       return_foxx(result, :dependencies)
     end
@@ -216,12 +214,12 @@ module Arango
     # === MISCELLANEOUS
 
     def scripts
-      query = {mount: @mount}
+      query = { mount: @mount }
       @database.request("GET", "_api/foxx/scripts", query: query)
     end
 
     def run_script(name:, body: {})
-      query = {mount: @mount}
+      query = { mount: @mount }
       @database.request("POST", "_api/foxx/scripts/#{name}", query: query, body: body)
     end
 
@@ -238,39 +236,39 @@ module Arango
       else
         nil
       end
-      query = {mount: @mount}
+      query = { mount: @mount }
       @database.request("GET", "_api/foxx/scripts", query: query, headers: headers)
     end
 
-    def enableDevelopment
-      query = {mount: @mount}
+    def enable_development
+      query = { mount: @mount }
       @database.request("POST", "_api/foxx/development", query: query)
     end
 
-    def disableDevelopment
-      query = {mount: @mount}
+    def disable_development
+      query = { mount: @mount }
       @database.request("DELETE", "_api/foxx/development", query: query)
     end
 
     def readme
-      query = {mount: @mount}
+      query = { mount: @mount }
       @database.request("GET", "_api/foxx/readme", query: query)
     end
 
     def swagger
-      query = {mount: @mount}
+      query = { mount: @mount }
       @database.request("GET", "_api/foxx/swagger", query: query)
     end
 
     def download(path:, warning: @server.warning)
-      query = {mount: @mount}
+      query = { mount: @mount }
       @server.download("POST", "_db/#{@database.name}/_api/foxx/download",
         path: path, query: query)
       puts "File saved in #{path}" if warning
     end
 
     def commit(body:, replace: nil)
-      query = {replace: replace}
+      query = { replace: replace }
       @database.request("POST", "_api/foxx/commit", body: body, query: query)
     end
   end
