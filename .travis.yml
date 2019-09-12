@@ -1,0 +1,13 @@
+dist: bionic
+lanugage: ruby
+rvm: 2.5.3
+script: bundle exec rspec
+before_script:
+  - curl https://download.arangodb.com/arangodb35/DEBIAN/Release.key | sudo apt-key add -
+  - echo 'deb https://download.arangodb.com/arangodb35/DEBIAN/ /' | sudo tee /etc/apt/sources.list.d/arangodb.list
+  - sudo apt-get update
+  - echo arangodb3 arangodb3/password password root | sudo debconf-set-selections
+  - echo arangodb3 arangodb3/password_again password root | sudo debconf-set-selections
+  - sudo apt-get install arangodb3=3.5.0-1
+notifications:
+  slack: isomorfeus:fkfbTBlQTpTgXaF7e0YOjWCG

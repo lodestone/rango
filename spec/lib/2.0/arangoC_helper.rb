@@ -1,6 +1,6 @@
 require_relative './../../spec_helper'
 
-describe Arango::Collection do
+describe Arango::DocumentCollection do
   context "#new" do
     it "create a new instance" do
       myCollection = @myDatabase.collection name: "MyCollection"
@@ -97,7 +97,7 @@ describe Arango::Collection do
 
     it "search Document by key match" do
       docs = @myCollection.create_documents document: [{_key: "ThisIsATest1", test: "fantastic"}, {_key: "ThisIsATest2"}]
-      result = @myCollection.document_by_keys keys: ["ThisIsATest1", docs[1]]
+      result = @myCollection.documents_by_keys keys: ["ThisIsATest1", docs[1]]
       expect(result[0].body[:test]).to eq "fantastic"
     end
 

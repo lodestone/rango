@@ -3,11 +3,11 @@ require_relative './../../spec_helper'
 describe Arango::Database do
   context "#retrieve" do
     it "collection" do
-      expect(@myDatabase["MyCollection"].class).to be Arango::Collection
+      expect(@myDatabase["MyCollection"].class).to be Arango::DocumentCollection
     end
 
     it "collection" do
-      expect(@myDatabase.collection(name: "MyCollection").class).to be Arango::Collection
+      expect(@myDatabase.collection(name: "MyCollection").class).to be Arango::DocumentCollection
     end
 
     it "graph" do
@@ -16,7 +16,7 @@ describe Arango::Database do
   end
 end
 
-describe Arango::Collection do
+describe Arango::DocumentCollection do
   context "#retrieve" do
     it "document" do
       expect(@myCollection["MyDocument"].class).to be Arango::Document
@@ -31,7 +31,7 @@ end
 describe Arango::Document do
   context "#retrieve" do
     it "collection" do
-      expect(@myDocument.collection.class).to be Arango::Collection
+      expect(@myDocument.collection.class).to be Arango::DocumentCollection
     end
 
     it "database" do
@@ -43,7 +43,7 @@ end
 describe Arango::Vertex do
   context "#retrieve" do
     it "collection" do
-      expect(@myVertex.collection.class).to be Arango::Collection
+      expect(@myVertex.collection.class).to be Arango::DocumentCollection
     end
 
     it "database" do
@@ -59,7 +59,7 @@ end
 describe Arango::Edge do
   context "#retrieve" do
     it "collection" do
-      expect(@myEdge.collection.class).to be Arango::Collection
+      expect(@myEdge.collection.class).to be Arango::DocumentCollection
     end
 
     it "database" do
@@ -84,7 +84,7 @@ end
 describe Arango::Index do
   context "#retrieve" do
     it "collection" do
-      expect(@myIndex.collection.class).to be Arango::Collection
+      expect(@myIndex.collection.class).to be Arango::DocumentCollection
     end
 
     it "database" do
@@ -118,7 +118,7 @@ describe Arango::Traversal do
     end
 
     it "collection" do
-      expect(@myTraversal.collection.class).to be Arango::Collection
+      expect(@myTraversal.collection.class).to be Arango::DocumentCollection
     end
   end
 end

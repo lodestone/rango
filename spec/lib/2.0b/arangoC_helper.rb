@@ -1,6 +1,6 @@
 require_relative './../../spec_helper'
 
-describe Arango::Collection do
+describe Arango::DocumentCollection do
   context "#get" do
     it "revision" do
       expect(@myCollection.revision.class).to be String
