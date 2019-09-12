@@ -4,10 +4,12 @@ rvm: 2.6.3
 script: bundle exec rspec
 before_script:
   - curl https://download.arangodb.com/arangodb35/DEBIAN/Release.key | sudo apt-key add -
-  - echo 'deb https://download.arangodb.com/arangodb35/DEBIAN/ /' | sudo tee /etc/apt/sources.list.d/arangodb.list
-  - sudo apt-get update
+  # - echo 'deb https://download.arangodb.com/arangodb35/DEBIAN/ /' | sudo tee /etc/apt/sources.list.d/arangodb.list
+  # - sudo apt-get update -q
+  - wget https://download.arangodb.com/arangodb35/Community/Linux/arangodb3_3.5.0-1_amd64.deb
   - echo arangodb3 arangodb3/password password root | sudo debconf-set-selections
   - echo arangodb3 arangodb3/password_again password root | sudo debconf-set-selections
-  - sudo apt-get install arangodb3=3.5.0-1
+  # - sudo apt-get install arangodb3=3.5.0-1
+  - sudo dpkg -i arangodb3_3.5.0-1_amd64.deb
 notifications:
   slack: isomorfeus:fkfbTBlQTpTgXaF7e0YOjWCG
