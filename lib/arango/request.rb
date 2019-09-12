@@ -10,18 +10,17 @@ module Arango
 
     attr_accessor :async, :base_uri, :options, :return_output, :verbose
 
-    def request(action, url, body: {}, headers: {}, query: {},
-      key: nil, return_direct_result: @return_output, skip_to_json: false,
-      keep_null: false, skip_parsing: false)
+    def request(action, url, body: {}, headers: {}, query: {}, key: nil, skip_to_json: false, keep_null: false,
+                skip_parsing: false)
       send_url = "#{@base_uri}/"
       send_url += url
 
       if body.is_a?(Hash)
-        body.delete_if{|k,v| v.nil?} unless keep_null
+        body.delete_if{|_,v| v.nil?} unless keep_null
       end
-      query.delete_if{|k,v| v.nil?}
-      headers.delete_if{|k,v| v.nil?}
-      options = @options.merge({body: body, params: query})
+      query.delete_if{|_,v| v.nil?}
+      headers.delete_if{|_,v| v.nil?}
+      options = @options.merge({ body: body, params: query })
       options[:headers].merge!(headers)
 
       if %w[GET HEAD DELETE].include?(action)
@@ -38,7 +37,7 @@ module Arango
       if !skip_to_json && !options[:body].nil?
         options[:body] = Oj.dump(options[:body], mode: :json)
       end
-      options.delete_if{|k,v| v.empty?}
+      options.delete_if{|_,v| v.empty?}
 
       begin
         response = case action
@@ -104,26 +103,19 @@ module Arango
         puts "==============="
       end
 
-      if result.empty? || result.is_array?
-        return result
-      else
-        if result[:error]
-          raise Arango::ErrorDB.new message: result[:errorMessage],
-            code: result[:code], data: result, error_num: result[:errorNum],
-            action: action, url: send_url, request: options
-        elsif return_direct_result
-          return result
-        end
+      if !result.is_array? && result[:error]
+        raise Arango::ErrorDB.new(message: result[:errorMessage], code: result[:code], data: result, error_num: result[:errorNum],
+                                  action: action, url: send_url, request: options)
       end
-      return key.nil? ? result.delete_if { |k,v| k == :error || k == :code } : result[key]
+      key ? result[key] : result
     end
 
     def download(url:, path:, body: {}, headers: {}, query: {})
       send_url = "#{@base_uri}/"
       send_url += url
-      body.delete_if{|k,v| v.nil?}
-      query.delete_if{|k,v| v.nil?}
-      headers.delete_if{|k,v| v.nil?}
+      body.delete_if{|_,v| v.nil?}
+      query.delete_if{|_,v| v.nil?}
+      headers.delete_if{|_,v| v.nil?}
       body = Oj.dump(body, mode: :json)
       options = @options.merge({body: body, query: query, headers: headers, stream_body: true})
       puts "\n#{action} #{send_url}\n" if @verbose

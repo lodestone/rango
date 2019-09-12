@@ -51,7 +51,7 @@ module Arango
     alias assign_type type=
 
     def add_link(collection:, analyzers: nil, fields: {}, include_all_fields: nil, track_list_positions: nil, store_values: nil)
-      satisfy_class?(collection, [Arango::Collection, String])
+      satisfy_class?(collection, [Arango::DocumentCollection, String])
       collection_name = collection.is_a?(String) ? collection : collection.name
       satisfy_category?(store_values, ["none", "id", nil])
       @links[collection_name] = {
@@ -134,18 +134,11 @@ module Arango
       manage_properties("PATCH", "_api/view/#{@name}/properties", consolidation_interval_msec: consolidation_interval_msec, threshold: threshold, segment_threshold: segment_threshold, cleanup_interval_step: cleanup_interval_step)
     end
 
-    def rename name:
-      body = {name: name}
-      result = @database.request("PUT", "_api/view/#{@name}/rename", body: body)
-      return_element(result)
-    end
 
     def properties
       @database.request("GET", "_api/view/#{@name}/properties")
     end
 
-    def destroy
-      @database.request("DELETE", "_api/view/#{@name}", key: :result)
-    end
+
   end
 end

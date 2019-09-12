@@ -21,7 +21,7 @@ module Arango
     attr_reader :collection, :database, :server, :graph
 
     def collection=(collection)
-      satisfy_class?(collection, [Arango::Collection])
+      satisfy_class?(collection, [Arango::DocumentCollection])
       if collection.graph.nil?
         raise Arango::Error.new err: :collection_does_not_have_a_graph, data:
           {name_collection: collection.name, graph: nil}

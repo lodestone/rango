@@ -50,7 +50,7 @@ module Arango
       case value
       when Array
         return value.map{|x| return_collection(x)}
-      when String, Arango::Collection
+      when String, Arango::DocumentCollection
         return [return_collection(value)]
       when NilClass
         return []
@@ -61,12 +61,12 @@ module Arango
     private :return_write_or_read
 
     def return_collection(collection, type=nil)
-      satisfy_class?(collection, [Arango::Collection, String])
+      satisfy_class?(collection, [Arango::DocumentCollection, String])
       case collection
-      when Arango::Collection
+      when Arango::DocumentCollection
         return collection
       when String
-        return Arango::Collection.new(name: collection, database: @database)
+        return Arango::DocumentCollection.new(name: collection, database: @database)
       end
     end
     private :return_collection

@@ -94,7 +94,7 @@ module Arango
           raise Arango::Error.new err: :database_undefined_for_traversal
         elsif vertex.include? "/"
           val = vertex.split("/")
-          @collection = Arango::Collection.new(database: @database, name: val[0])
+          @collection = Arango::DocumentCollection.new(database: @database, name: val[0])
           @vertex = Arango::Document.new(collection: @collection, name: val[1])
           return
         end
@@ -105,16 +105,16 @@ module Arango
 
     def edge_collection=(collection)
       return nil if collection.nil?
-      satisfy_class?(collection, [Arango::Collection, String])
+      satisfy_class?(collection, [Arango::DocumentCollection, String])
       case collection
-      when Arango::Collection
+      when Arango::DocumentCollection
         if collection.type != :edge
           raise Arango::Error.new err: :edge_collection_should_be_of_type_edge
         end
         @edge_collection = collection
       when String
-        collection_instance = Arango::Collection.new(name: collection,
-          database: @database, type: :edge, graph: @graph)
+        collection_instance = Arango::DocumentCollection.new(name:     collection,
+                                                             database: @database, type: :edge, graph: @graph)
         @edge_collection = collection_instance
       end
     end
@@ -187,21 +187,21 @@ module Arango
       result = @database.request("POST", "_api/traversal", body: body)
       return result if @server.async != false
       @vertices = result[:result][:visited][:vertices].map do |x|
-        collection = Arango::Collection.new(name: x[:_id].split("/")[0],
-          database:  @database)
+        collection = Arango::DocumentCollection.new(name:     x[:_id].split("/")[0],
+                                                    database: @database)
         Arango::Document.new(name: x[:_key], collection: collection, body: x)
       end
       @paths = result[:result][:visited][:paths].map do |x|
         {
           edges: x[:edges].map do |e|
-            collection_edge = Arango::Collection.new(name: e[:_id].split("/")[0],
-              database:  @database, type: :edge)
+            collection_edge = Arango::DocumentCollection.new(name:     e[:_id].split("/")[0],
+                                                             database: @database, type: :edge)
             Arango::Document.new(name: e[:_key], collection: collection_edge,
               body: e, from: e[:_from], to: e[:_to])
           end,
           vertices: x[:vertices].map do |v|
-            collection_vertex = Arango::Collection.new(name: v[:_id].split("/")[0],
-              database:  @database)
+            collection_vertex = Arango::DocumentCollection.new(name:     v[:_id].split("/")[0],
+                                                               database: @database)
             Arango::Document.new(name: v[:_key], collection: collection_vertex, body: v)
           end
         }

@@ -37,8 +37,21 @@ module Arango
       nil
     end
 
-    def method_missing(field_name)
-      self[field_name]
+    def []=(field_name_or_index, value)
+      return @result[field_name_or_index] = value if @is_array
+      field_name_y = field_name_or_index.to_sym
+      return @result[field_name_y] = value if @result.key?(field_name_y)
+      field_name_s = field_name_or_index.to_s
+      field_name_lcy = field_name_s.camelize(:lower).to_sym
+      return @result[field_name_lcy] = value if @result.key?(field_name_lcy)
+      field_name_ucy = field_name_s.camelize(:upper).to_sym
+      return @result[field_name_ucy] = value if @result.key?(field_name_ucy)
+      nil
+    end
+
+    def method_missing(field_name_or_index, value = nil)
+      self[field_name_or_index] = value if field_name_or_index.to_s.end_with?('=')
+      self[field_name_or_index]
     end
 
     # convenience
@@ -48,6 +61,10 @@ module Arango
 
     def empty?
       @result.empty?
+    end
+
+    def first
+      @result.first
     end
 
     def is_array?
@@ -64,10 +81,20 @@ module Arango
 
     def to_h
       @result unless @is_array
+      @result.to_h
     end
 
     def to_a
       @result if @is_array
+      @result.to_a
+    end
+
+    def to_ary
+      @result.to_ary
+    end
+
+    def to_s
+      @result.to_s
     end
   end
 end

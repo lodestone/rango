@@ -75,13 +75,13 @@ module Arango
     end
 
     def return_collection(collection, type=nil)
-      satisfy_class?(collection, [Arango::Collection, String])
+      satisfy_class?(collection, [Arango::DocumentCollection, String])
       case collection
-      when Arango::Collection
+      when Arango::DocumentCollection
         return collection
       when String
-        return Arango::Collection.new(name: collection,
-          database: @database, type: type, graph: self)
+        return Arango::DocumentCollection.new(name:     collection,
+                                              database: @database, type: type, graph: self)
       end
     end
 
@@ -219,105 +219,5 @@ module Arango
       return_element(result)
     end
 
-# === POST ===
-
-    def create(is_smart: @is_smart, smart_graph_attribute: @smart_graph_attribute,
-      number_of_shards: @number_of_shards)
-      body = {
-        name: @name,
-        edgeDefinitions:   edge_definitions_raw,
-        orphanCollections: orphan_collections_raw,
-        isSmart: is_smart,
-        options: {
-          smartGraphAttribute: smart_graph_attribute,
-          numberOfShards: number_of_shards
-        }
-      }
-      body[:options].delete_if{|k,v| v.nil?}
-      body.delete(:options) if body[:options].empty?
-      result = @database.request("POST", "_api/gharial", body: body, key: :graph)
-      return_element(result)
-    end
-
-# === DELETE ===
-
-    def destroy(dropCollections: nil)
-      query = { dropCollections: dropCollections }
-      result = @database.request("DELETE", "_api/gharial/#{@name}", query: query,
-        key: :removed)
-      return_delete(result)
-    end
-
-# === VERTEX COLLECTION  ===
-
-    def get_vertex_collections
-      result = request("GET", "vertex", key: :collections)
-      return result if return_directly?(result)
-      result.map do |x|
-        Arango::Collection.new(name: x, database: @database, graph: self)
-      end
-    end
-    alias vertex_collections get_vertex_collections
-
-    def add_vertex_collection(collection:)
-      satisfy_class?(collection, [String, Arango::Collection])
-      collection = collection.is_a?(String) ? collection : collection.name
-      body = { collection: collection }
-      result = request("POST", "vertex", body: body, key: :graph)
-      return_element(result)
-    end
-
-    def remove_vertex_collection(collection:, dropCollection: nil)
-      query = {dropCollection: dropCollection}
-      satisfy_class?(collection, [String, Arango::Collection])
-      collection = collection.is_a?(String) ? collection : collection.name
-      result = request("DELETE", "vertex/#{collection}", query: query, key: :graph)
-      return_element(result)
-    end
-
-  # === EDGE COLLECTION ===
-
-    def get_edge_collections
-      result = request("GET", "edge", key: :collections)
-      return result if @database.server.async != false
-      return result if return_directly?(result)
-      result.map{|r| Arango::Collection.new(database: @database, name: r, type: :edge)}
-    end
-
-    def add_edge_definition(collection:, from:, to:)
-      satisfy_class?(collection, [String, Arango::Collection])
-      satisfy_class?(from, [String, Arango::Collection], true)
-      satisfy_class?(to, [String, Arango::Collection], true)
-      from = [from] unless from.is_a?(Array)
-      to = [to] unless to.is_a?(Array)
-      body = {}
-      body[:collection] = collection.is_a?(String) ? collection : collection.name
-      body[:from] = from.map{|f| f.is_a?(String) ? f : f.name }
-      body[:to] = to.map{|t| t.is_a?(String) ? t : t.name }
-      result = request("POST", "edge", body: body, key: :graph)
-      return_element(result)
-    end
-
-    def replace_edge_definition(collection:, from:, to:)
-      satisfy_class?(collection, [String, Arango::Collection])
-      satisfy_class?(from, [String, Arango::Collection], true)
-      satisfy_class?(to, [String, Arango::Collection], true)
-      from = [from] unless from.is_a?(Array)
-      to = [to] unless to.is_a?(Array)
-      body = {}
-      body[:collection] = collection.is_a?(String) ? collection : collection.name
-      body[:from] = from.map{|f| f.is_a?(String) ? f : f.name }
-      body[:to] = to.map{|t| t.is_a?(String) ? t : t.name }
-      result = request("PUT", "edge/#{body[:collection]}", body: body, key: :graph)
-      return_element(result)
-    end
-
-    def remove_edge_definition(collection:, dropCollection: nil)
-      satisfy_class?(collection, [String, Arango::Collection])
-      query = {dropCollection: dropCollection}
-      collection = collection.is_a?(String) ? collection : collection.name
-      result = request("DELETE", "edge/#{collection}", query: query, key: :graph)
-      return_element(result)
-    end
   end
 end

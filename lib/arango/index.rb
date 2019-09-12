@@ -10,7 +10,7 @@ module Arango
       hash = args[0]
       super unless hash.is_a?(Hash)
       collection = hash[:collection]
-      if collection.is_a?(Arango::Collection) && collection.database.server.active_cache && !hash[:id].nil?
+      if collection.is_a?(Arango::DocumentCollection) && collection.database.server.active_cache && !hash[:id].nil?
         cache_name = "#{collection.database.name}/#{collection.name}/#{hash[:id]}"
         cached = collection.database.server.cache.cache.dig(:index, cache_name)
         if cached.nil?

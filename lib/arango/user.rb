@@ -143,9 +143,9 @@ module Arango
     def add_collection_access(grant:, database:, collection:)
       satisfy_category?(grant, %w[rw ro none])
       satisfy_class?(database, [Arango::Database, String])
-      satisfy_class?(collection, [Arango::Collection, String])
+      satisfy_class?(collection, [Arango::DocumentCollection, String])
       database = database.name     if database.is_a?(Arango::Database)
-      collection = collection.name if collection.is_a?(Arango::Collection)
+      collection = collection.name if collection.is_a?(Arango::DocumentCollection)
       body = { grant: grant }
       result = @server.request("PUT", "_api/user/#{@name}/database/#{database}/#{collection}", body: body)
       return return_directly?(result) ? result : result[:"#{database}/#{collection}"]
@@ -161,9 +161,9 @@ module Arango
 
     def revoke_collection_access(database:, collection:)
       satisfy_class?(database, [Arango::Database, String])
-      satisfy_class?(collection, [Arango::Collection, String])
+      satisfy_class?(collection, [Arango::DocumentCollection, String])
       database = database.name     if database.is_a?(Arango::Database)
-      collection = collection.name if collection.is_a?(Arango::Collection)
+      collection = collection.name if collection.is_a?(Arango::DocumentCollection)
       result = @server.request("DELETE", "_api/user/#{@name}/database/#{database}/#{collection}")
       return return_directly?(result) ? result : true
     end
@@ -184,9 +184,9 @@ module Arango
 
     def collection_access(database:, collection:)
       satisfy_class?(database, [Arango::Database, String])
-      satisfy_class?(collection, [Arango::Collection, String])
+      satisfy_class?(collection, [Arango::DocumentCollection, String])
       database = database.name     if database.is_a?(Arango::Database)
-      collection = collection.name if collection.is_a?(Arango::Collection)
+      collection = collection.name if collection.is_a?(Arango::DocumentCollection)
       result = @server.request("GET", "_api/user/#{@name}/database/#{database}/#{collection}", body: body)
       return return_directly?(result) ? result : result[:result]
     end

@@ -4,15 +4,19 @@ module Arango
   class Server
     include Arango::Helper::Satisfaction
 
-    def initialize(username: "root", password:, server: "localhost",
+    include Arango::Server::Administration
+    include Arango::Server::Config
+    include Arango::Server::DatabaseAccess
+    include Arango::Server::Monitoring
+    include Arango::Server::Pool
+    include Arango::Server::Tasks
+
+    def initialize(username: "root", password:, host: "localhost",
       warning: true, port: "8529", verbose: false, return_output: false,
       async: false, active_cache: false, pool: false, size: 5, timeout: 5,
       tls: false)
       @tls = tls
-      @base_uri = "http"
-      @base_uri += "s" if tls
-      @base_uri += "://#{server}:#{port}"
-      @server = server
+      @host = host
       @port = port
       @username = username
       @password = password
@@ -28,165 +32,8 @@ module Arango
       @request = Arango::Request.new(return_output: @return_output,
         base_uri: @base_uri, options: @options, verbose: @verbose, async: @async)
       assign_async(async)
-      if @pool
-        @internal_request = ConnectionPool.new(size: @size, timeout: @timeout){ @request }
-      end
-    end
-
-# === DEFINE ===
-
-    attr_reader :async, :port, :server, :base_uri, :username, :cache,
-      :verbose, :return_output, :active_cache, :pool, :password, :tls
-    attr_accessor :warning, :size, :timeout
-
-    def active_cache=(active)
-      satisfy_category?(active, [true, false])
-      @active_cache = active
-      if @active_cache
-        @cache ||= Arango::Cache.new
-      elsif !@cache.nil?
-        @cache.clear
-      end
-    end
-
-    def pool=(pool)
-      satisfy_category?(pool, [true, false])
-      return if @pool == pool
-      @pool = pool
-      if @pool
-        @internal_request = ConnectionPool.new(size: @size, timeout: @timeout){ @request }
-      else
-        @internal_request&.shutdown { |conn| conn.quit }
-        @internal_request = nil
-      end
-    end
-    alias change_pool_status pool=
-
-    def restart_pool
-      changePoolStatus(false)
-      changePoolStatus(true)
-    end
-
-    def verbose=(verbose)
-      satisfy_category?(verbose, [true, false])
-      @verbose = verbose
-      @request.verbose = verbose
-    end
-
-    def return_output=(return_output)
-      satisfy_category?(return_output, [true, false])
-      @return_output = return_output
-      @request.return_output = return_output
-    end
-
-    def username=(username)
-      @username = username
-      @options[:basic_auth][:username] = @username
-      @request.options = options
-    end
-
-    def password=(password)
-      @password = password
-      @options[:basic_auth][:password] = @password
-      @request.options = options
-    end
-
-    def port=(port)
-      @port = port
-      @base_uri = "http"
-      @base_uri += "s" if @tls
-      @base_uri += "://#{@server}:#{@port}"
-      @request.base_uri = @base_uri
-    end
-
-    def server=(server)
-      @server = server
-      @base_uri = "http"
-      @base_uri += "s" if @tls
-      @base_uri += "://#{@server}:#{@port}"
-      @request.base_uri = @base_uri
-    end
-
-    def tls=(tls)
-      satisfy_category?(tls, [false, true])
-      @tls = tls
-      @base_uri = "http"
-      @base_uri += "s" if @tls
-      @base_uri += "://#{@server}:#{@port}"
-      @request.base_uri = @base_uri
-    end
-
-    def async=(async)
-      satisfy_category?(async, ["true", "false", false, true, "store", :store])
-      case async
-      when true, "true"
-        @options[:headers]["x-arango-async"] = "true"
-        @async = true
-      when :store, "store"
-        @options[:headers]["x-arango-async"] ="store"
-        @async = :store
-      when false, "false"
-        @options[:headers].delete("x-arango-async")
-        @async = false
-      end
-      @request.async = @async
-      @request.options = @options
-    end
-    alias assign_async async=
-
-# === TO HASH ===
-
-    def to_h
-      hash = {
-        base_uri: @base_uri,
-        server:   @server,
-        port:     @port,
-        username: @username,
-        async:    @async,
-        verbose:  @verbose,
-        return_output: @return_output,
-        warning: @warning,
-        tls: @tls
-      }.delete_if{|k,v| v.nil?}
-      hash
-    end
-
-# === REQUESTS ===
-
-    def request(*args)
-      if @pool
-        @internal_request.with{|request| request.request(*args)}
-      else
-        @request.request(*args)
-      end
-    end
-
-    def download(*args)
-      if @pool
-        @internal_request.with{|request| request.download(*args)}
-      else
-        @request.download(*args)
-      end
-    end
-
-  #  == DATABASE ==
-
-    def [](database)
-      Arango::Database.new(name: database, server: self)
-    end
-
-    def database(name:)
-      Arango::Database.new(name: name, server: self)
-    end
-
-    def databases(user: false)
-      if user
-        result = request("GET", "_api/database/user", key: :result)
-      else
-        result = request("GET", "_api/database", key: :result)
-      end
-      return result if return_directly?(result)
-      result.map{|db| Arango::Database.new(name: db, server: self)}
+      update_base_uri
+      @internal_request = ConnectionPool.new(size: @size, timeout: @timeout){ @request } if @pool
     end
 
   # == CLUSTER ==
@@ -195,97 +42,21 @@ module Arango
       request("GET", "_admin/clusterCheckPort", query: {port: port.to_s})
     end
 
-  # === MONITORING ===
-
-    def log(upto: nil, level: nil, start: nil, size: nil, offset: nil, search: nil, sort: nil)
-      satisfy_category?(upto, [nil, "fatal", 0, "error", 1, "warning", 2, "info", 3, "debug", 4])
-      satisfy_category?(sort, [nil, "asc", "desc"])
-      query = {
-        upto: upto, level: level, start: start, size: size,
-        offset: offset, search: search, sort: sort
-      }
-      request("GET", "_admin/log", query: query)
-    end
-
-    def loglevel
-      request("GET", "_admin/log/level")
-    end
-
-    def update_loglevel(body:)
-      request("PUT", "_admin/log/level", body: body)
-    end
-
-    def reload
-      request("GET", "_admin/routing/reload")
-      return true
-    end
-
-    def available?
-      request("POST", "_admin/routing/availability", body: {})
-    end
-
-    def statistics
-      request("GET", "_admin/statistics")
-    end
-
-    def statistics_description
-      request("GET", "_admin/statistics-description")
-    end
-
-    def status
-      request("GET", "_admin/status")
-    end
-
-    def role
-      request("GET", "_admin/server/role", key: :role)
-    end
-
-    def server_data
-      request("GET", "_admin/server/id")
-    end
-
-    def mode
-      request("GET", "_admin/server/mode")
-    end
-
-    def update_mode(mode:)
-      satisfy_category?(mode, ["default", "readonly"])
-      body = {mode: mode}
-      request("PUT", "_admin/server/mode", body: mode)
-    end
-
-    def cluster_health
-      request("GET", "_admin/health")
-    end
-
-    def cluster_statistics dbserver:
-      query = {DBserver: dbserver}
-      request("GET", "_admin/clusterStatistics", query: query)
-    end
-
-    def server_id
-      request("GET", "_api/replication/server-id", key: :serverId)
-    end
 
   # === ENDPOINT ===
 
     def endpoint
-      "tcp://#{@server}:#{@port}"
+      "tcp://#{@host}:#{@port}"
     end
 
-    def endpoints
-      request("GET", "_api/cluster/endpoints")
-    end
 
-    def all_endpoints(warning: @warning)
-      warning_deprecated(warning, "allEndpoints")
-      request("GET", "_api/endpoint")
-    end
+
+
 
   # === USER ===
 
     def user(password: "", name:, extra: {}, active: nil)
-      Arango::User.new(server: self, password: password, name: name, extra: extra,
+      Arango::User.new(host: self, password: password, name: name, extra: extra,
         active: active)
     end
 
@@ -294,66 +65,11 @@ module Arango
       return result if return_directly?(result)
       result.map do |user|
         Arango::User.new(name: user[:user], active: user[:active],
-          extra: user[:extra], server: self)
+          extra: user[:extra], host: self)
       end
     end
 
-  # == TASKS ==
 
-    def tasks
-      result = request("GET", "_api/tasks")
-      return result if return_directly?(result)
-      result.map do |task|
-        database = Arango::Database.new(name: task[:database], server: self)
-        Arango::Task.new(body: task, database: database)
-      end
-    end
-
-# === ASYNC ===
-
-    def fetch_async(id:)
-      request("PUT", "_api/job/#{id}")
-    end
-
-    def cancel_async(id:)
-      request("PUT", "_api/job/#{id}/cancel", key: :result)
-    end
-
-    def destroy_async(id:, stamp: nil)
-      query = {stamp: stamp}
-      request("DELETE", "_api/job/#{id}", query: query, key: :result)
-    end
-
-    def destroy_async_by_type(type:, stamp: nil)
-      satisfy_category?(type, ["all", "expired"])
-      query = {stamp: stamp}
-      request("DELETE", "_api/job/#{type}", query: query)
-    end
-
-    def destroy_all_async
-      destroyAsyncByType(type: "all")
-    end
-
-    def destroy_expired_async
-      destroyAsyncByType(type: "expired")
-    end
-
-    def retrieve_async(id:)
-      request("GET", "_api/job/#{id}")
-    end
-
-    def retrieve_async_by_type(type:, count: nil)
-      satisfy_category?(type, ["done", "pending"])
-      request("GET", "_api/job/#{type}", query: {count: count})
-    end
-
-    def retrieve_done_async(count: nil)
-      retrieve_async_by_type(type: "done", count: count)
-    end
-
-    def retrieve_pending_async(count: nil)
-      retrieve_async_by_type(type: "pending", count: count)
-    end
 
   # === BATCH ===
 
@@ -405,20 +121,8 @@ module Arango
         body: body)
     end
 
-# === MISCELLANEOUS FUNCTIONS ===
-    def force_version(details: nil)
-      query = {details: details}
-      request("GET", "_api/version", query: query)
-    end
+    # === MISCELLANEOUS FUNCTIONS ===
 
-    def version(details: nil)
-      query = {details: details}
-      @version ||= request("GET", "_api/version", query: query)
-    end
-
-    def engine
-      @engine ||= request("GET", "_api/engine")
-    end
 
     def flush_wal(waitForSync: nil, waitForCollector: nil)
       body = {
@@ -451,13 +155,7 @@ module Arango
       request("GET", "_admin/wal/transactions")
     end
 
-    def time
-      request("GET", "_admin/time", key: :time)
-    end
 
-    def echo
-      request("POST", "_admin/echo", body: {})
-    end
 
     def database_version
       request("GET", "_admin/database/target-version", key: :version)
@@ -472,9 +170,7 @@ module Arango
       request("POST", "_admin/test", body: body)
     end
 
-    def execute(body:)
-      request("POST", "_admin/execute", body: body)
-    end
+
 
     def return_directly?(result)
       return @async != false || @return_direct_result
@@ -484,6 +180,31 @@ module Arango
     def return_delete(result)
       return result if @async != false
       return return_directly?(result) ? result : true
+    end
+
+    private
+
+    def request(*args)
+      if @pool
+        @internal_request.with{|request| request.request(*args)}
+      else
+        @request.request(*args)
+      end
+    end
+
+    def download(*args)
+      if @pool
+        @internal_request.with{|request| request.download(*args)}
+      else
+        @request.download(*args)
+      end
+    end
+
+    def update_base_uri
+      @base_uri = "http"
+      @base_uri += "s" if @tls
+      @base_uri += "://#{@host}:#{@port}"
+      @request.base_uri = @base_uri
     end
   end
 end

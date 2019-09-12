@@ -1,10 +1,14 @@
 # === COLLECTION ===
 
 module Arango
-  class Collection
+  class EdgeCollection
     include Arango::Helper::Satisfaction
     include Arango::Helper::Return
     include Arango::Helper::DatabaseAssignment
+
+    include Arango::EdgeCollection::Basics
+    include Arango::EdgeCollection::DocumentAccess
+    include Arango::EdgeCollection::Indexes
 
     def self.new(*args)
       hash = args[0]
@@ -116,9 +120,6 @@ module Arango
       return_element(result)
     end
 
-    def properties
-      @database.request("GET", "_api/collection/#{@name}/properties")
-    end
 
     def count
       @database.request("GET", "_api/collection/#{@name}/count", key: :count)
@@ -126,10 +127,6 @@ module Arango
 
     def statistics
       @database.request("GET", "_api/collection/#{@name}/figures", key: :figures)
-    end
-
-    def revision
-      @database.request("GET", "_api/collection/#{@name}/revision", key: :revision)
     end
 
     def checksum(withRevisions: nil, withData: nil)
@@ -182,18 +179,6 @@ module Arango
       return_element(result)
     end
 
-# === DELETE ===
-
-    def destroy
-      result = @database.request("DELETE", "_api/collection/#{@name}")
-      return return_delete(result)
-    end
-
-    def truncate
-      result = @database.request("PUT", "_api/collection/#{@name}/truncate")
-      return_element(result)
-    end
-
 # === MODIFY ===
 
     def load
@@ -224,50 +209,17 @@ module Arango
       return_element(result)
     end
 
-    def rename(newName:)
-      body = { name: newName }
-      result = @database.request("PUT", "_api/collection/#{@name}/rename", body: body)
-      return_element(result)
-    end
 
     def rotate
       if @server.engine[:name] == 'mmfiles'
         result = @database.request("PUT", "_api/collection/#{@name}/rotate")
         return_element(result)
       else
-        # TODO raise error: not supported maybe?
         return true
       end
     end
 
 # == DOCUMENT ==
-
-    def [](document_name)
-      Arango::Document.new(name: document_name, collection: self)
-    end
-
-    def document(name: nil, body: {}, rev: nil, from: nil, to: nil)
-      Arango::Document.new(name: name, collection: self, body: body, rev: rev,
-        from: from, to: to)
-    end
-
-    def documents(type: "document") # "path", "id", "key"
-      @return_document = false
-      if type == "document"
-        @return_document = true
-        type = "key"
-      end
-      satisfy_category?(type, %w[path id key document])
-      body = { type: type, collection: @name }
-      result = @database.request("PUT", "_api/simple/all-keys", body: body)
-      @has_more_simple = result[:hasMore]
-      @id_simple = result[:id]
-      return result if return_directly?(result)
-      return result[:result] unless @return_document
-      if @return_document
-        result[:result].map{|key| Arango::Document.new(name: key, collection: self)}
-      end
-    end
 
     def next
       if @has_more_simple
@@ -320,29 +272,7 @@ module Arango
     end
     private :return_id
 
-    def create_documents(document: [], wait_for_sync: nil, return_new: nil,
-      silent: nil)
-      document = [document] unless document.is_a? Array
-      document = document.map{|x| return_body(x)}
-      query = {
-        waitForSync: wait_for_sync,
-        returnNew:   return_new,
-        silent:      silent
-      }
-      results = @database.request("POST", "_api/document/#{@name}", body: document,
-        query: query)
-      return results if return_directly?(results) || silent
-      results.map.with_index do |result, index|
-        body2 = result.clone
-        if return_new
-          body2.delete(:new)
-          body2 = body2.merge(result[:new])
-        end
-        real_body = document[index]
-        real_body = real_body.merge(body2)
-        Arango::Document.new(name: result[:_key], collection: self, body: real_body)
-      end
-    end
+
 
     def create_edges(document: {}, from:, to:, wait_for_sync: nil, return_new: nil, silent: nil)
       edges = []
@@ -365,66 +295,15 @@ module Arango
         return_new: return_new, silent: silent)
     end
 
-    def replace_documents(document: {}, wait_for_sync: nil, ignore_revs: nil,
-      return_old: nil, return_new: nil)
-      document.each{|x| x = x.body if x.is_a?(Arango::Document)}
-      query = {
-        waitForSync: wait_for_sync,
-        returnNew:   return_new,
-        returnOld:   return_old,
-        ignoreRevs:  ignore_revs
-      }
-      result = @database.request("PUT", "_api/document/#{@name}", body: document,
-        query: query)
-      return results if return_directly?(result)
-      results.map.with_index do |result, index|
-        body2 = result.clone
-        if return_new == true
-          body2.delete(:new)
-          body2 = body2.merge(result[:new])
-        end
-        real_body = document[index]
-        real_body = real_body.merge(body2)
-        Arango::Document.new(name: result[:_key], collection: self, body: real_body)
-      end
-    end
-
-    def update_documents(document: {}, wait_for_sync: nil, ignore_revs: nil,
-      return_old: nil, return_new: nil, keep_null: nil, merge_objects: nil)
-      document.each{|x| x = x.body if x.is_a?(Arango::Document)}
-      query = {
-        waitForSync: wait_for_sync,
-        returnNew:   return_new,
-        returnOld:   return_old,
-        ignoreRevs:  ignore_revs,
-        keepNull:    keep_null,
-        mergeObject: merge_objects
-      }
-      result = @database.request("PATCH", "_api/document/#{@name}", body: document,
-        query: query, keep_null: keep_null)
-      return results if return_directly?(result)
-      results.map.with_index do |result, index|
-        body2 = result.clone
-        if return_new
-          body2.delete(:new)
-          body2 = body2.merge(result[:new])
-        end
-        real_body = document[index]
-        real_body = real_body.merge(body2)
-        Arango::Document.new(name: result[:_key], collection: self,
-          body: real_body)
-      end
-    end
-
-    def destroy_documents(document: {}, wait_for_sync: nil, return_old: nil,
-      ignore_revs: nil)
-      document.each{|x| x = x.body if x.is_a?(Arango::Document)}
-      query = {
-        waitForSync: wait_for_sync,
-        returnOld:   return_old,
-        ignoreRevs:  ignore_revs
-      }
-      @database.request("DELETE", "_api/document/#{@id}", query: query, body: document)
+    def all_documents(offset: 0, limit: nil, batch_size: nil)
+      query = "FOR doc IN @name"
+      query << "\n LIMIT @offset, @limit" if limit
+      # TODO raise "offset must be used with limit" if offset > 0 && !limit # Arango::Error
+      query << "\n RETURN doc"
+      aql = Arango::AQL.new(database: @database, query: query, bind_vars: { '@name': @name, '@offset': offset, '@limit': limit })
+      aql.size = batch_size if batch_size
+      result = aql.execute
+      result.result
     end
 
 # == SIMPLE ==
@@ -445,16 +324,6 @@ module Arango
     end
     private :generic_document_search
 
-    def all_documents(skip: nil, limit: nil, batch_size: nil)
-      body = {
-        collection: @name,
-        skip:       skip,
-        limit:      limit,
-        batchSize:  batch_size
-      }
-      generic_document_search("_api/simple/all", body)
-    end
-
     def documents_match(match:, skip: nil, limit: nil, batch_size: nil)
       body = {
         collection: @name,
@@ -474,19 +343,13 @@ module Arango
       generic_document_search("_api/simple/first-example", body, true)
     end
 
-    def document_by_keys(keys:)
+    def documents_by_keys(keys:)
       keys = [keys] unless keys.is_a?(Array)
       keys = keys.map{|x| x.is_a?(Arango::Document) ? x.name : x}
-      body = { collection:  @name, keys:  keys }
-      result = @database.request("PUT", "_api/simple/lookup-by-keys", body: body)
-      return result if return_directly?(result)
-      result[:documents].map do |x|
-        Arango::Document.new(name: x[:_key], collection: self, body: x)
-      end
-    end
-
-    def document_by_name(names:)
-      document_by_keys(keys: names)
+      query = "FOR doc IN @name FILTER doc._key IN @keys RETURN doc"
+      aql = Arango::AQL.new(database: @database, query: query, bind_vars: { '@name': @name, '@keys': keys })
+      result = aql.execute
+      result.result
     end
 
     def random
@@ -588,23 +451,17 @@ module Arango
       end
     end
 
-    def near(distance: nil, longitude:, latitude:, geo: nil, limit: nil,
-      skip: nil, warning: @server.warning)
-      warning_deprecated(warning, "near")
-      body = {
-        distance:   distance,
-        longitude:  longitude,
-        collection: @name,
-        limit:      limit,
-        latitude:   latitude,
-        skip:       skip,
-        geo:        geo
-      }
-      result = @database.request("PUT", "_api/simple/near", body: body)
-      return result if return_directly?(result)
-      result[:result].map do |x|
-        Arango::Document.new(name: x[:_key], collection: self, body: x)
-      end
+    def distance(longitude:, latitude:, limit: nil, offset: 0)
+      query = <<~QUERY
+        FOR doc IN @name
+         SORT DISTANCE(doc.latitude, doc.longitude, @latitude, @longitude) ASC
+      QUERY
+      query << "\n LIMIT @offset, @limit" if limit
+      query << "\n RETURN doc"
+      aql = Arango::AQL.new(database: @database, query: query, bind_vars: { '@name': @name, '@latitude': latitude, '@longitude': longitude,
+                                                                            '@offset': offset, '@limit': limit})
+      result = aql.execute
+      result.result
     end
 
     def within(distance: nil, longitude:, latitude:, radius:, geo: nil,
@@ -639,7 +496,6 @@ module Arango
         limit:      limit,
         skip:       skip,
         geo:        geo,
-        radius:     radius
       }
       result = @database.request("PUT", "_api/simple/within-rectangle", body: body)
       return result if return_directly?(result)
@@ -648,68 +504,12 @@ module Arango
       end
     end
 
-    def fulltext(index:, attribute:, query:, limit: nil, skip: nil, warning: @server.warning)
-      warning_deprecated(warning, "fulltext")
-      body = {
-        index:     index,
-        attribute: attribute,
-        query:     query,
-        limit:     limit,
-        skip:      skip
-      }
-      result = @database.request("PUT", "_api/simple/fulltext", body: body)
-      return result if return_directly?(result)
-      result[:result].map do |x|
-        Arango::Document.new(name: x[:_key], collection: self, body: x)
-      end
-    end
-
-  # === IMPORT ===
-
-    def import(attributes:, values:, fromPrefix: nil,
-      toPrefix: nil, overwrite: nil, wait_for_sync: nil,
-      onDuplicate: nil, complete: nil, details: nil)
-      satisfy_category?(onDuplicate, [nil, "error", "update", "replace", "ignore"])
-      satisfy_category?(overwrite, [nil, "yes", "true", true])
-      satisfy_category?(complete, [nil, "yes", "true", true])
-      satisfy_category?(details, [nil, "yes", "true", true])
-      query = {
-        collection:  @name,
-        fromPrefix:  fromPrefix,
-        toPrefix:    toPrefix,
-        overwrite:   overwrite,
-        waitForSync: wait_for_sync,
-        onDuplicate: onDuplicate,
-        complete:    complete,
-        details:     details
-      }
-      body = "#{attributes}\n"
-      values[0].is_a?(Array) ? values.each{|x| body += "#{x}\n"} : body += "#{values}\n"
-      @database.request("POST", "_api/import", query: query,
-        body: body, skip_to_json: true)
-    end
-
-    def import_json(body:, type: "auto", fromPrefix: nil,
-      toPrefix: nil, overwrite: nil, wait_for_sync: nil,
-      onDuplicate: nil, complete: nil, details: nil)
-      satisfy_category?(type, ["auto", "list", "documents"])
-      satisfy_category?(onDuplicate, [nil, "error", "update", "replace", "ignore"])
-      satisfy_category?(overwrite, [nil, "yes", "true", true])
-      satisfy_category?(complete, [nil, "yes", "true", true])
-      satisfy_category?(details, [nil, "yes", "true", true])
-      query = {
-        collection:  @name,
-        type:        type,
-        fromPrefix:  fromPrefix,
-        toPrefix:    toPrefix,
-        overwrite:   overwrite,
-        waitForSync: wait_for_sync,
-        onDuplicate: onDuplicate,
-        complete:    complete,
-        details:     details
-      }
-      @database.request("POST", "_api/import", query: query,
-        body: body)
+    def fulltext(attribute:, query:, limit: 0)
+      query = "FOR doc IN FULLTEXT(@name, @attribute, @query, @limit) RETURN doc"
+      aql = Arango::AQL.new(database: @database, query: query, bind_vars: { '@name': @name, '@attribute': attribute, '@query': query,
+                                                                            '@limit': limit })
+      result = aql.execute
+      result.result
     end
 
   # === EXPORT ===
@@ -760,44 +560,9 @@ module Arango
       end
     end
 
-# === INDEXES ===
 
-    def index(body: {}, id: nil, type: "hash", unique: nil, fields:,
-      sparse: nil, geoJson: nil, minLength: nil, deduplicate: nil)
-      Arango::Index.new(collection: self, body: body, id: id, type: type,
-        unique: unique, fields: fields, sparse: sparse, geo_json: geoJson,
-        min_length: minLength, deduplicate: deduplicate)
-    end
 
-    def indexes
-      query = { collection:  @name }
-      result = @database.request("GET", "_api/index", query: query)
-      return result if return_directly?(result)
-      result[:indexes].map do |x|
-        Arango::Index.new(body: x, id: x[:id], collection: self,
-          type: x[:type], unique: x[:unique], fields: x[:fields],
-          sparse: x[:sparse])
-      end
-    end
 
-# === REPLICATION ===
-
-    def data(batchId:, from: nil, to: nil, chunkSize: nil,
-      includeSystem: nil, failOnUnknown: nil, ticks: nil, flush: nil)
-      query = {
-        collection: @name,
-        batchId:    batchId,
-        from:       from,
-        to:         to,
-        chunkSize:  chunkSize,
-        includeSystem:  includeSystem,
-        failOnUnknown:  failOnUnknown,
-        ticks: ticks,
-        flush: flush
-      }
-      @database.request("GET", "_api/replication/dump", query: query)
-    end
-    alias dump data
 
 # === USER ACCESS ===
 

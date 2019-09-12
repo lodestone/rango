@@ -58,12 +58,12 @@ module Arango
       if restrict_collections.nil?
         @restrict_collections = nil
       else
-        satisfy_class?(restrict_collections, [Arango::Collection, String], true)
+        satisfy_class?(restrict_collections, [Arango::DocumentCollection, String], true)
         @restrict_collections = restrict_collections.map do |v|
           case v
           when String
             v
-          when Arango::Collection
+          when Arango::DocumentCollection
             v.name
           end
         end
