@@ -2,4 +2,6 @@
 *.gem
 *~
 opal_modules/node_modules
-arango_3_5_opal_*
+arango_opal_*
+doc
+.yardoc
