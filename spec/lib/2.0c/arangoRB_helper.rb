@@ -93,14 +93,6 @@ describe Arango::Index do
   end
 end
 
-describe Arango::Task do
-  context "#retrieve" do
-    it "database" do
-      expect(@myTask.database.class).to be Arango::Database
-    end
-  end
-end
-
 describe Arango::Traversal do
   context "#retrieve" do
     it "database" do

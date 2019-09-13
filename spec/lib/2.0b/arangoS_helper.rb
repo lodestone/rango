@@ -137,13 +137,6 @@ describe Arango::Server do
     end
   end
 
-  context "#task" do
-    it "tasks" do
-      result = @server.tasks
-      expect(result[0].id.class).to be String
-    end
-  end
-
   context "#miscellaneous" do
     it "version" do
       expect(@server.version[:server]).to eq "arango"
