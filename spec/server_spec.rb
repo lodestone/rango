@@ -98,14 +98,4 @@ describe "Arango::Server" do
       expect(@server.version.version).to be_a(String)
     end
   end
-
-  context "Tasks" do
-    before :all do
-      @server = connect
-    end
-
-    it "all_endpoints" do
-      expect(@server.all_endpoints.first).to have_key(:endpoint)
-    end
-  end
 end

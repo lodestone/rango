@@ -16,33 +16,13 @@ module Arango
     include Arango::Database::QueryCache
     include Arango::Database::Replication
     include Arango::Database::StreamTransactions
+    include Arango::Database::Tasks
     include Arango::Database::Transactions
     include Arango::Database::ViewAccess
 
-    def self.new(*args)
-      hash = args[0]
-      super unless hash.is_a?(Hash)
-      server = hash[:server]
-      if server.is_a?(Arango::Server) && server.active_cache
-        cache_name = hash[:name]
-        cached = server.cache.cache.dig(:database, cache_name)
-        if cached.nil?
-          hash[:cache_name] = cache_name
-          return super
-        else
-          return cached
-        end
-      end
-      super
-    end
-
     # TODO see js api https://www.arangodb.com/docs/devel/drivers/js-reference-database.html
-    def initialize(name:, server:, cache_name: nil)
+    def initialize(name, server:)
       assign_server(server)
-      unless cache_name.nil?
-        @cache_name = cache_name
-        @server.cache.save(:database, cache_name, self)
-      end
       @name = name
       @server = server
       @is_system = nil
@@ -104,13 +84,9 @@ module Arango
       query: {}, key: nil, return_direct_result: false,
       skip_to_json: false, keep_null: false)
       url = "_db/#{@name}/#{url}"
-      @server.request(action, url, body: body, headers: headers, query: query, key: key, return_direct_result: return_direct_result,
-                      skip_to_json: skip_to_json, keep_null: keep_null)
+      @server.request(action, url, body: body, headers: headers, query: query, key: key, skip_to_json: skip_to_json,
+                      keep_null: keep_null)
     end
-    private :request
-
-
-
 
 # === USER ACCESS ===
 
@@ -134,21 +110,5 @@ module Arango
       user = check_user(user)
       user.database_access(database: @name)
     end
-
-# === TASK ===
-
-    def task(body: {}, command: nil, created: nil, id: nil, name: nil, params: nil, period: nil, type: nil)
-      Arango::Task.new(body: body, command: command, created: created, database: self, id: id, name: name, params: params, period: period, type: type)
-    end
-
-    def tasks
-      result = request("GET", "_api/tasks")
-      return result if return_directly?(result)
-      result.delete_if{|k| k[:database] != @name}
-      result.map do |task|
-        Arango::Task.new(body: task, database: self)
-      end
-    end
-
   end
 end

@@ -1,6 +1,14 @@
 module Arango
   class Database
     module Basics
+
+      def self.included(base)
+        base.instance_exec do
+          def drop(name, server:)
+            server.request("DELETE", "_api/database/#{name}")
+          end
+        end
+      end
       # === GET ===
       # TODO
       def assign_attributes(result)
@@ -24,7 +32,12 @@ module Arango
 
 
       def create
-        # TODO
+        body = {
+          name:  @name,
+          # TODO users: users
+        }
+        @server.request("POST", "_api/database", body: body)
+        self
       end
 
       def exist?
@@ -39,8 +52,10 @@ module Arango
       # TODO move to server
 
       def drop
-
+        self.drop(@name, server: @server)
       end
+      alias delete drop
+      alias destroy drop
 
       def truncate
 

@@ -14,9 +14,14 @@ module Arango
       def from_h(task_hash, server: nil)
         raise Arango::Error.new(err: :no_task_id) unless task_hash.key?(:id)
         task_hash.merge!(server: server) if server
+        if task_hash[:database].class == String
+          task_hash[:database] = Arango::Database.new(task_hash[:database], server: server)
+        end
+        created = task_hash.delete(:created)
         offset = task_hash.delete(:offset)
         type = task_hash.delete(:type)
         task = Arango::Task.new(task_hash.delete(:id), **task_hash)
+        task.instance_variable_set(:@created, created)
         task.instance_variable_set(:@offset, offset)
         task.instance_variable_set(:@type, type)
         task
@@ -58,6 +63,7 @@ module Arango
       def get(id, database: nil, server: nil)
         if database
           result = database.request("GET", "_api/tasks/#{id}")
+          server = database.server
         elsif server
           result = server.request("GET", "_api/tasks/#{id}")
         else
@@ -74,6 +80,7 @@ module Arango
       def all_tasks(database: nil, server: nil)
         if database
           result = database.request("GET", "_api/tasks")
+          server = database.server
         elsif server
           result = server.request("GET", "_api/tasks")
         else
@@ -151,7 +158,6 @@ module Arango
     # @return [Arango::Task]
     def initialize(id, command: nil, name: nil, offset: nil, params: nil, period: nil, database: nil, server: nil)
       if database
-        database = Arango::Database.new(name: database, server: server) if database.class == String
         assign_database(database)
         @requester = @database
       elsif server

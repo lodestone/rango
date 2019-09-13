@@ -6,7 +6,7 @@ module Arango
 
     include Arango::Server::Administration
     include Arango::Server::Config
-    include Arango::Server::DatabaseAccess
+    include Arango::Server::Databases
     include Arango::Server::Monitoring
     include Arango::Server::Pool
     include Arango::Server::Tasks
@@ -48,10 +48,6 @@ module Arango
     def endpoint
       "tcp://#{@host}:#{@port}"
     end
-
-
-
-
 
   # === USER ===
 
@@ -182,8 +178,6 @@ module Arango
       return return_directly?(result) ? result : true
     end
 
-    private
-
     def request(*args)
       if @pool
         @internal_request.with{|request| request.request(*args)}
@@ -191,6 +185,8 @@ module Arango
         @request.request(*args)
       end
     end
+
+    private
 
     def download(*args)
       if @pool
