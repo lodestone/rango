@@ -71,6 +71,12 @@ module Arango
       @is_array
     end
 
+    def key?(key)
+      return false if @is_array
+      @result.key?(key)
+    end
+    alias has_key? key?
+
     def map(*args, &block)
       @result.map(*args, &block)
     end
@@ -80,17 +86,19 @@ module Arango
     end
 
     def to_h
-      @result unless @is_array
+      return @result unless @is_array
       @result.to_h
     end
+    alias to_hash to_h
 
     def to_a
-      @result if @is_array
+      return @result if @is_array
       @result.to_a
     end
 
     def to_ary
-      @result.to_ary
+      return @result.to_ary if @is_array
+      to_a
     end
 
     def to_s
