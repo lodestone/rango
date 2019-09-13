@@ -5,12 +5,6 @@ describe "Arango::Task" do
     @server = connect
   end
 
-  # context "" do
-  #   before do
-  #     @myTask = @myDatabase.task(id: "mytaskid", name: "MyTaskID", command: "(function(params) { require('@arangodb').print(params); })(params)", params: {foo: "bar", bar: "foo"}, period: 60).create
-  #   end
-  # end
-
   context "Server" do
     before :each do
       begin
@@ -175,67 +169,80 @@ describe "Arango::Task" do
     end
   end
 
-  #   it "create new instance" do
-  #     myArangoTask = Arango::Task.new "mytaskid", name: "MyTaskID",
-  #                                     command: "(function(params) { require('@arangodb').print(params); })(params)",
-  #                                     params: {foo: "bar", bar: "foo"}, period: 2, database: @myDatabase
-  #     expect(myArangoTask.params[:foo]).to eq "bar"
-  #   end
-  #
-  #   it "create a new Task instance" do
-  #     myArangoTask = Arango::Task.new name: "MyTaskID",
-  #                                     command: "(function(params) { require('@arangodb').print(params); })(params)",
-  #                                     params: {foo: "bar", bar: "foo"}, period: 2, database: @myDatabase
-  #     expect([BigDecimal, Float].include?(myArangoTask.create.created.class)).to eq true
-  #   end
-  #
-  #   it "create a new Task instance with ID" do
-  #     myArangoTask = Arango::Task.new id: "mytaskid2", name: "MyTaskID",
-  #                                     command: "(function(params) { require('@arangodb').print(params); })(params)",
-  #                                     params: {"foo2": "bar2", "bar2": "foo2"}, period: 2, database: @myDatabase
-  #     myArangoTask.create
-  #     expect(myArangoTask.params[:foo2]).to eq "bar2"
-  #   end
-  #
-  #   it "duplicate a Task instance with ID" do
-  #     val = nil
-  #     begin
-  #       myArangoTask = Arango::Task.new id: "mytaskid2", name: "MyTaskID",
-  #                                       command: "(function(params) { require('@arangodb').print(params); })(params)",
-  #                                       params: {"foo21": "bar2", "bar21": "foo21"}, period: 2, database: @myDatabase
-  #       myArangoTask.create
-  #     rescue Arango::Error => e
-  #       val = e.message
-  #     end
-  #     expect(val).to eq "duplicate task id"
-  #   end
-  #
-  #   it "retrieve lists" do
-  #     myArangoTask = Arango::Task.new name: "MyTaskID",
-  #                                     command: "(function(params) { require('@arangodb').print(params); })(params)",
-  #                                     params: {"foo2": "bar2", "bar2": "foo2"}, period: 2, database: @myDatabase
-  #     myArangoTask.create
-  #     result = @myDatabase.tasks
-  #     result = result.map{|x| x.database.name}
-  #     expect(result.include? 'MyDatabase').to be true
-  #   end
-  #
-  #   it "retrieve" do
-  #     myArangoTask = Arango::Task.new name: "MyTaskID",
-  #                                     command: "(function(params) { require('@arangodb').print(params); })(params)",
-  #                                     params: {"foo2": "bar2", "bar2": "foo2"}, period: 2, database: @myDatabase
-  #     myArangoTask.create
-  #     expect(myArangoTask.retrieve.params[:foo2]).to eq "bar2"
-  #   end
-  #
-  #   it "destroy" do
-  #     myArangoTask = Arango::Task.new id: "mytaskid2", database: @myDatabase
-  #     expect(myArangoTask.destroy).to be true
-  #   end
-  #
-  # context "Database" do
-  #   it "database" do
-  #     expect(@myTask.database.class).to be Arango::Database
-  #   end
-  # end
+  context "Arango::Task itself" do
+    before :all do
+      begin
+        @server.drop_database("TaskDatabase")
+      rescue
+      end
+      @database = @server.create_database("TaskDatabase")
+    end
+
+    before :each do
+      begin
+        @server.drop_task("mytaskid")
+      rescue
+      end
+    end
+
+    after :each do
+      begin
+        @server.drop_task("mytaskid")
+      rescue
+      end
+    end
+
+    after :all do
+      @server.drop_database("TaskDatabase")
+    end
+
+    it "create new instance without id and check params" do
+      myArangoTask = Arango::Task.new name: "MyTaskID",
+                                      command: "(function(params) { require('@arangodb').print(params); })(params)",
+                                      params: {foo: "bar", bar: "foo"}, period: 2, database: @database
+      myArangoTask.create
+      expect(myArangoTask.params[:foo]).to eq "bar"
+      expect(myArangoTask.id).to be_a String
+    end
+
+    it "create a new Task instance and check created" do
+      myArangoTask = Arango::Task.new "mytaskid", name: "MyTaskID",
+                                      command: "(function(params) { require('@arangodb').print(params); })(params)",
+                                      params: {foo: "bar", bar: "foo"}, period: 2, database: @database
+      expect([BigDecimal, Float].include?(myArangoTask.create.created.class)).to eq true
+    end
+
+    it "create a new Task instance with ID" do
+      myArangoTask = Arango::Task.new "mytaskid", name: "MyTaskID",
+                                      command: "(function(params) { require('@arangodb').print(params); })(params)",
+                                      params: {"foo2": "bar2", "bar2": "foo2"}, period: 2, offset: 4, database: @database
+      myArangoTask.create
+      expect(myArangoTask.params[:foo2]).to eq "bar2"
+    end
+
+    it "fail to duplicate a Task instance with ID" do
+      val = nil
+      begin
+        myArangoTask = Arango::Task.new "mytaskid", name: "MyTaskID",
+                                        command: "(function(params) { require('@arangodb').print(params); })(params)",
+                                        params: {"foo21": "bar2", "bar21": "foo21"}, period: 2, database: @database
+        myArangoTask.create
+        myArangoTask2 = Arango::Task.new "mytaskid", name: "MyTaskID",
+                                        command: "(function(params) { require('@arangodb').print(params); })(params)",
+                                        params: {"foo21": "bar2", "bar21": "foo21"}, period: 2, database: @database
+        myArangoTask2.create
+      rescue Arango::Error => e
+        val = e.message
+      end
+      expect(val).to eq "duplicate task id"
+    end
+
+    it "destroy" do
+      myArangoTask = Arango::Task.new "mytaskid", command: '1+1', period: 2, database: @database
+      myArangoTask.create
+      expect(@database.list_tasks).to include('mytaskid')
+      expect(myArangoTask.destroy).to be nil
+      expect(@database.list_tasks).not_to include('mytaskid')
+    end
+  end
 end

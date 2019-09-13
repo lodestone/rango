@@ -133,7 +133,7 @@ module Arango
     attr_accessor :period
 
     # Time this task has been created at, timestamp.
-    # return [Integer]
+    # return [BigDecimal]
     attr_reader :created
 
     # Database the task belongs to
@@ -156,7 +156,7 @@ module Arango
     # @param params [Hash] Hash of params to pass to the command, optional.
     # @param period [Integer] Number of seconds between executions, optional.
     # @return [Arango::Task]
-    def initialize(id, command: nil, name: nil, offset: nil, params: nil, period: nil, database: nil, server: nil)
+    def initialize(id = nil, command: nil, name: nil, offset: nil, params: nil, period: nil, database: nil, server: nil)
       if database
         assign_database(database)
         @requester = @database
@@ -194,7 +194,6 @@ module Arango
     # return [Arango::Task] Returns the task.
     def create
       body = {
-        id: @id,
         name: @name,
         command: @command,
         period: @period,
@@ -202,24 +201,15 @@ module Arango
         params: @params,
         database: @database ? @database.name : nil
       }
-      result = @requester.request("POST", "_api/tasks", body: body)
-      @type = result.type
+      if @id
+        result = @requester.request("PUT", "_api/tasks/#{@id}", body: body)
+      else
+        result = @requester.request("POST", "_api/tasks", body: body)
+        @id = result.id
+      end
+      @type = result.type.to_sym
       @created = result.created
-      self
-    end
-
-    # Update the task in the database.
-    # return [Arango::Task] Returns the task.
-    def update
-      body = {
-        id: @id,
-        name: @name,
-        command: @command,
-        period: @period,
-        offset: @offset,
-        params: @params
-      }
-      @requester.request("PUT", "_api/tasks/#{@id}", body: body)
+      @name = result.name
       self
     end
 
