@@ -77,7 +77,7 @@ module Arango
       # @param database [Arango::Database, String] A database, optional if server is given.
       # @param server [Arango::Server] Server, optional if database is given.
       # @return [Array] Array of Arango::Task objects.
-      def all_tasks(database: nil, server: nil)
+      def all(database: nil, server: nil)
         if database
           result = database.request("GET", "_api/tasks")
           server = database.server
@@ -94,7 +94,7 @@ module Arango
       # @param database [Arango::Database, String] A database, optional if server is given.
       # @param server [Arango::Server] Server, optional if database is given.
       # @return [Array] Array of task ids.
-      def list_tasks(database: nil, server: nil)
+      def list(database: nil, server: nil)
         if database
           result = database.request("GET", "_api/tasks")
         elsif server

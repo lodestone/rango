@@ -5,7 +5,7 @@ module Arango
       #
       # @return [Array] Array of Arango::Task
       def all_tasks
-        Arango::Task.all_tasks(database: self)
+        Arango::Task.all(database: self)
       end
 
       # Create a new task with given id, task is saved to the database.
@@ -46,7 +46,7 @@ module Arango
       #
       # @return [Array] Array of Strings.
       def list_tasks
-        Arango::Task.list_tasks(database: self)
+        Arango::Task.list(database: self)
       end
 
       # Delete task with given id.
