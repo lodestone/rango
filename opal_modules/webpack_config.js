@@ -51,8 +51,8 @@ const common_config = {
 const node_config = {
     target: 'node',
     entry: {
-        arango_3_5_opal_1_1: path.resolve(__dirname, 'entry_opal_node.js'),
-        arango_3_5_opal_parser_1_1: path.resolve(__dirname, 'entry_opal_parser.js'),
+        arango_opal: path.resolve(__dirname, 'entry_opal_node.js'),
+        arango_opal_parser: path.resolve(__dirname, 'entry_opal_parser.js'),
     }
 };
 
