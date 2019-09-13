@@ -1,12 +1,11 @@
 module Arango
-  class Server
+  class Database
     module Tasks
-
       # Get all tasks.
       #
       # @return [Array] Array of Arango::Task
       def all_tasks
-        Arango::Task.all_tasks(server: self)
+        Arango::Task.all_tasks(database: self)
       end
 
       # Create a new task with given id, task is saved to the database.
@@ -19,15 +18,15 @@ module Arango
       # @param period [Integer] Number of seconds between executions, optional.
       # @return [Arango::Task]
       def create_task(id, command:, name: nil, offset: nil, params: nil, period: nil)
-        Arango::Task.new(id, command: command, name: name, offset: offset, params: params, period: period, server: self).create
+        Arango::Task.new(id, command: command, name: name, offset: offset, params: params, period: period, database: self).create
       end
 
-      # Get a task from the server.
+      # Get a task from the database.
       #
       # @param id [String]
       # @return [Arango::Task]
       def get_task(id)
-        Arango::Task.get(id, server: self)
+        Arango::Task.get(id, database: self)
       end
 
       # Instantiate a new task with given id, task is not saved to the database.
@@ -40,14 +39,14 @@ module Arango
       # @param period [Integer] Number of seconds between executions, optional.
       # @return [Arango::Task]
       def new_task(id, command: nil, name: nil, offset: nil, params: nil, period: nil)
-        Arango::Task.new(id, command: command, name: name, offset: offset, params: params, period: period, server: self)
+        Arango::Task.new(id, command: command, name: name, offset: offset, params: params, period: period, database: self)
       end
 
       # Get a list of all task ids.
       #
       # @return [Array] Array of Strings.
       def list_tasks
-        Arango::Task.list_tasks(server: self)
+        Arango::Task.list_tasks(database: self)
       end
 
       # Delete task with given id.
@@ -55,7 +54,7 @@ module Arango
       # @param id [String]
       # @return [Boolean] Returns true if task has been deleted.
       def drop_task(id)
-        Arango::Task.delete(id, server: self)
+        Arango::Task.delete(id, database: self)
       end
       alias delete_task drop_task
       alias destroy_task drop_task
