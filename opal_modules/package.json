@@ -1,0 +1,20 @@
+{
+  "name": "opal_module",
+  "version": "1.1.0",
+  "description": "Ruby runtime and core library for JavaScript within ArangoDB",
+  "main": "opal.js",
+  "keywords": [
+    "opal",
+    "ruby"
+  ],
+  "scripts": {
+    "build": "webpack --config=webpack_config.js"
+  },
+  "author": "Adam Beynon and the Opal contributors",
+  "license": "MIT",
+  "devDependencies": {
+    "opal-webpack-loader": "^0.9.6",
+    "webpack": "^4.40.0",
+    "webpack-cli": "^3.3.8"
+  }
+}

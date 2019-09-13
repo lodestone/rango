@@ -1,3 +1,5 @@
 *.lock
 *.gem
 *~
+opal_modules/node_modules
+arango_3_5_opal_*
