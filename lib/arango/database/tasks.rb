@@ -28,6 +28,8 @@ module Arango
       def get_task(id)
         Arango::Task.get(id, database: self)
       end
+      alias fetch_task get_task
+      alias retrieve_task get_task
 
       # Instantiate a new task with given id, task is not saved to the database.
       #
@@ -58,6 +60,14 @@ module Arango
       end
       alias delete_task drop_task
       alias destroy_task drop_task
+
+      # Checks existence of a task.
+      # @param id [String]
+      # @return [Boolean] Returns true if the task exists, otherwise false.
+      def exist_task?(id)
+        Arango::Task.exist?(id, database: self)
+      end
+      alias task_exist? exist_task?
     end
   end
 end

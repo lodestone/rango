@@ -38,7 +38,7 @@ module Arango
       # Delete a task from the server or from a database.
       #
       # @param id [String] The id of the Task
-      # @param database [Arango::Database, String] A database, optional if server is given.
+      # @param database [Arango::Database] A database, optional if server is given.
       # @param server [Arango::Server] Server, optional if database is given.
       # @return [Arango::Task]
       def drop(id, database: nil, server: nil)
@@ -57,7 +57,7 @@ module Arango
       # Gets a task from the server or from a database.
       #
       # @param id [String] The id of the Task
-      # @param database [Arango::Database, String] A database, optional if server is given.
+      # @param database [Arango::Database] A database, optional if server is given.
       # @param server [Arango::Server] Server, optional if database is given.
       # @return [Arango::Task]
       def get(id, database: nil, server: nil)
@@ -71,10 +71,12 @@ module Arango
         end
         Arango::Task.from_result(result, server: server)
       end
+      alias fetch get
+      alias retrieve get
 
       # Get all tasks from a server or from a database
       #
-      # @param database [Arango::Database, String] A database, optional if server is given.
+      # @param database [Arango::Database] A database, optional if server is given.
       # @param server [Arango::Server] Server, optional if database is given.
       # @return [Array] Array of Arango::Task objects.
       def all(database: nil, server: nil)
@@ -91,7 +93,7 @@ module Arango
 
       # List all tasks ids from a server or from a database
       #
-      # @param database [Arango::Database, String] A database, optional if server is given.
+      # @param database [Arango::Database] A database, optional if server is given.
       # @param server [Arango::Server] Server, optional if database is given.
       # @return [Array] Array of task ids.
       def list(database: nil, server: nil)
@@ -103,6 +105,11 @@ module Arango
           raise Arango::Error.new(err: :no_db_no_server)
         end
         result.map { |task| task[:id] }
+      end
+
+      def exist?(id, database: nil, server: nil)
+        result = list(database: database, server: server)
+        result.include?(id)
       end
     end
 

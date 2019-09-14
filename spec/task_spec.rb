@@ -79,6 +79,14 @@ describe "Arango::Task" do
       expect(list.size).to eq 2
       expect(list.sort).to eq %w[1 3]
     end
+
+    it "exist_task?" do
+      %w[1 2 3].each do |id|
+        @server.new_task(id, command: '1+1', period: 2).create
+      end
+      expect(@server.exist_task?('2')).to be true
+      expect(@server.exist_task?('5')).to be false
+    end
   end
 
   context "Database" do
@@ -166,6 +174,14 @@ describe "Arango::Task" do
       list = @database.list_tasks
       expect(list.size).to eq 2
       expect(list.sort).to eq %w[1 3]
+    end
+
+    it "exist_task?" do
+      %w[1 2 3].each do |id|
+        @database.new_task(id, command: '1+1', period: 2).create
+      end
+      expect(@database.exist_task?('2')).to be true
+      expect(@database.exist_task?('5')).to be false
     end
   end
 
