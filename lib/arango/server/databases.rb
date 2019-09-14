@@ -56,6 +56,8 @@ module Arango
       def get_database(name)
         Arango::Database.get(name, server: self)
       end
+      alias fetch_database get_database
+      alias retrieve_database get_database
     end
   end
 end
