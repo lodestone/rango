@@ -1,17 +1,17 @@
 require 'rspec/core/rake_task'
 RSpec::Core::RakeTask.new :rspec
 
-task :default => :rspec
+task :default => [:build_opal_modules, :rspec]
 
 task :build_opal_modules do
   Dir.chdir('opal_modules')
   if File.exist?('yarn.lock')
-    system('yarn upgrade')
+    system('env -i PATH=$PATH yarn upgrade')
   else
-    system('yarn install')
+    system('env -i PATH=$PATH yarn install')
   end
-  system('bundle update')
-  system('yarn run build')
+  system('env -i PATH=$PATH bundle update')
+  system('env -i PATH=$PATH yarn run build')
   Dir.chdir('..')
 end
 
