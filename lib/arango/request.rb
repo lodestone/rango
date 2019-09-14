@@ -12,6 +12,7 @@ module Arango
 
     def request(action, url, body: {}, headers: {}, query: {}, key: nil, skip_to_json: false, keep_null: false,
                 skip_parsing: false)
+      # TODO uri safety, '..', etc., maybe arango is guarded? not sure.
       send_url = "#{@base_uri}/"
       send_url += url
 
