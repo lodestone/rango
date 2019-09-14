@@ -7,10 +7,10 @@ and its [Error Codes](https://www.arangodb.com/docs/3.5/appendix-error-codes.htm
 
 The version of arango-driver follows the ArangoDB version, version 3.5.x of the driver is meant to be used with ArangoDB 3.5.y, where x and y may differ. 
 
-It requires the gems "HTTParty", "Oj" and "connection_pool"</br>
-
-To install arango-driver: `gem install arango-driver`
+This doesnt work yet, gem not published yet:
+To install arango-driver: `gem install arango-driver` 
 To use it in your application: `require "arango-driver"`
+Please install from the repo instead.
 
 ## Community and Support
 At the [Isomorfeus Framework Project](http://isomorfeus.com). There is a #arango_driver channel at the isomorfeus Slack space.
