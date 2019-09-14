@@ -1,45 +1,20 @@
 # === COLLECTION ===
 
 module Arango
-  class EdgeCollection
+  class Collection
     include Arango::Helper::Satisfaction
     include Arango::Helper::Return
     include Arango::Helper::DatabaseAssignment
 
-    include Arango::EdgeCollection::Basics
-    include Arango::EdgeCollection::DocumentAccess
-    include Arango::EdgeCollection::Indexes
+    include Arango::Collection::Basics
+    include Arango::Collection::Documents
+    include Arango::Collection::Indexes
 
-    def self.new(*args)
-      hash = args[0]
-      super unless hash.is_a?(Hash)
-      database = hash[:database]
-      if database.is_a?(Arango::Database) && database.server.active_cache
-        cache_name = "#{database.name}/#{hash[:name]}"
-        cached = database.server.cache.cache.dig(:database, cache_name)
-        if cached.nil?
-          hash[:cache_name] = cache_name
-          return super
-        else
-          body = hash[:body] || {}
-          [:type, :isSystem].each{|k| body[k] ||= hash[k]}
-          cached.assign_attributes(body)
-          return cached
-        end
-      end
-      super
-    end
-
-    def initialize(name:, database:, graph: nil, body: {}, type: :document,
-      is_system: nil, cache_name: nil)
+    def initialize(name, database:, graph: nil, body: {}, type: :document, is_system: nil)
       @name = name
       assign_database(database)
       assign_graph(graph)
       assign_type(type)
-      unless cache_name.nil?
-        @cache_name = cache_name
-        @server.cache.save(:collection, cache_name, self)
-      end
       body[:type]     ||= type == :document ? 2 : 3
       body[:status]   ||= nil
       body[:isSystem] ||= is_system
