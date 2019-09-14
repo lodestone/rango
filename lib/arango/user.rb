@@ -6,26 +6,6 @@ module Arango
     include Arango::Helper::Return
     include Arango::Helper::ServerAssignment
 
-    def self.new(*args)
-      hash = args[0]
-      super unless hash.is_a?(Hash)
-      database = hash[:database]
-      if database.is_a?(Arango::Database) && database.server.active_cache
-        cache_name = hash[:name]
-        cached = database.server.cache.cache.dig(:user, cache_name)
-        if cached.nil?
-          hash[:cache_name] = cache_name
-          return super
-        else
-          body = {}
-          %i[password extra active].each{|k| body[k] ||= hash[k]}
-          cached.assign_attributes(body)
-          return cached
-        end
-      end
-      super
-    end
-
     def initialize(server:, password: "", name:, extra: {}, active: nil, cache_name: nil)
       assign_server(server)
       unless cache_name.nil?
@@ -143,9 +123,9 @@ module Arango
     def add_collection_access(grant:, database:, collection:)
       satisfy_category?(grant, %w[rw ro none])
       satisfy_class?(database, [Arango::Database, String])
-      satisfy_class?(collection, [Arango::DocumentCollection, String])
+      satisfy_class?(collection, [Arango::Collection, String])
       database = database.name     if database.is_a?(Arango::Database)
-      collection = collection.name if collection.is_a?(Arango::DocumentCollection)
+      collection = collection.name if collection.is_a?(Arango::Collection)
       body = { grant: grant }
       result = @server.request("PUT", "_api/user/#{@name}/database/#{database}/#{collection}", body: body)
       return return_directly?(result) ? result : result[:"#{database}/#{collection}"]
@@ -161,9 +141,9 @@ module Arango
 
     def revoke_collection_access(database:, collection:)
       satisfy_class?(database, [Arango::Database, String])
-      satisfy_class?(collection, [Arango::DocumentCollection, String])
+      satisfy_class?(collection, [Arango::Collection, String])
       database = database.name     if database.is_a?(Arango::Database)
-      collection = collection.name if collection.is_a?(Arango::DocumentCollection)
+      collection = collection.name if collection.is_a?(Arango::Collection)
       result = @server.request("DELETE", "_api/user/#{@name}/database/#{database}/#{collection}")
       return return_directly?(result) ? result : true
     end
@@ -184,9 +164,9 @@ module Arango
 
     def collection_access(database:, collection:)
       satisfy_class?(database, [Arango::Database, String])
-      satisfy_class?(collection, [Arango::DocumentCollection, String])
+      satisfy_class?(collection, [Arango::Collection, String])
       database = database.name     if database.is_a?(Arango::Database)
-      collection = collection.name if collection.is_a?(Arango::DocumentCollection)
+      collection = collection.name if collection.is_a?(Arango::Collection)
       result = @server.request("GET", "_api/user/#{@name}/database/#{database}/#{collection}", body: body)
       return return_directly?(result) ? result : result[:result]
     end

@@ -6,26 +6,6 @@ module Arango
     include Arango::Helper::Return
     include Arango::Helper::DatabaseAssignment
 
-    def self.new(*args)
-      hash = args[0]
-      super unless hash.is_a?(Hash)
-      database = hash[:database]
-      if database.is_a?(Arango::Database) && database.server.active_cache && !hash[:mount].nil?
-        cache_name = "#{database.name}/#{hash[:mount]}"
-        cached = database.server.cache.cache.dig(:foxx, cache_name)
-        if cached.nil?
-          hash[:cache_name] = cache_name
-          return super
-        else
-          body = hash[:body] || {}
-          %i[mount development legacy provides name version type setup teardown].each{|k| body[k] ||= hash[k]}
-          cached.assign_attributes(body)
-          return cached
-        end
-      end
-      super
-    end
-
     def initialize(database:, body: {}, mount:, development: nil, legacy: nil,
       provides: nil, name: nil, version: nil, type: "application/json",
       setup: nil, teardown: nil, cache_name: nil)

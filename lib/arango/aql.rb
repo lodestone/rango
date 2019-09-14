@@ -109,7 +109,7 @@ module Arango
         @result = result[:result]
       else
         @result = result[:result].map do |x|
-          collection = Arango::DocumentCollection.new(name: x[:_id].split("/")[0], database: @database)
+          collection = Arango::Collection.new(name: x[:_id].split("/")[0], database: @database)
           Arango::Document.new(name: x[:_key], collection: collection, body: x)
         end
       end

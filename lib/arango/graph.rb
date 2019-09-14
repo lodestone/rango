@@ -6,26 +6,6 @@ module Arango
     include Arango::Helper::Return
     include Arango::Helper::DatabaseAssignment
 
-    def self.new(*args)
-      hash = args[0]
-      super unless hash.is_a?(Hash)
-      database = hash[:database]
-      if database.is_a?(Arango::Database) && database.server.active_cache
-        cache_name = "#{database.name}/#{hash[:name]}"
-        cached = database.server.cache.cache.dig(:graph, cache_name)
-        if cached.nil?
-          hash[:cache_name] = cache_name
-          return super
-        else
-          body = hash[:body] || {}
-          %i[isSmart edgeDefinitions orphanDollections numberOfShards replicationFactor smartGraphAttribute].each{|k| body[k] ||= hash[k]}
-          cached.assign_attributes(body)
-          return cached
-        end
-      end
-      super
-    end
-
     def initialize(name:, database:, body: {}, cache_name: nil, edge_definitions: [], is_smart: nil, number_of_shards: nil, orphan_collections: [],
                    replication_factor: nil, smart_graph_attribute: nil)
       assign_database(database)
@@ -75,13 +55,13 @@ module Arango
     end
 
     def return_collection(collection, type=nil)
-      satisfy_class?(collection, [Arango::DocumentCollection, String])
+      satisfy_class?(collection, [Arango::Collection, String])
       case collection
-      when Arango::DocumentCollection
+      when Arango::Collection
         return collection
       when String
-        return Arango::DocumentCollection.new(name:     collection,
-                                              database: @database, type: type, graph: self)
+        return Arango::Collection.new(name:     collection,
+                                      database: @database, type: type, graph: self)
       end
     end
 

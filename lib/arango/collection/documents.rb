@@ -1,15 +1,41 @@
 module Arango
-  class DocumentCollection
-    module DocumentAccess
-      def document_exist?
+  class Collection
+    module Documents
+      def create_documents(document: [], wait_for_sync: nil, return_new: nil,
+                           silent: nil)
+        document = [document] unless document.is_a? Array
+        document = document.map{|x| return_body(x)}
+        query = {
+            waitForSync: wait_for_sync,
+            returnNew:   return_new,
+            silent:      silent
+        }
+        results = @database.request("POST", "_api/document/#{@name}", body: document,
+                                    query: query)
+        return results if return_directly?(results) || silent
+        results.map.with_index do |result, index|
+          body2 = result.clone
+          if return_new
+            body2.delete(:new)
+            body2 = body2.merge(result[:new])
+          end
+          real_body = document[index]
+          real_body = real_body.merge(body2)
+          Arango::Document.new(name: result[:_key], collection: self, body: real_body)
+        end
+      end
+
+      def exist_document?
 
       end
-      alias document_exists? document_exist?
+      alias document_exist? exist_document?
 
-      def document(name: nil, body: {}, rev: nil, from: nil, to: nil)
+      def get_document(name: nil, body: {}, rev: nil, from: nil, to: nil)
         Arango::Document.new(name: name, collection: self, body: body, rev: rev,
                              from: from, to: to)
       end
+      alias fetch_document get_document
+      alias retrieve_document get_document
 
       def documents(type: "document") # "path", "id", "key"
         @return_document = false

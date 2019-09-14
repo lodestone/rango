@@ -8,7 +8,7 @@ module Arango
 
     include Arango::Database::AQLFunctions
     include Arango::Database::Basics
-    include Arango::Database::CollectionAccess
+    include Arango::Database::Collections
     include Arango::Database::FoxxServices
     include Arango::Database::GraphAccess
     include Arango::Database::HTTPRoute

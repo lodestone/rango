@@ -1,5 +1,5 @@
 module Arango
-  class DocumentCollection
+  class Collection
     module Replication
       # === REPLICATION ===
 

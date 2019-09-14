@@ -7,28 +7,6 @@ module Arango
     include Arango::Helper::CollectionAssignment
     include Arango::Helper::Traversal
 
-    def self.new(*args)
-      hash = args[0]
-      super unless hash.is_a?(Hash)
-      collection = hash[:collection]
-      if collection.is_a?(Arango::DocumentCollection) &&
-        collection.database.server.active_cache && !hash[:name].nil?
-        cache_name = "#{collection.database.name}/#{collection.name}/#{hash[:name]}"
-        cached = collection.database.server.cache.cache.dig(:document, cache_name)
-        if cached.nil?
-          hash[:cache_name] = cache_name
-          return super
-        else
-          body = hash[:body] || {}
-          [:rev, :from, :to].each{|k| body[:"_#{k}"] ||= hash[k]}
-          body[:"_key"] ||= hash[:name]
-          cached.assign_attributes(body)
-          return cached
-        end
-      end
-      super
-    end
-
     def initialize(name: nil, collection:, body: {}, rev: nil, from: nil,
       to: nil, cache_name: nil)
       assign_collection(collection)
@@ -163,7 +141,7 @@ module Arango
         return nil
       when String
         collection_name, document_name = var.split("/")
-        collection = Arango::DocumentCollection.new name: collection_name, database: @database
+        collection = Arango::Collection.new name: collection_name, database: @database
         if @graph.nil?
           return Arango::Document.new(name: document_name, collection: collection)
         else
@@ -300,8 +278,8 @@ module Arango
   # === EDGE ===
 
     def edges(collection:, direction: nil)
-      satisfy_class?(collection, [Arango::DocumentCollection, String])
-      collection = collection.is_a?(Arango::DocumentCollection) ? collection.name : collection
+      satisfy_class?(collection, [Arango::Collection, String])
+      collection = collection.is_a?(Arango::Collection) ? collection.name : collection
       query = {
         vertex:    @body[:_id],
         direction: direction
@@ -310,8 +288,8 @@ module Arango
       return result if return_directly?(result)
       result[:edges].map do |edge|
         collection_name, key = edge[:_id].split("/")
-        collection = Arango::DocumentCollection.new(name:     collection_name,
-                                                    database: @database, type: :edge)
+        collection = Arango::Collection.new(name:     collection_name,
+                                            database: @database, type: :edge)
         Arango::Document.new(name: key, body: edge, collection: collection)
       end
     end

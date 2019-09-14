@@ -151,8 +151,6 @@ module Arango
       request("GET", "_admin/wal/transactions")
     end
 
-
-
     def database_version
       request("GET", "_admin/database/target-version", key: :version)
     end

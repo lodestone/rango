@@ -6,26 +6,6 @@ module Arango
     include Arango::Helper::Return
     include Arango::Helper::DatabaseAssignment
 
-    def self.new(*args)
-      hash = args[0]
-      super unless hash.is_a?(Hash)
-      database = hash[:database]
-      if database.is_a?(Arango::Database) && database.server.active_cache && !hash[:id].nil?
-        cache_name = "#{database.name}/#{hash[:id]}"
-        cached = database.server.cache.cache.dig(:view, cache_name)
-        if cached.nil?
-          hash[:cache_name] = cache_name
-          return super
-        else
-          body = {}
-          [:type, :name].each{|k| body[k] ||= hash[k]}
-          cached.assign_attributes(body)
-          return cached
-        end
-      end
-      super
-    end
-
     def initialize(database:, type: "arangosearch", name:, id: nil, cache_name: nil)
       assign_database(database)
       unless cache_name.nil?
@@ -51,7 +31,7 @@ module Arango
     alias assign_type type=
 
     def add_link(collection:, analyzers: nil, fields: {}, include_all_fields: nil, track_list_positions: nil, store_values: nil)
-      satisfy_class?(collection, [Arango::DocumentCollection, String])
+      satisfy_class?(collection, [Arango::Collection, String])
       collection_name = collection.is_a?(String) ? collection : collection.name
       satisfy_category?(store_values, ["none", "id", nil])
       @links[collection_name] = {

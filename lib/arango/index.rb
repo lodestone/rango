@@ -6,27 +6,6 @@ module Arango
     include Arango::Helper::Return
     include Arango::Helper::CollectionAssignment
 
-    def self.new(*args)
-      hash = args[0]
-      super unless hash.is_a?(Hash)
-      collection = hash[:collection]
-      if collection.is_a?(Arango::DocumentCollection) && collection.database.server.active_cache && !hash[:id].nil?
-        cache_name = "#{collection.database.name}/#{collection.name}/#{hash[:id]}"
-        cached = collection.database.server.cache.cache.dig(:index, cache_name)
-        if cached.nil?
-          hash[:cache_name] = cache_name
-          return super
-        else
-          body = hash[:body] || {}
-          [:type, :sparse, :unique, :fields, :deduplicate, :geoJson,
-            :minLength].each{|k| body[k] ||= hash[k]}
-          cached.assign_attributes(body)
-          return cached
-        end
-      end
-      super
-    end
-
     def initialize(collection:, fields:, body: {}, cache_name: nil, deduplicate: nil, geo_json: nil, id: nil, min_length: nil, sparse: nil,
                    type: "hash", unique: nil)
       assign_collection(collection)
