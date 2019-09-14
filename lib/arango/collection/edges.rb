@@ -1,6 +1,6 @@
 module Arango
-  module EdgeCollection
-    module EdgeAccess
+  module Collection
+    module Edges
       def edge_exist?
 
       end
