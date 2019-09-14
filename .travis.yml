@@ -1,7 +1,7 @@
 dist: bionic
 lanugage: ruby
 rvm: 2.6.3
-script: bundle exec rspec
+script: bundle exec rake
 before_script:
   - curl https://download.arangodb.com/arangodb35/DEBIAN/Release.key | sudo apt-key add -
   # - echo 'deb https://download.arangodb.com/arangodb35/DEBIAN/ /' | sudo tee /etc/apt/sources.list.d/arangodb.list
