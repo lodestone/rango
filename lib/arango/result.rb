@@ -49,9 +49,11 @@ module Arango
       nil
     end
 
-    def method_missing(field_name_or_index, value = nil)
-      self[field_name_or_index] = value if field_name_or_index.to_s.end_with?('=')
-      self[field_name_or_index]
+    def method_missing(field_name_or_index, *args, &block)
+      return self[field_name_or_index] = args[0] if field_name_or_index.to_s.end_with?('=')
+      return self[field_name_or_index] if field_name_or_index.class == Integer
+      return self[field_name_or_index] if key?(field_name_or_index)
+      @result.send(field_name_or_index, *args, &block)
     end
 
     # convenience
@@ -73,7 +75,14 @@ module Arango
 
     def key?(key)
       return false if @is_array
-      @result.key?(key)
+      field_name_y = key.to_sym
+      return true if @result.key?(field_name_y)
+      field_name_s = key.to_s
+      field_name_lcy = field_name_s.camelize(:lower).to_sym
+      return true if @result.key?(field_name_lcy)
+      field_name_ucy = field_name_s.camelize(:upper).to_sym
+      return true if @result.key?(field_name_ucy)
+      false
     end
     alias has_key? key?
 
@@ -83,6 +92,11 @@ module Arango
 
     def raw_result
       @result
+    end
+
+    def to_underscored_h
+      hash = to_h
+      hash.transform_keys { |k| k.to_s.underscore }
     end
 
     def to_h
