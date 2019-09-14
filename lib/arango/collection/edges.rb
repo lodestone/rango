@@ -1,6 +1,40 @@
 module Arango
   module Collection
     module Edges
+      # === GRAPH ===
+      def graph=(graph)
+        satisfy_class?(graph, [Arango::Graph, NilClass])
+        if !graph.nil? && graph.database.name != @database.name
+          raise Arango::Error.new err: :database_graph_no_same_as_collection_database,
+                                  data: { graph_database_name: graph.database.name, collection_database_name:  @database.name}
+        end
+        @graph = graph
+      end
+      alias assign_graph graph=
+
+      def vertex(name: nil, body: {}, rev: nil, from: nil, to: nil)
+        if @type == :edge
+          raise Arango::Error.new err: :is_a_edge_collection, data: {type:  @type}
+        end
+        if @graph.nil?
+          Arango::Document.new(name: name, body: body, rev: rev, collection: self)
+        else
+          Arango::Vertex.new(name: name, body: body, rev: rev, collection: self)
+        end
+      end
+
+      def edge(name: nil, body: {}, rev: nil, from: nil, to: nil)
+        if @type == :document
+          raise Arango::Error.new err: :is_a_document_collection, data: {type:  @type}
+        end
+        if @graph.nil?
+          Arango::Document.new(name: name, body: body, rev: rev, collection: self)
+        else
+          Arango::Edge.new(name: name, body: body, rev: rev, from: from, to: to,
+                           collection: self)
+        end
+      end
+
       def edge_exist?
 
       end

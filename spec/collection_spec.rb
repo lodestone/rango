@@ -16,18 +16,18 @@ describe Arango::Collection do
     rescue
     end
   end
-  
+
   after :each do
     begin
       @database.drop_collection('MyCollection')
     rescue
     end
   end
-  
+
   after :all do
     @server.drop_database("DocumentCollectionDatabase")
   end
-  
+
   context "Database" do
     it "new_collection" do
       collection = @database.new_collection("MyCollection")
@@ -41,7 +41,75 @@ describe Arango::Collection do
       expect(collection.type).to eq :edge
     end
 
+    it "new_edge_collection" do
+      collection = @database.new_edge_collection "MyCollection"
+      expect(collection.name).to eq "MyCollection"
+      expect(collection.type).to eq :edge
+    end
 
+    it "create_collection" do
+      collection = @database.create_collection "MyCollection"
+      expect(collection.name).to eq "MyCollection"
+      expect(collection.type).to eq :document
+    end
+
+    it "create_edge_collection" do
+      collection = @database.create_edge_collection "MyCollection"
+      expect(collection.name).to eq "MyCollection"
+      expect(collection.type).to eq :edge
+    end
+
+    it "get_collection document type" do
+      @database.create_collection "MyCollection"
+      collection = @database.get_collection("MyCollection")
+      expect(collection.name).to eq "MyCollection"
+      expect(collection.type).to eq :document
+    end
+
+    it "get_collection edge type" do
+      @database.create_edge_collection "MyCollection"
+      collection = @database.get_collection("MyCollection")
+      expect(collection.name).to eq "MyCollection"
+      expect(collection.type).to eq :edge
+    end
+
+    it "get_collection edge type" do
+      @database.create_edge_collection "MyCollection"
+      collection = @database.get_collection("MyCollection")
+      expect(collection.name).to eq "MyCollection"
+      expect(collection.type).to eq :edge
+    end
+
+    it "list_collections" do
+      @database.create_collection "MyCollection"
+      list = @database.list_collections
+      expect(list).to include("MyCollection")
+    end
+
+    it "drop_collection" do
+      @database.create_collection "MyCollection"
+      list = @database.list_collections
+      expect(list).to include("MyCollection")
+      @database.drop_collection("MyCollection")
+      list = @database.list_collections
+      expect(list).not_to include("MyCollection")
+    end
+
+    it "exist_collection?" do
+      @database.create_collection "MyCollection"
+      result = @database.collection_exist?("MyCollection")
+      expect(result).to be true
+      result = @database.collection_exist?("StampCollection")
+      expect(result).to be false
+    end
+
+    it "all_collections" do
+      @database.create_collection "MyCollection"
+      collections = @database.all_collections
+      list = collections.map(&:name)
+      expect(list).to include("MyCollection")
+      expect(collections.first.class).to be Arango::Collection
+    end
   end
 
   # context "#create" do

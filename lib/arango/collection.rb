@@ -6,47 +6,154 @@ module Arango
     include Arango::Helper::Return
     include Arango::Helper::DatabaseAssignment
 
-    include Arango::Collection::Basics
     include Arango::Collection::Documents
     include Arango::Collection::Indexes
 
-    def initialize(name, database:, graph: nil, is_system: false, is_volatile: false, type: :document)
-      assign_database(database)
-      assign_graph(graph)
-      assign_type(type)
-      @name = name
-      @do_compact = true
-      @enforce_replication_factor = 1
-      @is_system = is_system
-      @is_volatile = is_volatile
-      @journal_size = nil
-      @type = type
-      @wait_for_sync = false
-      @wait_for_sync_replication = true
+    STATES = %i[unknown new_born unloaded loaded being_unloaded deleted loading] # do not sort, index is used
+    TYPES = %i[unknown unknown document edge] # do not sort, index is used
+
+    class << self
+      # Takes a hash and instantiates a Arango::Collection object from it.
+      #
+      # @param collection_hash [Hash]
+      # @return [Arango::Collection]
+      def from_h(collection_hash, database: nil)
+        collection_hash = collection_hash.transform_keys { |k| k.to_s.underscore.to_sym }
+        collection_hash.merge!(database: database) if database
+        %i[code error].each { |key| collection_hash.delete(key) }
+        instance_variable_hash = {}
+        %i[cache_enabled globally_unique_id id object_id].each do |key|
+          instance_variable_hash[key] = collection_hash.delete(key)
+        end
+
+        collection = Arango::Collection.new(collection_hash.delete(:name), **collection_hash)
+        instance_variable_hash.each do |k,v|
+          collection.instance_variable_set("@#{k}", v)
+        end
+        collection
+      end
+
+      # Takes a Arango::Result and instantiates a Arango::Collection object from it.
+      #
+      # @param collection_result [Arango::Result]
+      # @param properties_result [Arango::Result]
+      # @return [Arango::Collection]
+      def from_results(collection_result, properties_result, database: nil)
+        hash = {}.merge(collection_result.to_h)
+        %i[cache_enabled globally_unique_id id key_options object_id wait_for_sync].each do |key|
+          hash[key] = properties_result[key]
+        end
+        from_h(hash, database: database)
+      end
+
+      def all(exclude_system: true, database:)
+        query = { excludeSystem: exclude_system }
+        result = database.request("GET", "_api/collection", query: query, key: :result)
+        result.map do |c|
+          Arango::Collection.from_h(c.to_h, database: database)
+        end
+      end
+
+      def get(name, database:)
+        collection_result = database.request("GET", "_api/collection/#{name}")
+        properties_result = database.request("GET", "_api/collection/#{name}/properties")
+        Arango::Collection.from_results(collection_result, properties_result, database: database)
+      end
+      alias fetch get
+      alias retrieve get
+
+      def list(exclude_system: true, database:)
+        query = { excludeSystem: exclude_system }
+        result = database.request("GET", "_api/collection", query: query, key: :result)
+        result.map { |c| c[:name] }
+      end
+
+      def drop(name, database:)
+        database.request("DELETE", "_api/collection/#{name}")
+        nil
+      end
+      alias delete drop
+      alias destroy drop
+
+      def exist?(name, exclude_system: true, database:)
+        result = list(exclude_system: exclude_system, database: database)
+        result.include?(name)
+      end
     end
 
+    def initialize(name, database:, graph: nil, type: :document,
+                   status: nil,
+                   distribute_shards_like: nil, do_compact: nil, enforce_replication_factor: nil, index_buckets: nil, is_system: false,
+                   is_volatile: false, journal_size: nil, key_options: nil, number_of_shards: nil, replication_factor: nil, shard_keys: nil,
+                   sharding_strategy: nil, smart_join_attribute: nil, wait_for_sync: nil, wait_for_sync_replication: nil)
+      assign_database(database)
+      #  assign_graph(graph)
+      @name = name
+      @name_changed = false
+      @distribute_shards_like = distribute_shards_like
+      @do_compact = do_compact
+      @enforce_replication_factor = enforce_replication_factor
+      @index_buckets = index_buckets
+      @is_system = is_system
+      @is_volatile = is_volatile
+      @journal_size = journal_size
+      @journal_size_changed = false
+      @key_options = key_options
+      @number_of_shards = number_of_shards
+      @replication_factor = replication_factor
+      @shard_keys = shard_keys
+      @sharding_strategy = sharding_strategy
+      @smart_join_attribute = smart_join_attribute
+      _set_status(status)
+      _set_type(type)
+      @wait_for_sync = wait_for_sync
+      @wait_for_sync_changed = false
+      @wait_for_sync_replication = wait_for_sync_replication
+    end
 
-    attr_reader :cache_name, :count_export, :database, :graph, :has_more_export, :has_more_simple, :id, :id_export, :id_simple,
-                :server, :status
+    attr_reader :database, :graph, :server
+
+    # @return [Boolean]
+    attr_reader :cache_enabled
+
+    # In an Enterprise Edition cluster, this attribute binds the specifics of sharding for the newly created collection to follow that of a specified
+    # existing collection.
+    # Note: Using this parameter has consequences for the prototype collection. It can no longer be dropped,
+    # before the sharding-imitating collections are dropped. Equally, backups and restores of imitating collections alone will generate warnings
+    # (which can be overridden) about missing sharding prototype.
+    # (The default is ”“)
+    # Can only be set by calling the constructor with the distribute_shards_like param.
+    # @return [String]
+    attr_reader :distribute_shards_like
 
     # Whether or not the collection will be compacted (default is true) This option is meaningful for the MMFiles storage engine only.
+    # Can only be set by calling the constructor with the do_compact param.
     # @return [Boolean]
-    attr_accessor :do_compact
+    attr_reader :do_compact
 
     # Default is 1 which means the server will check if there are enough replicas available at creation time and
     # bail out otherwise. Set to 0 to disable this extra check.
+    # Can only be set by calling the constructor with the enforce_replication_factor param.
     # @return [Integer]
-    attr_accessor :enforce_replication_factor
+    attr_reader :enforce_replication_factor
 
-    #  The maximal size of a journal or datafile in bytes. The value must be at least 1048576 (1 MiB). (The default is a configuration parameter).
-    #  This option is meaningful for the MMFiles storage engine only.
-    # @return [Integer] or nil
-    attr_accessor :journal_size
+    # @return [String]
+    attr_reader :globally_unique_id
+
+    # @return [String]
+    attr_reader :id
+
+    # The number of buckets into which indexes using a hash table are split. The default is 16 and this number
+    # has to be a power of 2 and less than or equal to 1024.
+    # This option is meaningful for the MMFiles storage engine only.
+    # Can only be set by calling the constructor with the index_buckets param.
+    # @return [Integer]
+    attr_reader :index_buckets
 
     # If true, create a system collection. In this case collection-name should start with an underscore.
     # End users should normally create non-system collections only. API implementors may be required to create system collections in
     # very special occasions, but normally a regular collection will do. (The default is false)
-    # Must be set by calling the constructor with the is_system param.
+    # Can only be set by calling the constructor with the is_system param.
     # @return [Boolean]
     attr_reader :is_system
 
@@ -56,9 +163,70 @@ module Arango
     # synchronization to disk and does not calculate any CRC checksums for datafiles (as there are no datafiles). This option should therefore
     # be used for cache-type collections only, and not for data that cannot be re-created otherwise. (The default is false)
     # This option is meaningful for the MMFiles storage engine only.
-    # Must be set by calling the constructor with the is_volatile param.
+    # Can only be set by calling the constructor with the is_volatile param.
     # @return [Boolean]
     attr_reader :is_volatile
+
+    # The maximal size of a journal or datafile in bytes. The value must be at least 1048576 (1 MiB). (The default is a configuration parameter).
+    # This option is meaningful for the MMFiles storage engine only.
+    # @return [Integer] or nil
+    attr_reader :journal_size
+
+    # The name of the collection.
+    # @return [String]
+    attr_reader :name
+
+    # In a cluster, this value determines the number of shards to create for the collection. In a single server setup, this option is meaningless.
+    # (The default is 1)
+    # Can only be set by calling the constructor with the number_of_shards param.
+    # @return [Integer]
+    attr_reader :number_of_shards
+
+    # In a cluster, this attribute determines how many copies of each shard are kept on different DBServers.
+    # The value 1 means that only one copy (no synchronous replication) is kept.
+    # A value of k means that k-1 replicas are kept. Any two copies reside on different DBServers.
+    # Replication between them is synchronous, that is, every write operation to the “leader” copy will be replicated to all “follower” replicas,
+    # before the write operation is reported successful.
+    # (The default is 1)
+    # Can only be set by calling the constructor with the replication_factor param.
+    # @return [Integer]
+    attr_reader :replication_factor
+
+    # In a cluster, this attribute determines which document attributes are used to determine the target shard for documents.
+    # Documents are sent to shards based on the values of their shard key attributes.
+    # The values of all shard key attributes in a document are hashed, and the hash value is used to determine the target shard.
+    # Note: Values of shard key attributes cannot be changed once set. This option is meaningless in a single server setup.
+    # (The default is [ “_key” ])
+    # Can only be set by calling the constructor with the shard_keys param.
+    # @return [Array]
+    attr_reader :shard_keys
+
+    # In an Enterprise Edition cluster, this attribute determines an attribute of the collection that must contain the shard key value of the
+    # referred-to smart join collection. Additionally, the shard key for a document in this collection must contain the value of this attribute,
+    # followed by a colon, followed by the actual primary key of the document.
+    # This feature can only be used in the Enterprise Edition and requires the distributeShardsLike attribute of the collection to be set to the name
+    # of another collection. It also requires the shardKeys attribute of the collection to be set to a single shard key attribute,
+    # with an additional ‘:’ at the end. A further restriction is that whenever documents are stored or updated in the collection,
+    # the value stored in the smartJoinAttribute must be a string.
+    # Can only be set by calling the constructor with the smart_join_attribute param.
+    # @return [String]
+    attr_reader :smart_join_attribute
+
+    # If true then the data is synchronized to disk before returning from a document create, update, replace or removal operation. (default: false)
+    # @return [Boolean]
+    attr_reader :wait_for_sync
+
+    # Default is true which means the server will only report success back to the client if all replicas have created the collection.
+    # Set to false if you want faster server responses and don’t care about full replication.
+    # Can only be set by calling the constructor with the wait_for_sync_replication param.
+    # @return [Boolean]
+    attr_reader :wait_for_sync_replication
+
+    # The collections ArangoDB object_id, not to be confused with the collections ruby object_id.
+    # @return [String]
+    def arango_object_id
+      @object_id
+    end
 
     # Additional options for key generation. If specified, then key_options should be a Hash containing the following attributes:
     # - type: specifies the type of the key generator. The currently available generators are traditional, autoincrement, uuid and padded.
@@ -67,586 +235,257 @@ module Arango
     #   of documents is considered an error.
     # - increment: increment value for autoincrement key generator. Not used for other key generator types.
     # - offset: Initial offset value for autoincrement key generator. Not used for other key generator types.
-    # @return [Hash]
-    attr_accessor :key_options
+    # Can only be set by calling the constructor with the key_options param.
+    # @return [Arango::Result]
+    def key_options
+      Arango::Result.new(@key_options)
+    end
 
-    # The name of the collection.
-    # @return [String]
-    attr_accessor :name
+    # This attribute specifies the name of the sharding strategy to use for the collection. Since ArangoDB 3.4 there are different sharding strategies
+    # to select from when creating a new collection.
+    # The selected shardingStrategy value will remain fixed for the collection and cannot be changed afterwards.
+    # This is important to make the collection keep its sharding settings and always find documents already distributed to shards using the same
+    # initial sharding algorithm.
+    # The available sharding strategies are:
+    # - community_compat: default sharding used by ArangoDB Community Edition before version 3.4
+    # - enterprise_compat: default sharding used by ArangoDB Enterprise Edition before version 3.4
+    # - enterprise_smart_edge_compat: default sharding used by smart edge collections in ArangoDB Enterprise Edition before version 3.4
+    # - hash: default sharding used for new collections starting from version 3.4 (excluding smart edge collections)
+    # - enterprise_hash_smart_edge: default sharding used for new smart edge collections starting from version 3.4
+    # If no sharding strategy is specified, the default will be hash for all collections, and enterprise_hash_smart_edge for all smart edge
+    # collections (requires the Enterprise Edition of ArangoDB). Manually overriding the sharding strategy does not yet provide a benefit,
+    # but it may later in case other sharding strategies are added.
+    # Can only be set by calling the constructor with the sharding_strategy param.
+    # @return [Symbol]
+    def sharding_strategy
+      @sharding_strategy.to_s.underscore.to_sym
+    end
+
+    # The status of the collection as symbol, one of:
+    # - :unknown
+    # - :new_born
+    # - :unloaded
+    # - :loaded
+    # - :being_unloaded
+    # - :deleted
+    # - :loading
+    # @return [Symbol]
+    def status
+      STATES[@status]
+    end
 
     # The type of the collection to create. The following values for type are valid:
     #   - document collection, use the :document symbol
     #   - edge collection, use the :edge symbol
     # The default collection type is :document.
-    # Must be set by calling the constructor with the type param.
+    # Can only be set by calling the constructor with the type param.
     # @return [Symbol]
-    attr_reader :type
+    def type
+      TYPES[@type]
+    end
 
-    # If true then the data is synchronized to disk before returning from a document create, update, replace or removal operation. (default: false)
-    # @return [Boolean]
-    attr_accessor :wait_for_sync
+    def journal_size=(n)
+      @journal_size_changed = true
+      @journal_size = n
+    end
 
-    # Default is true which means the server will only report success back to the client if all replicas have created the collection.
-    # Set to false if you want faster server responses and don’t care about full replication.
-    # @return [Boolean]
-    attr_accessor :wait_for_sync_replication
+    def name=(n)
+      @name_changed = true
+      @name = n
+    end
 
-    def graph=(graph)
-      satisfy_class?(graph, [Arango::Graph, NilClass])
-      if !graph.nil? && graph.database.name != @database.name
-        raise Arango::Error.new err: :database_graph_no_same_as_collection_database,
-        data: { graph_database_name: graph.database.name, collection_database_name:  @database.name}
+    def wait_for_sync(boolean)
+      @wait_for_sync_changed = true
+      @wait_for_sync = boolean
+    end
+
+    # Stores the collection in the database.
+    # @return [Arango::Collection] self
+    def create
+      @name_changed = false
+      @journal_size_changed = false
+      @wait_for_sync_changed = false
+
+      body = {}
+      %i[distributeShardsLike doCompact indexBuckets isSystem isVolatile journalSize name numberOfShards replicationFactor shardingStrategy shardKeys
+      smartJoinAttribute type waitForSync].each do |key|
+        body[key] = instance_variable_get("@#{key.to_s.underscore}")
       end
-      @graph = graph
-    end
-    alias assign_graph graph=
 
-    def body=(result)
-      @body     = result
-      @name     = result[:name] || @name
-      @type     = assign_type(result[:type])
-      @status   = reference_status(result[:status])
-      @id       = result[:id] || @id
-      @is_system = result[:isSystem] || @is_system
-      if @server.active_cache && @cache_name.nil?
-        @cache_name = "#{@database.name}/#{@name}"
-        @server.cache.save(:database, @cache_name, self)
+      if @key_options && @key_options.class == Hash
+        key_options_hash = @key_options.transform_keys { |key| key.to_s.camelize(:lower).to_sym }
+        key_options_hash.delete_if{|_,v| v.nil?}
+        body[:keyOptions] = key_options_hash unless key_options_hash.empty?
       end
-    end
-    alias assign_attributes body=
 
-    def type=(type)
-      type ||= @type
-      satisfy_category?(type, ["Document", "Edge", 2, 3, nil, :document, :edge])
-      @type = case type
-      when 2, "Document", nil
-        :document
-      when 3, "Edge"
-        :edge
+      if @enforce_replication_factor || @wait_for_sync_replication
+        query = {}
+        query[:enforceReplicationFactor] = @enforce_replication_factor
+        query[:waitForSyncReplication] = @wait_for_sync_replication
+        result = @database.request("POST", "_api/collection", body: body, query: query)
+        _update_instance_variables(result)
+      else
+        result = @database.request("POST", "_api/collection", body: body)
+        _update_instance_variables(result)
       end
-    end
-    alias assign_type type=
-
-    def reference_status(number)
-      number ||= @number
-      return nil if number.nil?
-      hash = ["new born collection", "unloaded", "loaded",
-        "in the process of being unloaded", "deleted", "loading"]
-      return hash[number-1]
-    end
-    private :reference_status
-
-# === TO HASH ===
-
-    def to_h
-      {
-        name:     @name,
-        type:     @type,
-        status:   @status,
-        id:       @id,
-        isSystem: @is_system,
-        body:     @body,
-        cache_name: @cache_name,
-        database: @database.name
-      }.delete_if{|k,v| v.nil?}
+      self
     end
 
-# === GET ===
-
-    def retrieve
-      result = @database.request("GET", "_api/collection/#{@name}")
-      return_element(result)
+    # Drops a collection.
+    # @return [NilClass]
+    def drop
+      @database.request("DELETE", "_api/collection/#{@name}", query: { isSystem: @is_system })
+      nil
     end
 
+    # Truncates a collection.
+    # @return [Arango::Collection] self
+    def truncate
+      @database.request("PUT", "_api/collection/#{@name}/truncate")
+      self
+    end
 
-    def count
+    # Counts the documents in a collection
+    # @return [Integer]
+    def size
       @database.request("GET", "_api/collection/#{@name}/count", key: :count)
     end
+    alias count size
+    alias length size
 
+    # Fetch the statistics of a collection
+    # @return [Hash]
     def statistics
       @database.request("GET", "_api/collection/#{@name}/figures", key: :figures)
     end
 
-    def checksum(withRevisions: nil, withData: nil)
+    # Return the shard ids of a collection
+    # Note: This method only works on a cluster coordinator.
+    # @param details [Boolean] If set to true, the return value will also contain the responsible servers for the collections’ shards.
+    # @return [Array, Hash]
+    def shards(details: false)
+      @database.request("GET", "_api/collection/#{@name}/shards", key: :shards, query: { details: details })
+    end
+
+    # Retrieve the collections revision id
+    # @return [String]
+    def revision
+      @database.request("GET", "_api/collection/#{@name}/revision", key: :revision)
+    end
+
+    # Returns a checksum for the specified collection
+    # @param with_revisions [Boolean] Whether or not to include document revision ids in the checksum calculation, optional, default: false.
+    # @param with_data [Boolean] Whether or not to include document body data in the checksum calculation, optional, default: false.
+    def checksum(with_revisions: false, with_data: false)
       query = {
-        withRevisions: withRevisions,
-        withData: withData
+        withRevisions: with_revisions,
+        withData: with_data
       }
-      @database.request("GET", "_api/collection/#{@name}/checksum",  query: query,
-        key: :checksum)
+      @database.request("GET", "_api/collection/#{@name}/checksum", query: query, key: :checksum)
     end
 
-# == POST ==
-
-    def create(allow_user_keys: nil, distribute_shards_like: nil, do_compact: nil, increment_key_generator: nil, index_buckets: nil,
-               is_system: @is_system, is_volatile: nil, journal_size: nil, number_of_shards: nil, offset_key_generator: nil, replication_factor: nil,
-               shard_keys: nil, sharding_strategy: nil, type: @type, type_key_generator: nil, wait_for_sync: nil)
-      satisfy_category?(type_key_generator, [nil, "traditional", "autoincrement"])
-      satisfy_category?(type, ["Edge", "Document", 2, 3, nil, :edge, :document])
-      satisfy_category?(sharding_strategy, [nil, "community-compat", "enterprise-compat", "enterprise-smart-edge-compat", "hash", "enterprise-hash-smart-edge"])
-      keyOptions = {
-        allowUserKeys:      allow_user_keys,
-        type:               type_key_generator,
-        increment:          increment_key_generator,
-        offset:             offset_key_generator
-      }
-      keyOptions.delete_if{|k,v| v.nil?}
-      keyOptions = nil if keyOptions.empty?
-      type = case type
-      when 2, "Document", nil, :document then 2
-      when 3, "Edge", :edge then 3
-      end
-      body = {
-        name: @name,
-        type: type,
-        distributeShardsLike: distribute_shards_like,
-        doCompact:         do_compact,
-        indexBuckets:      index_buckets,
-        isSystem:          is_system,
-        isVolatile:        is_volatile,
-        journalSize:       journal_size,
-        keyOptions:        keyOptions,
-        numberOfShards:    number_of_shards,
-        replicationFactor: replication_factor,
-        shardingStrategy:  sharding_strategy,
-        shardKeys:         shard_keys,
-        waitForSync:       wait_for_sync
-      }
-      body = @body.merge(body)
-      result = @database.request("POST", "_api/collection", body: body)
-      return_element(result)
+    # Loads a collection into ArangoDBs memory. Returns the collection on success.
+    # @return [Arango::Collection] self
+    def load_into_memory
+      result = @database.request("PUT", "_api/collection/#{@name}/load", body: { count: false }, key: :status)
+      _set_status(result)
+      self
     end
 
-# === MODIFY ===
-
-    def load
-      result = @database.request("PUT", "_api/collection/#{@name}/load")
-      return_element(result)
+    # Unloads a collection into ArangoDBs memory. Returns the collection on success.
+    # @return [Arango::Collection] self
+    def unload_from_memory
+      result = @database.request("PUT", "_api/collection/#{@name}/unload", key: :status)
+      _set_status(result)
+      self
     end
 
-    def unload
-      result = @database.request("PUT", "_api/collection/#{@name}/unload")
-      return_element(result)
-    end
-
+    # Load Indexes into Memory
+    # Note: For the time being this function is only useful on RocksDB storage engine, as in MMFiles engine all indexes are in memory anyways.
+    # @return [Arango::Collection] self
     def load_indexes_into_memory
-      if @server.engine[:name] == 'rocksdb'
-        result = @database.request("PUT", "_api/collection/#{@name}/loadIndexesIntoMemory")
-        return_element(result)
+      @database.request("PUT", "_api/collection/#{@name}/loadIndexesIntoMemory") if @server.engine[:name] == 'rocksdb'
+      self
+    end
+
+    # Rotates the journal of a collection. Collection must have a journal.
+    # Note: This method is specific for the MMFiles storage engine, and there it is not available in a cluster.
+    # @return [Arango::Collection] self
+    def rotate_journal
+      @database.request("PUT", "_api/collection/#{@name}/rotate") if @server.engine[:name] == 'mmfiles'
+      self
+    end
+
+    # recalculates the document count of a collection
+    # Note: This function is only useful on RocksDB storage engine.
+    # @return [Arango::Collection] self
+    def recalculate_count
+      @database.request("PUT", "_api/collection/#{@name}/recalculateCount") if @server.engine[:name] == 'rocksdb'
+      self
+    end
+
+    # Reload collection properties and name from the database, reverting any changes.
+    # @return [Arango::Collection] self
+    def reload
+      @name_changed = false
+      @journal_size_changed = false
+      @wait_for_sync_changed = false
+      result = @database.request("GET", "_api/collection/#{@name}/properties")
+      _update_instance_variables(result)
+      self
+    end
+    alias refresh reload
+    alias retrieve reload
+    alias revert reload
+
+    # Save changed collection properties and name changed, to the database.
+    # Note: except for wait_for_sync, journal_size and name, collection properties cannot be changed once a collection is created.
+    # @return [Arango::Collection] self
+    def save
+      if @name_changed
+        @name_changed = false
+        @database.request("PUT", "_api/collection/#{@name}/rename", body: { name: @name })
+      end
+      if @journal_size_changed || @wait_for_sync_changed
+        @journal_size_changed = false
+        @wait_for_sync_changed = false
+        body = {}
+        body[:journalSize] = @journal_size if @journal_size_changed
+        body[:waitForSync] = @wait_for_sync if @wait_for_sync_changed
+        result = @database.request("GET", "_api/collection/#{@name}/properties", body: body)
+        @journal_size = result.journal_size
+        @wait_for_sync = result.wait_for_sync
+      end
+      self
+    end
+    alias update save
+
+    private
+
+    def _set_status(s)
+      if s.class == Symbol && STATES.include?(s)
+        @status = STATES.index(s)
+      elsif s.class == Integer && s >= 0 && s <= 6
+        @status = s
       else
-        return true
+        @status = STATES[0]
       end
     end
 
-    def change(wait_for_sync: nil, journal_size: nil)
-      body = {
-        journalSize: journal_size,
-        waitForSync: wait_for_sync
-      }
-      result = @database.request("PUT", "_api/collection/#{@name}/properties", body: body)
-      return_element(result)
-    end
-
-
-    def rotate
-      if @server.engine[:name] == 'mmfiles'
-        result = @database.request("PUT", "_api/collection/#{@name}/rotate")
-        return_element(result)
+    def _set_type(t)
+      if t.class == Symbol && TYPES.include?(t)
+        @type = TYPES.index(t)
+        @type = 2 if @type < 2
+      elsif t.class == Integer && t >= 2 && t <= 3
+        @type = t
       else
-        return true
+        @type = 2
       end
     end
 
-# == DOCUMENT ==
-
-    def next
-      if @has_more_simple
-        result = @database.request("PUT", "_api/cursor/#{@id_simple}")
-        @has_more_simple = result[:hasMore]
-        @id_simple = result[:id]
-        return result if return_directly?(result)
-        return result[:result] unless @return_document
-        if @return_document
-          result[:result].map{|key| Arango::Document.new(name: key, collection: self)}
-        end
-      else
-        raise Arango::Error.new err: :no_other_simple_next, data: {hasMoreSimple: @has_more_simple}
-      end
-    end
-
-    def return_body(x, type=:document)
-      satisfy_class?(x, [Hash, Arango::Document, Arango::Edge, Arango::Vertex])
-      body = case x
-      when Hash
-        x
-      when Arango::Edge
-        if type == :vertex
-          raise Arango::Error.new err: :wrong_type_instead_of_expected_one, data:
-            { expected_value: type, received_value: x.type, wrong_object: x }
-        end
-        x.body
-      when Arango::Vertex
-        if type == :edge
-          raise Arango::Error.new err: :wrong_type_instead_of_expected_one, data:
-            { expected_value: type, received_value: x.type, wrong_object: x }
-        end
-        x.body
-      when Arango::Document
-        if (type == :vertex && x.collection.type == :edge)  ||
-           (type == :edge && x.collection.type == :document) ||
-           (type == :edge && x.collection.type == :vertex)
-          raise Arango::Error.new err: :wrong_type_instead_of_expected_one, data:
-            { expected_value: type, received_value: x.collection.type, wrong_object: x}
-        end
-        x.body
-      end
-      return body.delete_if{|k,v| v.nil?}
-    end
-    private :return_body
-
-    def return_id(x)
-      satisfy_class?(x, [String, Arango::Document, Arango::Vertex])
-      return x.is_a?(String) ? x : x.id
-    end
-    private :return_id
-
-
-
-    def create_edges(document: {}, from:, to:, wait_for_sync: nil, return_new: nil, silent: nil)
-      edges = []
-      from = [from] unless from.is_a? Array
-      to   = [to]   unless to.is_a? Array
-      document = [document] unless document.is_a? Array
-      document = document.map{|x| return_body(x, :edge)}
-      from = from.map{|x| return_id(x)}
-      to   = to.map{|x| return_id(x)}
-      document.each do |b|
-        from.each do |f|
-          to.each do |t|
-            b[:_from] = f
-            b[:_to] = t
-            edges << b.clone
-          end
-        end
-      end
-      create_documents(document: edges, wait_for_sync: wait_for_sync,
-        return_new: return_new, silent: silent)
-    end
-
-    def all_documents(offset: 0, limit: nil, batch_size: nil)
-      query = "FOR doc IN @name"
-      query << "\n LIMIT @offset, @limit" if limit
-      # TODO raise "offset must be used with limit" if offset > 0 && !limit # Arango::Error
-      query << "\n RETURN doc"
-      aql = Arango::AQL.new(database: @database, query: query, bind_vars: { '@name': @name, '@offset': offset, '@limit': limit })
-      aql.size = batch_size if batch_size
-      result = aql.execute
-      result.result
-    end
-
-# == SIMPLE ==
-
-    def generic_document_search(url, body, single=false)
-      result = @database.request("PUT", url, body: body)
-      @returnDocument = true
-      @hasMoreSimple = result[:hasMore]
-      @idSimple = result[:id]
-      return result if return_directly?(result)
-
-      if single
-        Arango::Document.new(name: result[:document][:_key], collection: self,
-          body: result[:document])
-      else
-        result[:result].map{|x| Arango::Document.new(name: x[:_key], collection: self, body: x)}
-      end
-    end
-    private :generic_document_search
-
-    def documents_match(match:, skip: nil, limit: nil, batch_size: nil)
-      body = {
-        collection: @name,
-        example:    match,
-        skip:       skip,
-        limit:      limit,
-        batchSize:  batch_size
-      }
-      generic_document_search("_api/simple/by-example", body)
-    end
-
-    def document_match(match:)
-      body = {
-        collection: @name,
-        example:    match
-      }
-      generic_document_search("_api/simple/first-example", body, true)
-    end
-
-    def documents_by_keys(keys:)
-      keys = [keys] unless keys.is_a?(Array)
-      keys = keys.map{|x| x.is_a?(Arango::Document) ? x.name : x}
-      query = "FOR doc IN @name FILTER doc._key IN @keys RETURN doc"
-      aql = Arango::AQL.new(database: @database, query: query, bind_vars: { '@name': @name, '@keys': keys })
-      result = aql.execute
-      result.result
-    end
-
-    def random
-      body = { collection:  @name }
-      generic_document_search("_api/simple/any", body, true)
-    end
-
-    def remove_by_keys(keys:, return_old: nil, silent: nil, wait_for_sync: nil)
-      options = {
-        returnOld:   return_old,
-        silent:      silent,
-        waitForSync: wait_for_sync
-      }
-      options.delete_if{|k,v| v.nil?}
-      options = nil if options.empty?
-      if keys.is_a? Array
-        keys = keys.map{|x| x.is_a?(String) ? x : x.key}
-      end
-      body = { collection: @name, keys: keys, options: options}
-      result = @database.request("PUT", "_api/simple/remove-by-keys", body: body)
-      return result if return_directly?(result)
-      if return_old == true && silent != true
-        result.each do |r|
-          Arango::Document.new(name: r[:_key], collection: self, body: r)
-        end
-      else
-        return result
-      end
-    end
-
-    def remove_match(match:, limit: nil, wait_for_sync: nil)
-      options = {
-        limit:        limit,
-        waitForSync:  wait_for_sync
-      }
-      options.delete_if{|k,v| v.nil?}
-      options = nil if options.empty?
-      body = {
-        collection:  @name,
-        "example"    => match,
-        "options"    => options
-      }
-      @database.request("PUT", "_api/simple/remove-by-example", body: body, key: :deleted)
-    end
-
-    def replace_match(match:, newValue:, limit: nil, wait_for_sync: nil)
-      options = {
-        limit:        limit,
-        waitForSync:  wait_for_sync
-      }
-      options.delete_if{|k,v| v.nil?}
-      options = nil if options.empty?
-      body = {
-        collection: @name,
-        example:    match,
-        options:    options,
-        newValue:   newValue
-      }
-      @database.request("PUT", "_api/simple/replace-by-example", body: body, key: :replaced)
-    end
-
-    def update_match(match:, newValue:, keep_null: nil, merge_objects: nil,
-      limit: nil, wait_for_sync: nil)
-      options = {
-        keepNull:     keep_null,
-        mergeObjects: merge_objects,
-        limit:        limit,
-        waitForSync:  wait_for_sync
-      }
-      options.delete_if{|k,v| v.nil?}
-      options = nil if options.empty?
-      body = {
-        collection: @name,
-        example:    match,
-        options:    options,
-        newValue:   newValue
-      }
-      @database.request("PUT", "_api/simple/update-by-example", body: body, key: :updated)
-    end
-
-# === SIMPLE DEPRECATED ===
-
-    def range(right:, attribute:, limit: nil, closed: true, skip: nil, left:,
-      warning: @server.warning)
-      warning_deprecated(warning, "range")
-      body = {
-        right:      right,
-        attribute:  attribute,
-        collection: @name,
-        limit:  limit,
-        closed: closed,
-        skip:   skip,
-        left:   left
-      }
-      result = @database.request("PUT", "_api/simple/range", body: body)
-      return result if return_directly?(result)
-      result[:result].map do |x|
-        Arango::Document.new(name: x[:_key], collection: self, body: x)
-      end
-    end
-
-    def distance(longitude:, latitude:, limit: nil, offset: 0)
-      query = <<~QUERY
-        FOR doc IN @name
-         SORT DISTANCE(doc.latitude, doc.longitude, @latitude, @longitude) ASC
-      QUERY
-      query << "\n LIMIT @offset, @limit" if limit
-      query << "\n RETURN doc"
-      aql = Arango::AQL.new(database: @database, query: query, bind_vars: { '@name': @name, '@latitude': latitude, '@longitude': longitude,
-                                                                            '@offset': offset, '@limit': limit})
-      result = aql.execute
-      result.result
-    end
-
-    def within(distance: nil, longitude:, latitude:, radius:, geo: nil,
-      limit: nil, skip: nil, warning: @server.warning)
-      warning_deprecated(warning, "within")
-      body = {
-        distance:   distance,
-        longitude:  longitude,
-        collection: @name,
-        limit:      limit,
-        latitude:   latitude,
-        skip:       skip,
-        geo:        geo,
-        radius:     radius
-      }
-      result = @database.request("PUT", "_api/simple/within", body: body)
-      return result if return_directly?(result)
-      result[:result].map do |x|
-        Arango::Document.new(name: x[:_key], collection: self, body: x)
-      end
-    end
-
-    def within_rectangle(longitude1:, latitude1:, longitude2:, latitude2:,
-      geo: nil, limit: nil, skip: nil, warning: @server.warning)
-      warning_deprecated(warning, "withinRectangle")
-      body = {
-        "longitude1": longitude1,
-        "latitude1":  latitude1,
-        "longitude2": longitude2,
-        "latitude2":  latitude2,
-        collection: @name,
-        limit:      limit,
-        skip:       skip,
-        geo:        geo,
-      }
-      result = @database.request("PUT", "_api/simple/within-rectangle", body: body)
-      return result if return_directly?(result)
-      result[:result].map do |x|
-        Arango::Document.new(name: x[:_key], collection: self, body: x)
-      end
-    end
-
-    def fulltext(attribute:, query:, limit: 0)
-      query = "FOR doc IN FULLTEXT(@name, @attribute, @query, @limit) RETURN doc"
-      aql = Arango::AQL.new(database: @database, query: query, bind_vars: { '@name': @name, '@attribute': attribute, '@query': query,
-                                                                            '@limit': limit })
-      result = aql.execute
-      result.result
-    end
-
-  # === EXPORT ===
-
-    def export(count: nil, restrict: nil, batch_size: nil,
-      flush: nil, flush_wait: nil, limit: nil, ttl: nil)
-      query = { collection:  @name }
-      body = {
-        count:     count,
-        restrict:  restrict,
-        batchSize: batch_size,
-        flush:     flush,
-        flushWait: flush_wait,
-        limit:     limit,
-        ttl:       ttl
-      }
-      result = @database.request("POST", "_api/export", body: body, query: query)
-      return reuslt if @server.async != false
-      @countExport   = result[:count]
-      @hasMoreExport = result[:hasMore]
-      @idExport      = result[:id]
-      if return_directly?(result) || result[:result][0].nil? || !result[:result][0].is_a?(Hash) || !result[:result][0].key?(:_key)
-        return result[:result]
-      else
-        return result[:result].map do |x|
-          Arango::Document.new(name: x[:_key], collection: self, body: x)
-        end
-      end
-    end
-
-    def export_next
-      unless @hasMoreExport
-        raise Arango::Error.new err: :no_other_export_next, data: {hasMoreExport:  @hasMoreExport}
-      else
-        query = { collection:  @name }
-        result = @database.request("PUT", "_api/export/#{@idExport}", query: query)
-        return result if @server.async != false
-        @countExport   = result[:count]
-        @hasMoreExport = result[:hasMore]
-        @idExport      = result[:id]
-        if return_directly?(result) || result[:result][0].nil? || !result[:result][0].is_a?(Hash) || !result[:result][0].key?(:_key)
-          return result[:result]
-        else
-          return result[:result].map do |x|
-            Arango::Document.new(name: x[:_key], collection: self, body: x)
-          end
-        end
-      end
-    end
-
-
-
-
-
-# === USER ACCESS ===
-
-    def check_user(user)
-      user = Arango::User.new(user: user) if user.is_a?(String)
-      return user
-    end
-    private :check_user
-
-    def add_user_access(grant:, user:)
-      user = check_user(user)
-      user.add_collection_access(grant: grant, database: @database.name, collection: @name)
-    end
-
-    def revoke_user_access(user:)
-      user = check_user(user)
-      user.clear_collection_access(database: @database.name, collection: @name)
-    end
-
-    def user_access(user:)
-      user = check_user(user)
-      user.collection_access(database: @database.name, collection: @name)
-    end
-
-# === GRAPH ===
-
-    def vertex(name: nil, body: {}, rev: nil, from: nil, to: nil)
-      if @type == :edge
-        raise Arango::Error.new err: :is_a_edge_collection, data: {type:  @type}
-      end
-      if @graph.nil?
-        Arango::Document.new(name: name, body: body, rev: rev, collection: self)
-      else
-        Arango::Vertex.new(name: name, body: body, rev: rev, collection: self)
-      end
-    end
-
-    def edge(name: nil, body: {}, rev: nil, from: nil, to: nil)
-      if @type == :document
-        raise Arango::Error.new err: :is_a_document_collection, data: {type:  @type}
-      end
-      if @graph.nil?
-        Arango::Document.new(name: name, body: body, rev: rev, collection: self)
-      else
-        Arango::Edge.new(name: name, body: body, rev: rev, from: from, to: to,
-          collection: self)
+    def _update_instance_variables(result)
+      %i[cacheEnabled globallyUniqueId id isSystem keyOptions name objectId status type waitForSync].each do |key|
+        instance_variable_set("@#{key.to_s.underscore}", result[key])
       end
     end
   end
