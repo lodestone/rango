@@ -13,7 +13,9 @@ To install arango-driver: `gem install arango-driver`
 To use it in your application: `require "arango-driver"`
 
 ## Community and Support
-At the [Isomorfeus Framework Project](http://isomorfeus.com) 
+At the [Isomorfeus Framework Project](http://isomorfeus.com). There is a #arango_driver channel at the isomorfeus Slack space.
+
+# This is currently WIP, the information below is mostly obsolete. See spec/*_spec.rb files for currently supported things and usage.
 
 ## Classes used
 
