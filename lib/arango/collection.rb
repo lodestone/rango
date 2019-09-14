@@ -10,23 +10,86 @@ module Arango
     include Arango::Collection::Documents
     include Arango::Collection::Indexes
 
-    def initialize(name, database:, graph: nil, body: {}, type: :document, is_system: nil)
-      @name = name
+    def initialize(name, database:, graph: nil, is_system: false, is_volatile: false, type: :document)
       assign_database(database)
       assign_graph(graph)
       assign_type(type)
-      body[:type]     ||= type == :document ? 2 : 3
-      body[:status]   ||= nil
-      body[:isSystem] ||= is_system
-      body[:id]       ||= nil
-      assign_attributes(body)
+      @name = name
+      @do_compact = true
+      @enforce_replication_factor = 1
+      @is_system = is_system
+      @is_volatile = is_volatile
+      @journal_size = nil
+      @type = type
+      @wait_for_sync = false
+      @wait_for_sync_replication = true
     end
 
-# === DEFINE ===
 
-    attr_reader :body, :cache_name, :count_export, :database, :graph, :has_more_export, :has_more_simple, :id, :id_export, :id_simple, :is_system,
-                :server, :status, :type
+    attr_reader :cache_name, :count_export, :database, :graph, :has_more_export, :has_more_simple, :id, :id_export, :id_simple,
+                :server, :status
+
+    # Whether or not the collection will be compacted (default is true) This option is meaningful for the MMFiles storage engine only.
+    # @return [Boolean]
+    attr_accessor :do_compact
+
+    # Default is 1 which means the server will check if there are enough replicas available at creation time and
+    # bail out otherwise. Set to 0 to disable this extra check.
+    # @return [Integer]
+    attr_accessor :enforce_replication_factor
+
+    #  The maximal size of a journal or datafile in bytes. The value must be at least 1048576 (1 MiB). (The default is a configuration parameter).
+    #  This option is meaningful for the MMFiles storage engine only.
+    # @return [Integer] or nil
+    attr_accessor :journal_size
+
+    # If true, create a system collection. In this case collection-name should start with an underscore.
+    # End users should normally create non-system collections only. API implementors may be required to create system collections in
+    # very special occasions, but normally a regular collection will do. (The default is false)
+    # Must be set by calling the constructor with the is_system param.
+    # @return [Boolean]
+    attr_reader :is_system
+
+    # If true then the collection data is kept in-memory only and not made persistent. Unloading the collection will cause the collection data to
+    # be discarded. Stopping or re-starting the server will also cause full loss of data in the collection.
+    # Setting this option will make the resulting collection be slightly faster than regular collections because ArangoDB does not enforce any
+    # synchronization to disk and does not calculate any CRC checksums for datafiles (as there are no datafiles). This option should therefore
+    # be used for cache-type collections only, and not for data that cannot be re-created otherwise. (The default is false)
+    # This option is meaningful for the MMFiles storage engine only.
+    # Must be set by calling the constructor with the is_volatile param.
+    # @return [Boolean]
+    attr_reader :is_volatile
+
+    # Additional options for key generation. If specified, then key_options should be a Hash containing the following attributes:
+    # - type: specifies the type of the key generator. The currently available generators are traditional, autoincrement, uuid and padded.
+    # - allow_user_keys: if set to true, then it is allowed to supply own key values in the _key attribute of a document.
+    #   If set to false, then the key generator will solely be responsible for generating keys and supplying own key values in the _key attribute
+    #   of documents is considered an error.
+    # - increment: increment value for autoincrement key generator. Not used for other key generator types.
+    # - offset: Initial offset value for autoincrement key generator. Not used for other key generator types.
+    # @return [Hash]
+    attr_accessor :key_options
+
+    # The name of the collection.
+    # @return [String]
     attr_accessor :name
+
+    # The type of the collection to create. The following values for type are valid:
+    #   - document collection, use the :document symbol
+    #   - edge collection, use the :edge symbol
+    # The default collection type is :document.
+    # Must be set by calling the constructor with the type param.
+    # @return [Symbol]
+    attr_reader :type
+
+    # If true then the data is synchronized to disk before returning from a document create, update, replace or removal operation. (default: false)
+    # @return [Boolean]
+    attr_accessor :wait_for_sync
+
+    # Default is true which means the server will only report success back to the client if all replicas have created the collection.
+    # Set to false if you want faster server responses and don’t care about full replication.
+    # @return [Boolean]
+    attr_accessor :wait_for_sync_replication
 
     def graph=(graph)
       satisfy_class?(graph, [Arango::Graph, NilClass])
