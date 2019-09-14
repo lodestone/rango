@@ -57,7 +57,7 @@ module Arango
       #
       #  So this is what we use for storing the opal module in arango and making it available.
 
-      def install_opal_module
+      def install_opal_module(force: false)
         dirname = File.dirname(__FILE__)
         filename = File.expand_path(File.join(dirname, '..', '..', '..', 'arango_opal.js'))
         content = File.read(filename)
@@ -66,12 +66,11 @@ module Arango
             content: content
         }
         system_db = get_database('_system')
-        system_db.create_collection('_modules') unless system_db.collection_exist?('_modules')
+        system_db.create_collection('_modules', is_system: true) unless system_db.collection_exist?('_modules')
         modules_collection = system_db.get_collection('_modules')
-
       end
 
-      def install_opal_parser_module
+      def install_opal_parser_module(force: false)
         dirname = File.dirname(__FILE__)
         filename = File.expand_path(File.join(dirname, '..', '..', '..', 'arango_opal_parser.js'))
         content = File.read(filename)
@@ -80,7 +79,7 @@ module Arango
             content: content
         }
         system_db = get_database('_system')
-        system_db.create_collection('_modules') unless system_db.collection_exist?('_modules')
+        system_db.create_collection('_modules', is_system: true) unless system_db.collection_exist?('_modules')
         modules_collection = system_db.get_collection('_modules')
       end
     end
