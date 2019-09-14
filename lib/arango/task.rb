@@ -13,6 +13,7 @@ module Arango
       # @return [Arango::Task]
       def from_h(task_hash, server: nil)
         raise Arango::Error.new(err: :no_task_id) unless task_hash.key?(:id)
+        task_hash = task_hash.transform_keys { |k| k.to_s.underscore.to_sym }
         task_hash.merge!(server: server) if server
         if task_hash[:database].class == String
           task_hash[:database] = Arango::Database.new(task_hash[:database], server: server)
