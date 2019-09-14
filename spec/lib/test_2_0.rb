@@ -1,6 +1,6 @@
 require_relative "2.0/arangoS_helper"
 require_relative "2.0/arangoDB_helper"
-require_relative "2.0/arangoC_helper"
+require_relative "2.0/rangoC_helper"
 require_relative "2.0/arangoDoc_helper"
 require_relative "2.0/arangoG_helper"
 require_relative "2.0/arangoV_helper"
