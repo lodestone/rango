@@ -5,6 +5,8 @@ module Arango
       @is_array = @result.class == Array
     end
 
+    attr_accessor :response_code
+
     # standard fields
     def code
       @result[:code]
