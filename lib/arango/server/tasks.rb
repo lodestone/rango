@@ -4,7 +4,7 @@ module Arango
 
       # Get all tasks.
       #
-      # @return [Array] Array of Arango::Task
+      # @return [Array<Arango::Task>]
       def all_tasks
         Arango::Task.all(server: self)
       end
@@ -43,7 +43,7 @@ module Arango
       end
 
       # Get a list of all task ids.
-      # @return [Array] Array of Strings.
+      # @return [Array<String>]
       def list_tasks
         Arango::Task.list(server: self)
       end

@@ -199,7 +199,7 @@ module Arango
     # Note: Values of shard key attributes cannot be changed once set. This option is meaningless in a single server setup.
     # (The default is [ “_key” ])
     # Can only be set by calling the constructor with the shard_keys param.
-    # @return [Array]
+    # @return [Array<String>]
     attr_reader :shard_keys
 
     # In an Enterprise Edition cluster, this attribute determines an attribute of the collection that must contain the shard key value of the
