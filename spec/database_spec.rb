@@ -85,7 +85,9 @@ describe Arango::Database do
       database = @server.get_database("MyDatabase")
       expect(database.name).to eq "MyDatabase"
     end
+  end
 
+  context "Arango::Database itself" do
     it "target_version" do
       database = @server.create_database "MyDatabase"
       expect(database.target_version).to be_a String
