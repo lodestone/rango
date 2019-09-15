@@ -25,6 +25,11 @@ describe Arango::Graph do
     end
   end
 
+  # it "list graphs" do
+  #   list = @database.graphs
+  #   expect(list.length).to be 0
+  # end
+  #
   context "#manageVertexCollections" do
     it "add VertexCollection" do
       errors = []
