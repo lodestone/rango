@@ -5,3 +5,4 @@ opal_modules/node_modules
 arango_opal*
 doc
 .yardoc
+coverage
