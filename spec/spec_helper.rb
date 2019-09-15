@@ -1,4 +1,6 @@
 require "rspec"
+require "simplecov"
+SimpleCov.start
 require "arango-driver"
 
 module Helpers
