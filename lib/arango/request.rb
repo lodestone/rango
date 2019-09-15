@@ -63,6 +63,7 @@ module Arango
                         {}
                       end
         result = Arango::Result.new(json_result)
+        result.response_code = response.response_code
       rescue Exception => e
         raise Arango::Error.new err: :impossible_to_parse_arangodb_response,
           data: { response: response.response_body, action: action, url: send_url, request: JSON.pretty_generate(options) }
