@@ -8,8 +8,7 @@ describe Arango::Server do
     end
 
     it "force_version works" do
-      result = @server.version
-      expect(result[:server]).to eq('arango')
+      expect(@server.version).to be_a String
     end
 
     it "force_version benchmark" do
@@ -19,8 +18,8 @@ describe Arango::Server do
           result = @server.version
         end
       end
-      STDERR.puts "1000 requests: #{timings}"
-      expect(result[:server]).to eq('arango')
+      STDERR.puts "\n1000 requests: #{timings}"
+      expect(result).to be_a String
     end
   end
 end
