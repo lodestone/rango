@@ -265,7 +265,8 @@ module Arango
       # return [Arango::Result]
       def wal_properties
         result = request("GET", "_admin/wal/properties")
-        raise "A error occured." if result.response_code >= 500
+        raise "WAL properties not available." if result.response_code >= 500
+        result
       end
 
       # Configures the behavior of the write-ahead log.
@@ -280,7 +281,9 @@ module Arango
           throttleWait: properties_object.throttle_wait,
           throttleWhenPending: properties_object.throttle_when_pending
         }
-        request("PUT", "_admin/wal/properties", body: body)
+        result = request("PUT", "_admin/wal/properties", body: body)
+        raise "WAL properties not available." if result.response_code >= 500
+        result
       end
 
       # Shutdown the server.
