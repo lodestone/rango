@@ -2,14 +2,12 @@ module Arango
   class Database
     module Tasks
       # Get all tasks.
-      #
-      # @return [Array] Array of Arango::Task
+      # @return [Array<Arango::Task>]
       def all_tasks
         Arango::Task.all(database: self)
       end
 
       # Create a new task with given id, task is saved to the database.
-      #
       # @param id [String]
       # @param command [String] The javascript code to execute.
       # @param name [String] The task name, optional.
@@ -22,7 +20,6 @@ module Arango
       end
 
       # Get a task from the database.
-      #
       # @param id [String]
       # @return [Arango::Task]
       def get_task(id)
@@ -32,7 +29,6 @@ module Arango
       alias retrieve_task get_task
 
       # Instantiate a new task with given id, task is not saved to the database.
-      #
       # @param id [String]
       # @param command [String] The javascript code to execute, optional.
       # @param name [String] The task name, optional.
@@ -45,14 +41,12 @@ module Arango
       end
 
       # Get a list of all task ids.
-      #
-      # @return [Array] Array of Strings.
+      # @return [Array<String>]
       def list_tasks
         Arango::Task.list(database: self)
       end
 
       # Delete task with given id.
-      #
       # @param id [String]
       # @return [Boolean] Returns true if task has been deleted.
       def drop_task(id)
