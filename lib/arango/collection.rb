@@ -14,7 +14,6 @@ module Arango
 
     class << self
       # Takes a hash and instantiates a Arango::Collection object from it.
-      #
       # @param collection_hash [Hash]
       # @return [Arango::Collection]
       def from_h(collection_hash, database: nil)
@@ -34,7 +33,6 @@ module Arango
       end
 
       # Takes a Arango::Result and instantiates a Arango::Collection object from it.
-      #
       # @param collection_result [Arango::Result]
       # @param properties_result [Arango::Result]
       # @return [Arango::Collection]
@@ -46,28 +44,42 @@ module Arango
         from_h(hash, database: database)
       end
 
+      # Retrieves all collections from the database.
+      # @param exclude_system [Boolean] Optional, default true, exclude system collections.
+      # @param database [Arango::Database]
+      # @return [Array<Arango::Collection>]
       def all(exclude_system: true, database:)
         query = { excludeSystem: exclude_system }
         result = database.request("GET", "_api/collection", query: query, key: :result)
-        result.map do |c|
-          Arango::Collection.from_h(c.to_h, database: database)
-        end
+        result.map { |c| from_h(c.to_h, database: database) }
       end
 
+      # Get collection from the database.
+      # @param name [String] The name of the collection.
+      # @param database [Arango::Database]
+      # @return [Arango::Database]
       def get(name, database:)
         collection_result = database.request("GET", "_api/collection/#{name}")
         properties_result = database.request("GET", "_api/collection/#{name}/properties")
-        Arango::Collection.from_results(collection_result, properties_result, database: database)
+        from_results(collection_result, properties_result, database: database)
       end
       alias fetch get
       alias retrieve get
 
+      # Retrieves a list of all collections.
+      # @param exclude_system [Boolean] Optional, default true, exclude system collections.
+      # @param database [Arango::Database]
+      # @return [Array<String>] List of collection names.
       def list(exclude_system: true, database:)
         query = { excludeSystem: exclude_system }
         result = database.request("GET", "_api/collection", query: query, key: :result)
         result.map { |c| c[:name] }
       end
 
+      # Removes a collection.
+      # @param name [String] The name of the collection.
+      # @param database [Arango::Database]
+      # @return nil
       def drop(name, database:)
         database.request("DELETE", "_api/collection/#{name}")
         nil
@@ -75,6 +87,10 @@ module Arango
       alias delete drop
       alias destroy drop
 
+      # Check if collection exists.
+      # @param name [String] Name of the collection
+      # @param database [Arango::Database]
+      # @return [Boolean]
       def exist?(name, exclude_system: true, database:)
         result = list(exclude_system: exclude_system, database: database)
         result.include?(name)
