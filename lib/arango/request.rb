@@ -58,10 +58,10 @@ module Arango
 
       begin
         json_result = unless response.response_body.empty?
-                   Oj.load(response.response_body, mode: :json, symbol_keys: true)
-                 else
-                   {}
-                 end
+                        Oj.load(response.response_body, mode: :json, symbol_keys: true)
+                      else
+                        {}
+                      end
         result = Arango::Result.new(json_result)
       rescue Exception => e
         raise Arango::Error.new err: :impossible_to_parse_arangodb_response,
