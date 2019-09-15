@@ -10,7 +10,7 @@ module Arango
       # Retrieves all databases the current user can access.
       # @return [Array<Arango::Database>]
       def all_user_databases
-        Arango::Databse.all_user_databases(server: self)
+        Arango::Database.all_user_databases(server: self)
       end
 
       # Retrieves a list of all databases.
