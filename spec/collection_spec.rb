@@ -112,213 +112,205 @@ describe Arango::Collection do
     end
   end
 
-  # context "#create" do
-  #   it "create a new Collection" do
-  #     @collection.destroy
-  #     collection = @collection.create
-  #     expect(collection.name).to eq "MyCollection"
-  #   end
-  #
-  #   it "create a duplicate Collection" do
-  #     error = nil
-  #     begin
-  #       @collection.create
-  #     rescue Arango::ErrorDB => e
-  #       error = e.error_num
-  #     end
-  #     expect(error.class).to eq Integer
-  #   end
-  #
-  #   it "create a new Edge Collection" do
-  #     @myEdgeCollection.destroy
-  #     collection = @myEdgeCollection.create
-  #     expect(collection.type).to eq :edge
-  #   end
-  #
-  #   it "create a new Document in the Collection" do
-  #     myDocument = @collection.create_documents document:
-  #       {Hello: "World", num: 1}
-  #     expect(myDocument[0].body[:Hello]).to eq "World"
-  #   end
-  #
-  #   it "create new Documents in the Collection" do
-  #     myDocument = @collection.create_documents document: [{Ciao: "Mondo", num: 1}, {Hallo: "Welt", num: 2}]
-  #     expect(myDocument[0].body[:Ciao]).to eq "Mondo"
-  #   end
-  #
-  #   it "create a new Edge in the Collection" do
-  #     myDoc = @collection.create_documents document: [{A: "B", num: 1}, {C: "D", num: 3}]
-  #     myEdge = @myEdgeCollection.create_edges from: myDoc[0].id, to: myDoc[1].id
-  #     expect(myEdge[0].body[:_from]).to eq myDoc[0].id
-  #   end
-  # end
-  #
-  # context "#info" do
-  #   it "retrieve the Collection" do
-  #     info = @collection.retrieve
-  #     expect(info.name).to eq "MyCollection"
-  #   end
-  #
-  #   it "properties of the Collection" do
-  #     info = @collection.properties
-  #     expect(info[:name]).to eq "MyCollection"
-  #   end
-  #
-  #   it "documents in the Collection" do
-  #     info = @collection.count
-  #     expect(info).to eq 5
-  #   end
-  #
-  #   it "statistics" do
-  #     info = @collection.statistics
-  #     expect(info[:cacheInUse]).to eq false
-  #   end
-  #
-  #   it "checksum" do
-  #     info = @collection.checksum
-  #     expect(info.class).to eq String
-  #   end
-  #
-  #   it "list Documents" do
-  #     info = @collection.all_documents
-  #     expect(info.length).to eq 5
-  #   end
-  #
-  #   it "search Documents by match" do
-  #     info = @collection.documents_match match: {num: 1}
-  #     expect(info.length).to eq 3
-  #   end
-  #
-  #   it "search Document by match" do
-  #     info = @collection.document_match match: {num: 1}
-  #     expect(info.collection.name).to eq "MyCollection"
-  #   end
-  #
-  #   it "search Document by key match" do
-  #     docs = @collection.create_documents document: [{_key: "ThisIsATest1", test: "fantastic"}, {_key: "ThisIsATest2"}]
-  #     result = @collection.documents_by_keys keys: ["ThisIsATest1", docs[1]]
-  #     expect(result[0].body[:test]).to eq "fantastic"
-  #   end
-  #
-  #   it "remove Document by key match" do
-  #     docs = @collection.create_documents document: [{_key: "ThisIsATest3", test: "fantastic"}, {_key: "ThisIsATest4"}]
-  #     result = @collection.remove_by_keys keys: ["ThisIsATest3", docs[1]]
-  #     expect(result[:removed]).to eq 2
-  #   end
-  #
-  #   it "remove Document by match" do
-  #     @collection.create_documents document: [{_key: "ThisIsATest5", test: "fantastic"}, {_key: "ThisIsATest6"}]
-  #     result = @collection.remove_match match: {test: "fantastic"}
-  #     expect(result).to eq 2
-  #   end
-  #
-  #   it "replace Document by match" do
-  #     @collection.create_documents document: {test: "fantastic", val: 4}
-  #     result = @collection.replace_match match: {test: "fantastic"}, newValue: {val: 5}
-  #     expect(result).to eq 1
-  #   end
-  #
-  #   it "update Document by match" do
-  #     @collection.create_documents document: {test: "fantastic2", val: 5}
-  #     result = @collection.update_match match: {val: 5}, newValue: {val: 6}
-  #     expect(result).to eq 2
-  #   end
-  #
-  #   it "search random Document" do
-  #     info = @collection.random
-  #     expect(info.collection.name).to eq "MyCollection"
-  #   end
-  # end
-  #
-  # context "#modify" do
-  #   it "load" do
-  #     collection = @collection.load
-  #     expect(collection.name).to eq "MyCollection"
-  #   end
-  #
-  #   it "unload" do
-  #     collection = @collection.unload
-  #     expect(collection.name).to eq "MyCollection"
-  #   end
-  #
-  #   it "change" do
-  #     collection = @collection.change wait_for_sync: true
-  #     expect(collection.body[:waitForSync]).to be true
-  #   end
-  #
-  #   it "rename" do
-  #     collection = @collection.rename newName: "MyCollection2"
-  #     expect(collection.name).to eq "MyCollection2"
-  #   end
-  # end
-  #
-  # context "#truncate" do
-  #   it "truncate a Collection" do
-  #     collection = @collection.truncate
-  #     expect(collection.count).to eq 0
-  #   end
-  # end
-  #
-  # context "#destroy" do
-  #   it "delete a Collection" do
-  #     collection = @collection.destroy
-  #     expect(collection).to be true
-  #   end
-  # end
-  #
-  #   context "#get" do
-  #     it "revision" do
-  #       expect(@myCollection.revision.class).to be String
-  #     end
-  #
-  #     it "collection" do
-  #       expect(@myCollection.rotate).to eq true
-  #     end
-  #   end
-  #
+  context "Arango::Collection itself" do
+    it "new" do
+      collection = Arango::Collection.new("MyCollection", database: @database)
+      expect(collection.name).to eq "MyCollection"
+      expect(collection.type).to eq :document
+    end
+
+    it "new edge" do
+      collection = Arango::Collection.new("MyCollection", type: :edge, database: @database)
+      expect(collection.name).to eq "MyCollection"
+      expect(collection.type).to eq :edge
+    end
+
+    it "create" do
+      Arango::Collection.new("MyCollection", database: @database).create
+      collection = Arango::Collection.get("MyCollection", database: @database)
+      expect(collection.name).to eq "MyCollection"
+      expect(collection.type).to eq :document
+    end
+
+    it "create edge" do
+      Arango::Collection.new("MyCollection", type: :edge, database: @database).create
+      collection = Arango::Collection.get("MyCollection", database: @database)
+      expect(collection.name).to eq "MyCollection"
+      expect(collection.type).to eq :edge
+    end
+
+    it "fails to create a duplicate Collection" do
+      Arango::Collection.new("MyCollection", database: @database).create
+      error = nil
+      begin
+        Arango::Collection.new("MyCollection", database: @database).create
+      rescue Arango::ErrorDB => e
+        error = e.error_num
+      end
+      expect(error.class).to eq Integer
+    end
+
+    it "reload the Collection" do
+      collection = Arango::Collection.new("MyCollection", database: @database).create
+      collection.name = 'StampCollection'
+      expect(collection.name).to eq 'StampCollection'
+      collection.reload
+      expect(collection.name).to eq "MyCollection"
+    end
+
+    it "size" do
+      collection = Arango::Collection.new("MyCollection", database: @database).create
+      info = collection.count
+      expect(info).to eq 0
+    end
+
+    it "statistics" do
+      collection = Arango::Collection.new("MyCollection", database: @database).create
+      info = collection.statistics
+      expect(info[:cacheInUse]).to eq false
+    end
+
+    it "checksum" do
+      collection = Arango::Collection.new("MyCollection", database: @database).create
+      info = collection.checksum
+      expect(info.class).to eq String
+    end
+
+    it "load" do
+      collection = Arango::Collection.new("MyCollection", database: @database).create
+      collection = collection.load_into_memory
+      expect(collection.name).to eq "MyCollection"
+    end
+
+    it "unload" do
+      collection = Arango::Collection.new("MyCollection", database: @database).create
+      collection = collection.unload_from_memory
+      expect(collection.name).to eq "MyCollection"
+    end
+
+    it "save wait_for_sync" do
+      collection = Arango::Collection.new("MyCollection", database: @database).create
+      expect(collection.wait_for_sync).to be false
+      collection.wait_for_sync = true
+      collection.save
+      expect([true, false]).to include(collection.wait_for_sync) # no guaranty its actually changed
+    end
+
+    it "save name" do
+      collection = Arango::Collection.new("MyCollection", database: @database).create
+      collection.name = 'StampCollection'
+      collection.save
+      expect(collection.name).to eq 'StampCollection'
+    end
+
+    it "truncate" do
+      collection = Arango::Collection.new("MyCollection", database: @database).create
+      collection = collection.truncate
+      expect(collection.size).to eq 0
+    end
+
+    it "drop" do
+      Arango::Collection.new("MyCollection", database: @database).create
+      collection = Arango::Collection.get("MyCollection", database: @database)
+      collection.drop
+      message = nil
+      begin
+        Arango::Collection.get("MyCollection", database: @database)
+      rescue Arango::ErrorDB => e
+        message = e.message
+      end
+      expect(message).to eq 'collection or view not found'
+    end
+
+    it "revision" do
+      collection = Arango::Collection.new("MyCollection", database: @database).create
+      expect(collection.revision).to be_a String
+    end
+
+    it "rotate_journal" do
+      collection = Arango::Collection.new("MyCollection", database: @database).create
+      expect(collection.rotate_journal).to eq collection
+    end
+
+    it "status" do
+      collection = Arango::Collection.new("MyCollection", database: @database).create
+      expect(collection.status).to eq :loaded
+    end
+
+    it "arango_object_id" do
+      collection = Arango::Collection.new("MyCollection", database: @database).create
+      expect(collection.arango_object_id).to be_a String
+    end
+
+    it "key_options" do
+      collection = Arango::Collection.new("MyCollection", database: @database).create
+      expect(collection.key_options).to be_a Arango::Result
+      expect(collection.key_options.allow_user_keys).to be true
+    end
+
+    it "sharding_strategy" do
+      collection = Arango::Collection.new("MyCollection", sharding_strategy: :hash, database: @database).create
+      expect(collection.sharding_strategy).to eq :hash
+    end
+
+    it "shards" do
+      skip "shards works only on a cluster coordinator"
+      collection = Arango::Collection.new("MyCollection", sharding_strategy: :hash, database: @database).create
+      expect(collection.shards).to be_truthy
+    end
+
+    it "load_indexes_into_memory" do
+      collection = Arango::Collection.new("MyCollection", sharding_strategy: :hash, database: @database).create
+      expect(collection.load_indexes_into_memory).to be collection
+    end
+
+    it "recalculate_count" do
+      collection = Arango::Collection.new("MyCollection", sharding_strategy: :hash, database: @database).create
+      expect(collection.recalculate_count).to eq 0
+    end
   #   context "#import" do
   #     it "import" do
   #       attributes = ["value", "num", "name"]
   #       values = [["uno",1,"ONE"],["due",2,"TWO"],["tre",3,"THREE"]]
-  #       result = @myCollection.import attributes: attributes, values: values
+  #       result = collection.import attributes: attributes, values: values
   #       expect(result[:created]).to eq 3
   #     end
   #
   #     it "import single" do
   #       attributes = ["value", "num", "name"]
   #       values = ["uno",1,"ONE"]
-  #       result = @myCollection.import attributes: attributes, values: values
+  #       result = collection.import attributes: attributes, values: values
   #       expect(result[:created]).to eq 1
   #     end
   #
   #     it "importJSON" do
   #       body = [{value: "uno", num: 1, name: "ONE"}, {value: "due", num: 2, name: "DUE"}]
-  #       result = @myCollection.import_json body: body
+  #       result = collection.import_json body: body
   #       expect(result[:created]).to eq 2
   #     end
   #   end
   #
   #   context "#export" do
   #     it "export" do
-  #       result = @myCollection.export flush: true
+  #       result = collection.export flush: true
   #       expect(result[0].class).to be Arango::Document
   #     end
   #
   #     it "exportNext" do
-  #       result = @myCollection.export batch_size: 3, flush: true
-  #       result = @myCollection.export_next
+  #       result = collection.export batch_size: 3, flush: true
+  #       result = collection.export_next
   #       expect(result[0].class).to be Arango::Document
   #     end
   #   end
   #
   #   context "#indexes" do
   #     it "indexes" do
-  #       expect(@myCollection.indexes[0].class).to be Arango::Index
+  #       expect(collection.indexes[0].class).to be Arango::Index
   #     end
   #
   #     it "create" do
-  #       myIndex = @myCollection.index(unique: false, fields: "num", type: "hash").create
+  #       myIndex = collection.index(unique: false, fields: "num", type: "hash").create
   #       expect(myIndex.fields).to eq ["num"]
   #     end
-  #   end
+  end
 end

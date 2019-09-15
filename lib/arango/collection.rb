@@ -90,6 +90,7 @@ module Arango
       #  assign_graph(graph)
       @name = name
       @name_changed = false
+      @original_name = name
       @distribute_shards_like = distribute_shards_like
       @do_compact = do_compact
       @enforce_replication_factor = enforce_replication_factor
@@ -255,10 +256,11 @@ module Arango
     # If no sharding strategy is specified, the default will be hash for all collections, and enterprise_hash_smart_edge for all smart edge
     # collections (requires the Enterprise Edition of ArangoDB). Manually overriding the sharding strategy does not yet provide a benefit,
     # but it may later in case other sharding strategies are added.
-    # Can only be set by calling the constructor with the sharding_strategy param.
-    # @return [Symbol]
+    # Can only be set by calling the constructor with the sharding_strategy param and is only available when creating the collection.
+    # Usually its just nil.
+    # @return [Symbol, NilClass]
     def sharding_strategy
-      @sharding_strategy.to_s.underscore.to_sym
+      @sharding_strategy.to_s.underscore.to_sym if @sharding_strategy
     end
 
     # The status of the collection as symbol, one of:
@@ -294,7 +296,7 @@ module Arango
       @name = n
     end
 
-    def wait_for_sync(boolean)
+    def wait_for_sync=(boolean)
       @wait_for_sync_changed = true
       @wait_for_sync = boolean
     end
@@ -320,8 +322,8 @@ module Arango
 
       if @enforce_replication_factor || @wait_for_sync_replication
         query = {}
-        query[:enforceReplicationFactor] = @enforce_replication_factor
-        query[:waitForSyncReplication] = @wait_for_sync_replication
+        query[:enforceReplicationFactor] = @enforce_replication_factor unless @enforce_replication_factor.nil?
+        query[:waitForSyncReplication] = @wait_for_sync_replication unless @wait_for_sync_replication.nil?
         result = @database.request("POST", "_api/collection", body: body, query: query)
         _update_instance_variables(result)
       else
@@ -421,16 +423,17 @@ module Arango
     # @return [Arango::Collection] self
     def recalculate_count
       @database.request("PUT", "_api/collection/#{@name}/recalculateCount") if @server.engine[:name] == 'rocksdb'
-      self
+      size
     end
 
     # Reload collection properties and name from the database, reverting any changes.
     # @return [Arango::Collection] self
     def reload
+      request_name = @name_changed ? @original_name : @name
       @name_changed = false
       @journal_size_changed = false
       @wait_for_sync_changed = false
-      result = @database.request("GET", "_api/collection/#{@name}/properties")
+      result = @database.request("GET", "_api/collection/#{request_name}/properties")
       _update_instance_variables(result)
       self
     end
@@ -443,18 +446,20 @@ module Arango
     # @return [Arango::Collection] self
     def save
       if @name_changed
+        request_name = @name_changed ? @original_name : @name
         @name_changed = false
-        @database.request("PUT", "_api/collection/#{@name}/rename", body: { name: @name })
+        @database.request("PUT", "_api/collection/#{request_name}/rename", body: { name: @name })
+        @original_name = @name
       end
       if @journal_size_changed || @wait_for_sync_changed
+        body = {}
+        body[:journalSize] = @journal_size if @journal_size_changed && @server.engine[:name] == 'mmfiles'
+        body[:waitForSync] = @wait_for_sync if @wait_for_sync_changed
         @journal_size_changed = false
         @wait_for_sync_changed = false
-        body = {}
-        body[:journalSize] = @journal_size if @journal_size_changed
-        body[:waitForSync] = @wait_for_sync if @wait_for_sync_changed
         result = @database.request("GET", "_api/collection/#{@name}/properties", body: body)
-        @journal_size = result.journal_size
-        @wait_for_sync = result.wait_for_sync
+        @journal_size = result.journal_size if result.key?(:journal_size)
+        @wait_for_sync = result.wait_for_sync if result.key?(:wait_for_sync)
       end
       self
     end
@@ -485,7 +490,7 @@ module Arango
 
     def _update_instance_variables(result)
       %i[cacheEnabled globallyUniqueId id isSystem keyOptions name objectId status type waitForSync].each do |key|
-        instance_variable_set("@#{key.to_s.underscore}", result[key])
+        instance_variable_set("@#{key.to_s.underscore}", result[key]) if result.key?(key)
       end
     end
   end
