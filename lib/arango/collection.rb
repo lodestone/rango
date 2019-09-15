@@ -406,7 +406,7 @@ module Arango
     # Note: For the time being this function is only useful on RocksDB storage engine, as in MMFiles engine all indexes are in memory anyways.
     # @return [Arango::Collection] self
     def load_indexes_into_memory
-      @database.request("PUT", "_api/collection/#{@name}/loadIndexesIntoMemory") if @server.engine[:name] == 'rocksdb'
+      @database.request("PUT", "_api/collection/#{@name}/loadIndexesIntoMemory") if @server.rocksdb?
       self
     end
 
@@ -414,7 +414,7 @@ module Arango
     # Note: This method is specific for the MMFiles storage engine, and there it is not available in a cluster.
     # @return [Arango::Collection] self
     def rotate_journal
-      @database.request("PUT", "_api/collection/#{@name}/rotate") if @server.engine[:name] == 'mmfiles'
+      @database.request("PUT", "_api/collection/#{@name}/rotate") if @server.mmfiles?
       self
     end
 
@@ -422,7 +422,7 @@ module Arango
     # Note: This function is only useful on RocksDB storage engine.
     # @return [Arango::Collection] self
     def recalculate_count
-      @database.request("PUT", "_api/collection/#{@name}/recalculateCount") if @server.engine[:name] == 'rocksdb'
+      @database.request("PUT", "_api/collection/#{@name}/recalculateCount") if @server.rocksdb?
       size
     end
 
@@ -453,7 +453,7 @@ module Arango
       end
       if @journal_size_changed || @wait_for_sync_changed
         body = {}
-        body[:journalSize] = @journal_size if @journal_size_changed && @server.engine[:name] == 'mmfiles'
+        body[:journalSize] = @journal_size if @journal_size_changed && @server.mmfiles?
         body[:waitForSync] = @wait_for_sync if @wait_for_sync_changed
         @journal_size_changed = false
         @wait_for_sync_changed = false

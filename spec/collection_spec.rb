@@ -4,10 +4,10 @@ describe Arango::Collection do
   before :all do
     @server = connect
     begin
-      @server.drop_database("DocumentCollectionDatabase")
+      @server.drop_database("CollectionDatabase")
     rescue
     end
-    @database = @server.create_database("DocumentCollectionDatabase")
+    @database = @server.create_database("CollectionDatabase")
   end
 
   before :each do
@@ -25,7 +25,7 @@ describe Arango::Collection do
   end
 
   after :all do
-    @server.drop_database("DocumentCollectionDatabase")
+    @server.drop_database("CollectionDatabase")
   end
 
   context "Database" do
