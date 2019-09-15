@@ -2,29 +2,27 @@ module Arango
   class Server
     module Databases
       # Retrieves all databases.
-      # @return [Array] Array of Arango::Database.
+      # @return [Array<Arango::Database>]
       def all_databases
-        result = request("GET", "_api/database", key: :result)
-        result.map{|db| Arango::Database.new(db, server: self)}
+        Arango::Database.all(server: self)
       end
 
       # Retrieves all databases the current user can access.
-      # @return [Array] Array of Arango::Database.
+      # @return [Array<Arango::Database>]
       def all_user_databases
-        result = request("GET", "_api/database/user", key: :result)
-        result.map{|db| Arango::Database.new(db, server: self)}
+        Arango::Databse.all_user_databases(server: self)
       end
 
       # Retrieves a list of all databases.
-      # @return [Array] List of database names.
+      # @return [Array<String>] List of database names.
       def list_databases
-        request("GET", "_api/database", key: :result)
+        Arango::Database.list(server: self)
       end
 
       # Retrieves a list of all databases the current user can access.
-      # @return [Array] List of database names.
+      # @return [Array<String>] List of database names.
       def list_user_databases
-        request("GET", "_api/database/user", key: :result)
+        Arango::Database.list_user_databases(server: self)
       end
 
       # Creates a new database.
@@ -58,6 +56,14 @@ module Arango
       end
       alias fetch_database get_database
       alias retrieve_database get_database
+
+      # Check if database exists.
+      # @param name [String] Name of the database.
+      # @return [Boolean]
+      def exist_database?(name)
+        Arango::Database.exist?(name, server: self)
+      end
+      alias database_exist? exist_database?
     end
   end
 end
