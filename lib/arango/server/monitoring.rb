@@ -3,10 +3,6 @@ module Arango
     module Monitoring
       # === MONITORING ===
 
-      def server_data
-        request("GET", "_admin/server/id")
-      end
-
       def cluster_health
         request("GET", "_admin/health")
       end
