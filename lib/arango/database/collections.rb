@@ -48,6 +48,7 @@ module Arango
       end
 
       # Retrieves a list of all collections.
+      # @param exclude_system [Boolean] Optional, default true, exclude system collections.
       # @return [Array<String>] List of collection names.
       def list_collections(exclude_system: true)
         Arango::Collection.list(exclude_system: exclude_system, database: self)
