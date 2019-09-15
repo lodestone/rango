@@ -19,10 +19,8 @@ module Arango
       # Returns information about all server endpoints.
       # @return [Array<String>]
       def endpoints
-        if in_cluster?
-          endpoints = request("GET", "_api/endpoint")
-          endpoints.map { |e| e[:endpoint] }
-        end
+        endpoints = request("GET", "_api/endpoint")
+        endpoints.map { |e| e[:endpoint] }
       end
 
       # Send back what was sent in, headers, post body etc.
