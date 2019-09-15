@@ -404,7 +404,7 @@ module Arango
     # @param details [Boolean] If set to true, the return value will also contain the responsible servers for the collections’ shards.
     # @return [Array, Hash]
     def shards(details: false)
-      @database.request("GET", "_api/collection/#{@name}/shards", key: :shards, query: { details: details })
+      @database.request("GET", "_api/collection/#{@name}/shards", key: :shards, query: { details: details }) if @server.coordinator?
     end
 
     # Retrieve the collections revision id
