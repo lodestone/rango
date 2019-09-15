@@ -174,7 +174,7 @@ module Arango
       # Returns the id of a server in a cluster.
       # @return [Boolean]
       def server_id
-        request("GET", "_api/replication/server-id", key: :serverId)
+        request("GET", "_admin/server/id", key: :serverId) if in_cluster?
       end
 
       # Returns the statistics information.
