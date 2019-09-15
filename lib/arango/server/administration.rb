@@ -234,6 +234,60 @@ module Arango
       def target_version
         request("GET", "_admin/database/target-version", key: :version)
       end
+
+      # Flushes the write-ahead log. By flushing the currently active write-ahead
+      # logfile, the data in it can be transferred to collection journals and
+      # datafiles. This is useful to ensure that all data for a collection is
+      # present in the collection journals and datafiles, for example, when dumping
+      # the data of a collection.
+      # @param wait_for_sync [Boolean] Whether or not the operation should block until the not-yet synchronized data in the write-ahead log was
+      #                                synchronized to disk.
+      # @param wait_for_collector [Boolean] Whether or not the operation should block until the data in the flushed log has been collected by the
+      #                                     write-ahead log garbage collector. Note that setting this option to true might block for a long time if
+      #                                     there are long-running transactions and the write-ahead log garbage collector cannot
+      #                                     finish garbage collection.
+      def flush_wal(wait_for_sync: nil, wait_for_collector: nil)
+        body = {
+          waitForSync: wait_for_sync,
+          waitForCollector: wait_for_collector
+        }
+        !!request("PUT", "_admin/wal/flush", body: body)
+      end
+
+      # Retrieves the configuration of the write-ahead log. Properties:
+      # - allow_oversize_entries: whether or not operations that are bigger than a single logfile can be executed and stored
+      # - log_file_size: the size of each write-ahead logfile
+      # - historic_logfiles: the maximum number of historic logfiles to keep
+      # - reserve_logfiles: the maximum number of reserve logfiles that ArangoDB allocates in the background
+      # - throttle_wait: the maximum wait time that operations will wait before they get aborted if case of write-throttling (in milliseconds)
+      # - throttle_when_pending: the number of unprocessed garbage-collection operations that, when reached, will activate write-throttling.
+      #                          A value of 0 means that write-throttling will not be triggered.
+      # return [Arango::Result]
+      def wal_properties
+        result = request("GET", "_admin/wal/properties")
+        raise "A error occured." if result.response_code >= 500
+      end
+
+      # Configures the behavior of the write-ahead log.
+      # @param properties_object [Arango::Result] Obtain the object with wal_properties, modify and pass here.
+      #
+      def wal_properties=(properties_object)
+        body = {
+          allowOversizeEntries: properties_object.allow_oversize_entries,
+          logfileSize: properties_object.logfile_size,
+          historicLogfiles: properties_object.historic_logfiles,
+          reserveLogfiles: properties_object.reserve_logfiles,
+          throttleWait: properties_object.throttle_wait,
+          throttleWhenPending: properties_object.throttle_when_pending
+        }
+        request("PUT", "_admin/wal/properties", body: body)
+      end
+
+      # Shutdown the server.
+      # @return [Boolean] True if request successful.
+      def shutdown
+        200 == request("DELETE", "_admin/shutdown").response_code
+      end
     end
   end
 end
