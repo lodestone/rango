@@ -127,7 +127,7 @@ describe "Arango::Server" do
     end
 
     it 'time' do
-      expect(@server.time).to be_a(Float)
+      expect(@server.time).to be_a(Numeric)
     end
 
     it 'detailed_version' do
