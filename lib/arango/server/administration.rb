@@ -16,6 +16,15 @@ module Arango
         end
       end
 
+      # Returns information about all server endpoints.
+      # @return [Array<String>]
+      def endpoints
+        if in_cluster?
+          endpoints = request("GET", "_api/endpoint")
+          endpoints.map { |e| e[:endpoint] }
+        end
+      end
+
       # Send back what was sent in, headers, post body etc.
       # @param request_hash [Hash] The request body.
       # @return [Hash]
@@ -220,6 +229,12 @@ module Arango
       # @return [String]
       def version
         request("GET", "_api/version", key: :version)
+      end
+
+      # Returns the database version that this server requires.
+      # @return [String]
+      def target_version
+        request("GET", "_admin/database/target-version", key: :version)
       end
     end
   end
