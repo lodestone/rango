@@ -254,9 +254,12 @@ describe Arango::Collection do
     end
 
     it "shards" do
-      skip "shards works only on a cluster coordinator"
       collection = Arango::Collection.new("MyCollection", sharding_strategy: :hash, database: @database).create
-      expect(collection.shards).to be_truthy
+      if @server.coordinator?
+        expect(collection.shards).to be_truthy
+      else
+        expect(collection.shards).to be_nil
+      end
     end
 
     it "load_indexes_into_memory" do
