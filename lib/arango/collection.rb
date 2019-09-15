@@ -341,10 +341,10 @@ module Arango
         query[:enforceReplicationFactor] = @enforce_replication_factor unless @enforce_replication_factor.nil?
         query[:waitForSyncReplication] = @wait_for_sync_replication unless @wait_for_sync_replication.nil?
         result = @database.request("POST", "_api/collection", body: body, query: query)
-        _update_instance_variables(result)
+        _update_attributes(result)
       else
         result = @database.request("POST", "_api/collection", body: body)
-        _update_instance_variables(result)
+        _update_attributes(result)
       end
       self
     end
@@ -450,7 +450,7 @@ module Arango
       @journal_size_changed = false
       @wait_for_sync_changed = false
       result = @database.request("GET", "_api/collection/#{request_name}/properties")
-      _update_instance_variables(result)
+      _update_attributes(result)
       self
     end
     alias refresh reload
@@ -504,7 +504,7 @@ module Arango
       end
     end
 
-    def _update_instance_variables(result)
+    def _update_attributes(result)
       %i[cacheEnabled globallyUniqueId id isSystem keyOptions name objectId status type waitForSync].each do |key|
         instance_variable_set("@#{key.to_s.underscore}", result[key]) if result.key?(key)
       end
