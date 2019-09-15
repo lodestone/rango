@@ -284,7 +284,7 @@ module Arango
       end
 
       # Shutdown the server.
-      # @return [Boolean] True if request successful.
+      # @return [Boolean] True if request was successful.
       def shutdown
         200 == request("DELETE", "_admin/shutdown").response_code
       end
