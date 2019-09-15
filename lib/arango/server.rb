@@ -30,8 +30,7 @@ module Arango
       @size = size
       @timeout = timeout
       @request = Arango::Request.new(return_output: @return_output,
-        base_uri: @base_uri, options: @options, verbose: @verbose, async: @async)
-      assign_async(async)
+        base_uri: @base_uri, options: @options)
       update_base_uri
       @internal_request = ConnectionPool.new(size: @size, timeout: @timeout){ @request } if @pool
     end

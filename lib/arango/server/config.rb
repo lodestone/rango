@@ -1,8 +1,8 @@
 module Arango
   class Server
     module Config
-      attr_reader :active_cache, :async, :base_uri, :cache, :host, :password, :pool, :port, :return_output, :tls, :username, :verbose
-      attr_accessor :size, :timeout, :warning
+      attr_reader :active_cache, :async, :base_uri, :cache, :host, :password, :pool, :port, :return_output, :tls, :username
+      attr_accessor :size, :timeout, :verbose, :warning
 
       def username=(username)
         @username = username

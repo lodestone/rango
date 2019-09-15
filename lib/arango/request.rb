@@ -1,14 +1,12 @@
 module Arango
   class Request
-    def initialize(return_output:, base_uri:, options:, verbose:, async:)
+    def initialize(return_output:, base_uri:, options:)
       @return_output = return_output
       @base_uri = base_uri
       @options = options
-      @verbose = verbose
-      @async = async
     end
 
-    attr_accessor :async, :base_uri, :options, :return_output, :verbose
+    attr_accessor :base_uri, :options, :return_output
 
     def request(action, url, body: {}, headers: {}, query: {}, key: nil, skip_to_json: false, keep_null: false,
                 skip_parsing: false)
@@ -26,13 +24,6 @@ module Arango
 
       if %w[GET HEAD DELETE].include?(action)
         options.delete(:body)
-      end
-
-      if @verbose
-        puts "\n===REQUEST==="
-        puts "#{action} #{send_url}\n"
-        puts JSON.pretty_generate(options)
-        puts "==============="
       end
 
       if !skip_to_json && !options[:body].nil?
@@ -60,30 +51,8 @@ module Arango
           data: {error: e.message}
       end
 
-      if @verbose
-        puts "\n===RESPONSE==="
-        puts "CODE: #{response.code}"
-      end
-
-      case @async
-      when :store
-        val = response.headers["x-arango-async-id"]
-        if @verbose
-          puts val
-          puts "==============="
-        end
-        return val
-      when true
-        puts "===============" if @verbose
-        return true
-      end
-
       if skip_parsing
         val = response.response_body
-        if @verbose
-          puts val
-          puts "==============="
-        end
         return val
       end
 
@@ -97,11 +66,6 @@ module Arango
       rescue Exception => e
         raise Arango::Error.new err: :impossible_to_parse_arangodb_response,
           data: { response: response.response_body, action: action, url: send_url, request: JSON.pretty_generate(options) }
-      end
-
-      if @verbose
-        puts JSON.pretty_generate(result.to_h)
-        puts "==============="
       end
 
       if !result.is_array? && result[:error]
@@ -119,7 +83,6 @@ module Arango
       headers.delete_if{|_,v| v.nil?}
       body = Oj.dump(body, mode: :json)
       options = @options.merge({body: body, query: query, headers: headers, stream_body: true})
-      puts "\n#{action} #{send_url}\n" if @verbose
       File.open(path, "w") do |file|
         file.binmode
         Typhoeus.post(send_url, options) do |fragment|
