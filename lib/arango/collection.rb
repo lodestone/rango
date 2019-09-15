@@ -97,6 +97,28 @@ module Arango
       end
     end
 
+    # Instantiate a new collection.
+    # For param description see the attributes descriptions. All params except name and database are optional.
+    # @param name [String] The name of the collection.
+    # @param type [Symbol]
+    # @param database [Arango::Database]
+    # @param status
+    # @param distribute_shards_like
+    # @param do_compact
+    # @param index_buckets
+    # @param is_system
+    # @param is_volatile
+    # @param journal_size
+    # @param key_options
+    # @param number_of_shards
+    # @param replication_factor
+    # @param shard_keys
+    # @param sharding_strategy
+    # @param smart_join_attribute
+    # @param wait_for_sync
+    # @param wait_for_sync_replication
+    # @param enforce_replication_factor
+    # @return [Arango::Collection]
     def initialize(name, database:, graph: nil, type: :document,
                    status: nil,
                    distribute_shards_like: nil, do_compact: nil, enforce_replication_factor: nil, index_buckets: nil, is_system: false,
