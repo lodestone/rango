@@ -24,7 +24,6 @@ module Arango
         %i[cache_enabled globally_unique_id id object_id].each do |key|
           instance_variable_hash[key] = collection_hash.delete(key)
         end
-
         collection = Arango::Collection.new(collection_hash.delete(:name), **collection_hash)
         instance_variable_hash.each do |k,v|
           collection.instance_variable_set("@#{k}", v)
@@ -59,9 +58,11 @@ module Arango
       # @param database [Arango::Database]
       # @return [Arango::Database]
       def get(name, database:)
-        collection_result = database.request("GET", "_api/collection/#{name}")
-        properties_result = database.request("GET", "_api/collection/#{name}/properties")
-        from_results(collection_result, properties_result, database: database)
+        batch = Arango::RequestBatch.new(database: database)
+        batch.add_request('collection', "GET", "/_api/collection/#{name}")
+        batch.add_request('collection_properties', "GET", "/_api/collection/#{name}/properties")
+        result = batch.execute
+        from_results(result[:collection], result[:collection_properties], database: database)
       end
       alias fetch get
       alias retrieve get
@@ -126,6 +127,8 @@ module Arango
                    sharding_strategy: nil, smart_join_attribute: nil, wait_for_sync: nil, wait_for_sync_replication: nil)
       assign_database(database)
       #  assign_graph(graph)
+      @aql = nil
+      @batch_proc = nil
       @name = name
       @name_changed = false
       @original_name = name
@@ -502,6 +505,30 @@ module Arango
       self
     end
     alias update save
+
+    # Request next batch from a batched request.
+    # @return value depending on original batched request.
+    def next_batch
+      return unless has_more?
+      result = @aql.next
+      final_result = if @batch_proc
+                       @batch_proc.call(result)
+                     else
+                       result
+                     end
+      unless @aql.has_more?
+        @aql = nil
+        @batch_proc = nil
+      end
+      final_result
+    end
+
+    # Check if more results are available for a betched request.
+    # @return [Boolean]
+    def has_more?
+      return false unless @aql
+      @aql.has_more?
+    end
 
     private
 
