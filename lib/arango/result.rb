@@ -9,20 +9,28 @@ module Arango
 
     # standard fields
     def code
-      @result[:code]
+      return @result['code'] if @result.key?('code')
+      return @result[:code] if @result.key?(:code)
+      nil
     end
 
-    def error
-      @result[:error]
+    def error?
+      return @result['error'] if @result.key?('error')
+      return @result[:error] if @result.key?(:error)
+      false
     end
 
     def error_message
-      @result[:errorMessage]
+      return @result['errorMessage'] if @result.key?('errorMessage')
+      return @result[:errorMessage] if @result.key?(:errorMessage)
+      nil
     end
     alias errorMessage error_message
 
     def error_num
-      @result[:errorNum]
+      return @result['errorNum'] if @result.key?('errorNum')
+      return @result[:errorNum] if @result.key?(:errorNum)
+      nil
     end
     alias errorNum error_num
 
@@ -32,6 +40,7 @@ module Arango
       field_name_y = field_name_or_index.to_sym
       return @result[field_name_y] if @result.key?(field_name_y)
       field_name_s = field_name_or_index.to_s
+      return @result[field_name_s] if @result.key?(field_name_s)
       field_name_lcy = field_name_s.camelize(:lower).to_sym
       return @result[field_name_lcy] if @result.key?(field_name_lcy)
       field_name_ucy = field_name_s.camelize(:upper).to_sym
@@ -44,6 +53,7 @@ module Arango
       field_name_y = field_name_or_index.to_sym
       return @result[field_name_y] = value if @result.key?(field_name_y)
       field_name_s = field_name_or_index.to_s
+      return @result[field_name_s] = value if @result.key?(field_name_s)
       field_name_lcy = field_name_s.camelize(:lower).to_sym
       return @result[field_name_lcy] = value if @result.key?(field_name_lcy)
       field_name_ucy = field_name_s.camelize(:upper).to_sym

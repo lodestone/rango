@@ -1,59 +1,59 @@
 module Arango
   class Request
-    def initialize(return_output:, base_uri:, options:)
-      @return_output = return_output
+    def initialize(base_uri:, options:)
       @base_uri = base_uri
       @options = options
     end
 
-    attr_accessor :base_uri, :options, :return_output
+    attr_accessor :base_uri, :options
 
-    def request(action, url, body: {}, headers: {}, query: {}, key: nil, skip_to_json: false, keep_null: false,
-                skip_parsing: false)
+    def request(action, url, body: {}, headers: nil, query: nil, key: nil, keep_null: false)
       # TODO uri safety, '..', etc., maybe arango is guarded? not sure.
       send_url = "#{@base_uri}/"
       send_url += url
 
-      if body.is_a?(Hash)
+      if body.class == Hash
         body.delete_if{|_,v| v.nil?} unless keep_null
+        body = Oj.dump(body, mode: :json) unless body.nil?
       end
-      query.delete_if{|_,v| v.nil?}
-      headers.delete_if{|_,v| v.nil?}
-      options = @options.merge({ body: body, params: query })
-      options[:headers].merge!(headers)
+      options = @options.merge({ body: body })
 
-      if %w[GET HEAD DELETE].include?(action)
-        options.delete(:body)
+      if query
+        query.delete_if{|_,v| v.nil?}
+        options[:params] = query
       end
 
-      if !skip_to_json && !options[:body].nil?
-        options[:body] = Oj.dump(options[:body], mode: :json)
+      if headers
+        headers.delete_if{|_,v| v.nil?}
+        options[:headers].merge!(headers)
       end
+
       options.delete_if{|_,v| v.empty?}
 
       begin
         response = case action
-        when "GET"
-          Typhoeus.get(send_url, options)
-        when "HEAD"
-          Typhoeus.head(send_url, options)
-        when "PATCH"
-          Typhoeus.patch(send_url, options)
-        when "POST"
-          Typhoeus.post(send_url, options)
-        when "PUT"
-          Typhoeus.put(send_url, options)
-        when "DELETE"
-          Typhoeus.delete(send_url, options)
-        end
+                   when "GET"
+                     options.delete(:body)
+                     Typhoeus.get(send_url, options)
+                   when "HEAD"
+                     options.delete(:body)
+                     Typhoeus.head(send_url, options)
+                   when "PATCH"
+                     Typhoeus.patch(send_url, options)
+                   when "POST"
+                     Typhoeus.post(send_url, options)
+                   when "PUT"
+                     Typhoeus.put(send_url, options)
+                   when "DELETE"
+                     options.delete(:body)
+                     Typhoeus.delete(send_url, options)
+                   end
       rescue Exception => e
-        raise Arango::Error.new err: :impossible_to_connect_with_database,
-          data: {error: e.message}
+        raise Arango::Error.new err: :impossible_to_connect_with_database, data: { error: e.message }
       end
 
-      if skip_parsing
-        val = response.response_body
-        return val
+      if headers && headers.key?("Content-Type") && headers["Content-Type"].start_with?("multipart/form-data")
+        return response.response_body
       end
 
       begin
@@ -69,8 +69,8 @@ module Arango
           data: { response: response.response_body, action: action, url: send_url, request: JSON.pretty_generate(options) }
       end
 
-      if !result.is_array? && result[:error]
-        raise Arango::ErrorDB.new(message: result[:errorMessage], code: result[:code], data: result, error_num: result[:errorNum],
+      if !result.is_array? && result.error?
+        raise Arango::ErrorDB.new(message: result.error_message, code: result.code, data: result.to_h, error_num: result.error_num,
                                   action: action, url: send_url, request: options)
       end
       key ? result[key] : result

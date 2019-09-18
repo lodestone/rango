@@ -27,16 +27,15 @@ module Arango
       @port = port
       @username = username
       @password = password
-      @options = { body: {}, headers: {}, query: {}, userpwd: "#{@username}:#{@password}" }
+      @options = { body: {}, headers: {}, query: {}, userpwd: "#{username}:#{password}" }
       @return_output = return_output
       @warning = warning
       @active_cache = active_cache
       @pool = pool
       @pool_size = pool_size
       @timeout = timeout
-      @request = Arango::Request.new(return_output: @return_output,
-        base_uri: @base_uri, options: @options)
-      update_base_uri
+      set_base_uri
+      @request = Arango::Request.new(base_uri: @base_uri, options: @options)
       @internal_request = ConnectionPool.new(size: @pool_size, timeout: @timeout) { @request } if @pool
     end
 
@@ -74,11 +73,10 @@ module Arango
       end
     end
 
-    def update_base_uri
+    def set_base_uri
       @base_uri = "http"
       @base_uri += "s" if @tls
       @base_uri += "://#{@host}:#{@port}"
-      @request.base_uri = @base_uri
     end
   end
 end
