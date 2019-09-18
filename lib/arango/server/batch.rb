@@ -3,8 +3,8 @@ module Arango
     module Batch
       # === BATCH ===
 
-      def batch(boundary: "XboundaryX", queries: [])
-        Arango::Batch.new(server: self, boundary: boundary, queries: queries)
+      def batch(requests: [])
+        Arango::RequestBatch.new(server: self, requests: requests)
       end
 
       def create_dump_batch(ttl:, dbserver: nil)
