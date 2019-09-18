@@ -142,9 +142,9 @@ module Arango
       request("GET", "_admin/database/target-version", key: :version)
     end
 
-    def request(action, url, body: {}, headers: {}, query: {}, key: nil, skip_to_json: false, keep_null: false)
+    def request(action, url, body: {}, headers: {}, query: {}, key: nil, keep_null: false)
       url = "_db/#{@name}/#{url}"
-      @server.request(action, url, body: body, headers: headers, query: query, key: key, skip_to_json: skip_to_json, keep_null: keep_null)
+      @server.request(action, url, body: body, headers: headers, query: query, key: key, keep_null: keep_null)
     end
 
     private
