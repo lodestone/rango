@@ -27,8 +27,7 @@ module Arango
         }
         body = "#{attributes}\n"
         values[0].is_a?(Array) ? values.each{|x| body += "#{x}\n"} : body += "#{values}\n"
-        @database.request("POST", "_api/import", query: query,
-                          body: body, skip_to_json: true)
+        @database.request("POST", "_api/import", query: query, body: body)
       end
 
       def import_json(body:, type: "auto", fromPrefix: nil,

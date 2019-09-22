@@ -7,10 +7,9 @@ module Arango
 
     attr_accessor :base_uri, :options
 
-    def request(action, url, body: {}, headers: nil, query: nil, key: nil, keep_null: false)
+    def request(get: nil, head: nil, patch: nil, post: nil, put: nil, delete: nil,
+                db: nil, body: {}, headers: nil, query: nil, key: nil, keep_null: false, block: nil)
       # TODO uri safety, '..', etc., maybe arango is guarded? not sure.
-      send_url = "#{@base_uri}/"
-      send_url += url
 
       if body.class == Hash
         body.delete_if{|_,v| v.nil?} unless keep_null
@@ -28,25 +27,23 @@ module Arango
         options[:headers].merge!(headers)
       end
 
-      options.delete_if{|_,v| v.empty?}
+      options.delete_if{|_,v| v.nil? || v.empty?}
+
+      dbcontext = db ? "_db/#{db}/" : nil
 
       begin
-        response = case action
-                   when "GET"
+        response = if get
                      options.delete(:body)
-                     Typhoeus.get(send_url, options)
-                   when "HEAD"
+                     Typhoeus.get("#{@base_uri}/#{dbcontext}#{get}", options)
+                   elsif head
                      options.delete(:body)
-                     Typhoeus.head(send_url, options)
-                   when "PATCH"
-                     Typhoeus.patch(send_url, options)
-                   when "POST"
-                     Typhoeus.post(send_url, options)
-                   when "PUT"
-                     Typhoeus.put(send_url, options)
-                   when "DELETE"
+                     Typhoeus.head("#{@base_uri}/#{dbcontext}#{head}", options)
+                   elsif patch then Typhoeus.patch("#{@base_uri}/#{dbcontext}#{patch}", options)
+                   elsif post then Typhoeus.post("#{@base_uri}/#{dbcontext}#{post}", options)
+                   elsif put then Typhoeus.put("#{@base_uri}/#{dbcontext}#{put}", options)
+                   elsif delete
                      options.delete(:body)
-                     Typhoeus.delete(send_url, options)
+                     Typhoeus.delete("#{@base_uri}/#{dbcontext}#{delete}", options)
                    end
       rescue Exception => e
         raise Arango::Error.new err: :impossible_to_connect_with_database, data: { error: e.message }
@@ -66,14 +63,17 @@ module Arango
         result.response_code = response.response_code
       rescue Exception => e
         raise Arango::Error.new err: :impossible_to_parse_arangodb_response,
-          data: { response: response.response_body, action: action, url: send_url, request: JSON.pretty_generate(options) }
+          data: { response: response.response_body, request: JSON.pretty_generate(options) }
       end
 
       if !result.is_array? && result.error?
-        raise Arango::ErrorDB.new(message: result.error_message, code: result.code, data: result.to_h, error_num: result.error_num,
-                                  action: action, url: send_url, request: options)
+        raise Arango::ErrorDB.new(message: result.error_message, code: result.code, data: result.to_h, error_num: result.error_num, request: options)
       end
-      key ? result[key] : result
+      if block
+        block.call(key ? result[key] : result)
+      else
+        key ? result[key] : result
+      end
     end
 
     def download(url:, path:, body: {}, headers: {}, query: {})

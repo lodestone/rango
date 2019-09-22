@@ -4,14 +4,14 @@ module Arango
       # Check availability of the server.
       # @return [Boolean]
       def available?
-        200 == request("GET", "_admin/server/availability", key: :code)
+        200 == request(get: '_admin/server/availability').code
       end
 
       # Returns information about all coordinator endpoints (cluster only).
       # @return [Array<String>]
       def cluster_endpoints
         if in_cluster?
-          endpoints = request("GET", "_api/cluster/endpoints", key: :endpoints)
+          endpoints = request(get: "_api/cluster/endpoints").endpoints
           endpoints.map { |e| e[:endpoint] }
         end
       end
@@ -19,7 +19,7 @@ module Arango
       # Returns information about all server endpoints.
       # @return [Array<String>]
       def endpoints
-        endpoints = request("GET", "_api/endpoint")
+        endpoints = request(get: "_api/endpoint")
         endpoints.map { |e| e[:endpoint] }
       end
 
@@ -27,14 +27,14 @@ module Arango
       # @param request_hash [Hash] The request body.
       # @return [Hash]
       def echo(request_hash)
-        result = request("POST", "_admin/echo", body: request_hash)
+        result = request(post: "_admin/echo", body: request_hash)
         Oj.load(result.requestBody, symbol_keys: true)
       end
 
       # Return server database engine information
       # @return [Arango::Result]
       def engine
-        @engine ||= request("GET", "_api/engine")
+        @engine ||= request(get: '_api/engine')
       end
 
       # Return true if the server uses the mmfiles engine.
@@ -79,13 +79,13 @@ module Arango
           satisfy_category?(level, [nil, "fatal", 0, "error", 1, "warning", 2, "info", 3, "debug", 4])
           query[:level] = level
         end
-        request("GET", "_admin/log", query: query)
+        request(get: "_admin/log", query: query)
       end
 
       # Returns the current log level settings
       # @return [Arango::Result]
       def log_level
-        request("GET", "_admin/log/level")
+        request(get: "_admin/log/level")
       end
 
       # Modifies the current log level settings
@@ -98,13 +98,13 @@ module Arango
                else
                  log_level_object
                end
-        request("PUT", "_admin/log/level", body: body)
+        request(put: "_admin/log/level", body: body)
       end
 
       # Return mode information about a server.
       # @return [Symbol] one of :default or :readonly
       def mode
-        request("GET", "_admin/server/mode", key: :mode).to_sym
+        request(get: "_admin/server/mode").mode.to_sym
       end
 
       # Set server mode.
@@ -113,7 +113,7 @@ module Arango
       def mode=(mode)
         satisfy_category?(mode, ["default", "readonly", :default, :readonly])
         body = { mode: mode.to_s }
-        request("PUT", "_admin/server/mode", body: body, key: :mode)
+        request(put: "_admin/server/mode", body: body).mode
       end
 
       # Check if server is read only.
@@ -125,7 +125,7 @@ module Arango
       # Reloads the routing information from the collection routing.
       # @return true
       def reload_routing
-        request("GET", "_admin/routing/reload")
+        request(get: "_admin/routing/reload")
         true
       end
 
@@ -139,7 +139,7 @@ module Arango
       # determined.
       # @return [String]
       def role
-        @role ||= request("GET", "_admin/server/role", key: :role)
+        @role ||= request(get: '_admin/server/role').role
       end
 
       # Check if server role is AGENT.
@@ -181,25 +181,25 @@ module Arango
       # Returns the id of a server in a cluster.
       # @return [Boolean]
       def server_id
-        request("GET", "_admin/server/id", key: :serverId) if in_cluster?
+        request(get: "_admin/server/id").serverId if in_cluster?
       end
 
       # Returns the statistics information.
       # @return [Arango::Result]
       def statistics
-        request("GET", "_admin/statistics")
+        request(get: "_admin/statistics")
       end
 
       # Returns a description of the statistics returned by /_admin/statistics.
       # @return [Arango::Result]
       def statistics_description
-        request("GET", "_admin/statistics-description")
+        request(get: "_admin/statistics-description")
       end
 
       # Returns status information about the server.
       # @return [Arango::Result]
       def status
-        request("GET", "_admin/status")
+        request(get: "_admin/status")
       end
 
       # Check if the server has the enterprise license.
@@ -211,7 +211,7 @@ module Arango
       # The servers current system time as a Unix timestamp with microsecond precision of the server
       # @return [Float]
       def time
-        request("GET", "_admin/time", key: :time)
+        request(get: "_admin/time").time
       end
 
       # Return server version details.
@@ -219,20 +219,20 @@ module Arango
       # and their versions. The attribute names and internals of the details object may vary depending on platform and ArangoDB version.
       # @return [Arango::Result]
       def detailed_version
-        request("GET", "_api/version", query: { details: true })
+        request(get: "_api/version", query: { details: true })
       end
 
       # The server version string. The string has the format “major.minor.sub”. major and minor will be numeric, and sub may contain a number or
       # a textual version.
       # @return [String]
       def version
-        request("GET", "_api/version", key: :version)
+        request(get: "_api/version").version
       end
 
       # Returns the database version that this server requires.
       # @return [String]
       def target_version
-        request("GET", "_admin/database/target-version", key: :version)
+        request(get: "_admin/database/target-version").version
       end
 
       # Flushes the write-ahead log. By flushing the currently active write-ahead
@@ -251,7 +251,7 @@ module Arango
           waitForSync: wait_for_sync,
           waitForCollector: wait_for_collector
         }
-        !!request("PUT", "_admin/wal/flush", body: body)
+        !!request(put: "_admin/wal/flush", body: body)
       end
 
       # Retrieves the configuration of the write-ahead log. Properties:
@@ -264,7 +264,7 @@ module Arango
       #                          A value of 0 means that write-throttling will not be triggered.
       # return [Arango::Result]
       def wal_properties
-        result = request("GET", "_admin/wal/properties")
+        result = request(get: "_admin/wal/properties")
         raise "WAL properties not available." if result.response_code >= 500
         result
       end
@@ -281,7 +281,7 @@ module Arango
           throttleWait: properties_object.throttle_wait,
           throttleWhenPending: properties_object.throttle_when_pending
         }
-        result = request("PUT", "_admin/wal/properties", body: body)
+        result = request(put: "_admin/wal/properties", body: body)
         raise "WAL properties not available." if result.response_code >= 500
         result
       end
@@ -289,7 +289,7 @@ module Arango
       # Shutdown the server.
       # @return [Boolean] True if request was successful.
       def shutdown
-        200 == request("DELETE", "_admin/shutdown").response_code
+        200 == request(delete: "_admin/shutdown").response_code
       end
     end
   end

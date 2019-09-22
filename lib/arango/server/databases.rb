@@ -52,7 +52,9 @@ module Arango
       # @param name [String] The name of the database
       # @return [Arango::Database] The instance of the database.
       def get_database(name)
-        Arango::Database.get(name, server: self)
+        db = Arango::Database.get(name, server: self)
+        Arango.current_database = db if Arango.current_server == self
+        db
       end
       alias fetch_database get_database
       alias retrieve_database get_database

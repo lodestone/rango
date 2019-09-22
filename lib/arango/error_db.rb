@@ -1,6 +1,6 @@
 module Arango
   class ErrorDB < Arango::Error
-    def initialize(message:, code:, data:, error_num:, action:, url:, request:)
+    def initialize(message:, code:, data:, error_num:, action: nil, url: nil, request:)
       @message   = message
       @code      = code
       @data      = data

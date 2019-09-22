@@ -4,7 +4,6 @@ module Arango
   class Database
     include Arango::Helper::Satisfaction
     include Arango::Helper::Return
-    include Arango::Helper::ServerAssignment
 
     include Arango::Database::AQLFunctions
     include Arango::Database::Collections
@@ -24,7 +23,7 @@ module Arango
       # @param server [Arango::Server]
       # @return [Array<Arango::Database>]
       def all(server:)
-        result = server.request("GET", "_api/database", key: :result)
+        result = server.request(get: '_api/database', key: :result)
         result.map{ |db| Arango::Database.new(db, server: server).reload }
       end
 
@@ -32,7 +31,7 @@ module Arango
       # @param server [Arango::Server]
       # @return [Array<Arango::Database>]
       def all_user_databases(server:)
-        result = server.request("GET", "_api/database/user", key: :result)
+        result = server.request(get: '_api/database/user', key: :result)
         result.map{ |db| Arango::Database.new(db, server: server).reload }
       end
 
@@ -50,14 +49,14 @@ module Arango
       # @param server [Arango::Server]
       # @return [Array<String>] List of database names.
       def list(server:)
-        server.request("GET", "_api/database", key: :result)
+        server.request(get: '_api/database', key: :result)
       end
 
       # Retrieves a list of all databases the current user can access.
       # @param server [Arango::Server]
       # @return [Array<String>] List of database names.
       def list_user_databases(server:)
-        server.request("GET", "_api/database/user", key: :result)
+        server.request(get: '_api/database/user', key: :result)
       end
 
       # Removes a database.
@@ -65,7 +64,7 @@ module Arango
       # @param server [Arango::Server]
       # @return nil
       def drop(name, server:)
-        server.request("DELETE", "_api/database/#{name}")
+        server.request(delete: "_api/database/#{name}")
         nil
       end
       alias delete drop
@@ -87,8 +86,8 @@ module Arango
     # @param is_system
     # @param path
     # @return [Arango::Database]
-    def initialize(name, id: nil, is_system: false, path: '', server:)
-      assign_server(server)
+    def initialize(name, id: nil, is_system: false, path: '', server: Arango.current_server)
+      send(:arango_server=, server)
       @name = name
       @is_system = is_system
       @path = path
@@ -107,22 +106,22 @@ module Arango
     # @return [String]
     attr_reader :path
 
-    attr_reader :server
+    attr_accessor :arango_server
 
     # Creates the database on the server.
     # @return [Arango::Database] self
     def create
       # TODO users: users
       body = { name: @name }
-      @server.request("POST", "_api/database", body: body)
+      @arango_server.request(post: '_api/database', body: body)
       self
     end
 
     # Reload database properties.
     # @return [Arango::Database] self
     def reload
-      result = request("GET", "_api/database/current", key: :result)
-      _update_attributes(result)
+      result = request(get: '_api/database/current')
+      _update_attributes(result.result)
       self
     end
     alias refresh reload
@@ -131,7 +130,8 @@ module Arango
     # Remove database from the server.
     # @return nil
     def drop
-      self.class.drop(@name, server: @server)
+      self.class.drop(@name, server: @arango_server)
+      nil
     end
     alias delete drop
     alias destroy drop
@@ -139,15 +139,50 @@ module Arango
     # Returns the database version that this server requires.
     # @return [String]
     def target_version
-      request("GET", "_admin/database/target-version", key: :version)
+      result = request(get: '_admin/database/target-version')
+      result.version
     end
 
-    def request(action, url, body: {}, headers: {}, query: {}, key: nil, keep_null: false)
+    def request(get: nil, head: nil, patch: nil, post: nil, put: nil, delete: nil, body: nil, headers: nil, query: nil, block: nil)
+      # url = "_db/#{@name}/#{url}"
+      @arango_server.request(get: get, head: head, patch: patch, post: post, put: put, delete: delete,
+                             db: @name, body: body, headers: headers, query: query, block: block)
+    end
+
+    def execute_request(get: nil, head: nil, patch: nil, post: nil, put: nil, delete: nil, body: nil, headers: nil, query: nil, block: nil)
       url = "_db/#{@name}/#{url}"
-      @server.request(action, url, body: body, headers: headers, query: query, key: key, keep_null: keep_null)
+      @arango_server.request(get: get, head: head, patch: patch, post: post, put: put, delete: delete,
+                             db: @name, body: body, headers: headers, query: query, block: block)
+    end
+
+    def execute_requests(request_hash)
+      block = request_hash.delete(:block)
+      batch = Arango::RequestBatch.new(database: self)
+      request_hash[:requests].each { |request_h| batch.add_request(**request_h) }
+      result = batch.execute
+      return block.call(result) if block
+      result
+    end
+
+    def promise_request(request_hash)
+      promise = Promise.new
+      request_hash[:promise] = promise
+      batch = _promise_batch
+      batch.add_request(**request_hash)
+      promise
+    end
+
+    def execute_promised_requests
+      batch = _promise_batch
+      batch.execute
+      @_promise_batch = nil
     end
 
     private
+
+    def _promise_batch
+      @_promise_batch ||= Arango::RequestBatch.new(database: self)
+    end
 
     def _update_attributes(result)
       %i[id isSystem name path].each do |key|

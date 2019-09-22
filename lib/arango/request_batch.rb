@@ -8,8 +8,8 @@ module Arango
     # Initialize a new request batch.
     # Request must be a Hash with the keys:
     # - :id, optional
-    # - :method, required
-    # - :uri, required
+    # - :action, required
+    # - :url, required
     # - :body, optional
     # @param server [Arango::Server] The server the requests should be run on. One of server or database must be given.
     # @param database [Arango::Database] The database the requests should be run on. One of server or database must be given.
@@ -38,25 +38,30 @@ module Arango
       requests = [requests] unless requests.is_a?(Array)
       @requests = {}
       requests.each do |request|
-        add_request(request[:id], request[:method], request[:uri], body: request[:body])
+        add_request(**request)
       end
       return @requests
     end
 
     # Add a single request
     # @param id [String] optional
-    # @param method [String]
-    # @param uri [String]
+    # @param action [String]
+    # @param url [String]
     # @param body [Hash] optional
-    def add_request(id = @id, method, uri, body: nil)
+    def add_request(id: @id, get: nil, head: nil, patch: nil, post: nil, put: nil, delete: nil, body: nil)
       id = @id unless id
       id = id.to_s
       @requests[id] = {
         id:      id,
-        method:  method,
-        uri:     uri,
         body:    body
       }.delete_if{|_,v| v.nil?}
+      @requests[id][:action] = if get then @requests[id][:url] = get; 'GET'
+                               elsif head then @requests[id][:url] = head; 'HEAD'
+                               elsif patch then @requests[id][:url] = patch; 'PATCH'
+                               elsif post then @requests[id][:url] = post; 'POST'
+                               elsif put then @requests[id][:url] = put; 'PUT'
+                               elsif delete then @requests[id][:url] = delete; 'DELETE'
+                               end
       @id += 1
       @requests[id]
     end
@@ -75,16 +80,16 @@ module Arango
         body << "--#{@boundary}\r\n"
         body << "Content-Type: application/x-arango-batchpart\r\n"
         body << "Content-Id: #{id}\r\n\r\n"
-        body << "#{request[:method]} #{request[:uri]} HTTP/1.1\r\n"
+        body << "#{request[:action]} #{request[:url]} HTTP/1.1\r\n"
         # TODO headers
         body << "\r\n"
         body << "#{Oj.dump(request[:body], mode: :json)}\r\n" unless request[:body].nil?
       end
       body << "--#{@boundary}--\r\n\r\n" if @requests.length > 0
       result = if @database
-                 @database.request("POST", "_api/batch", body: body, headers: @headers)
+                 @database.request(post: '_api/batch', body: body, headers: @headers)
                else
-                 @server.request("POST", "_api/batch", body: body, headers: @headers)
+                 @server.request(post: '_api/batch', body: body, headers: @headers)
                end
       result_hash = _parse_result(result)
       _check_for_errors(result_hash)

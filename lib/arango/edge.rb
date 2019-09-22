@@ -100,5 +100,15 @@ module Arango
         query: query, headers: headers)
       return_delete(result)
     end
+
+    def from=(att)
+      att = att.id if att.is_a?(Arango::Document)
+      assign_attributes({_from: att})
+    end
+
+    def to=(att)
+      att = att.id if att.is_a?(Arango::Document)
+      assign_attributes({_to: att})
+    end
   end
 end

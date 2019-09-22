@@ -4,7 +4,6 @@ module Arango
   class Collection
     include Arango::Helper::Satisfaction
     include Arango::Helper::Return
-    include Arango::Helper::DatabaseAssignment
 
     include Arango::Collection::Documents
     include Arango::Collection::Indexes
@@ -13,6 +12,34 @@ module Arango
     TYPES = %i[unknown unknown document edge] # do not sort, index is used
 
     class << self
+      def request_method(method_name, &block)
+        promise_method_name = "promise_#{method_name}".to_sym
+        define_method(method_name) do |*args|
+          request_hash = instance_exec(*args, &block)
+          @database.execute_request(request_hash)
+        end
+        define_method(promise_method_name) do |*args|
+          request_hash = instance_exec(*args, &block)
+          @database.promise_request(request_hash)
+        end
+      end
+
+      def multi_request_method(method_name, &block)
+        promise_method_name = "promise_#{method_name}".to_sym
+        define_method(method_name) do |*args|
+          request_hash_array = instance_exec(*args, &block)
+          @database.execute_requests(request_hash_array)
+        end
+        define_method(promise_method_name) do |*args|
+          request_hash_array = instance_exec(*args, &block)
+          promises = []
+          request_hash_array.each do |request_hash|
+            promises << @database.promise_request(request_hash)
+          end
+          Promise.when(promises)
+        end
+      end
+
       # Takes a hash and instantiates a Arango::Collection object from it.
       # @param collection_hash [Hash]
       # @return [Arango::Collection]
@@ -49,8 +76,8 @@ module Arango
       # @return [Array<Arango::Collection>]
       def all(exclude_system: true, database:)
         query = { excludeSystem: exclude_system }
-        result = database.request("GET", "_api/collection", query: query, key: :result)
-        result.map { |c| from_h(c.to_h, database: database) }
+        result = database.request(get: '_api/collection', query: query)
+        result.result.map { |c| from_h(c.to_h, database: database) }
       end
 
       # Get collection from the database.
@@ -59,8 +86,8 @@ module Arango
       # @return [Arango::Database]
       def get(name, database:)
         batch = Arango::RequestBatch.new(database: database)
-        batch.add_request('collection', "GET", "/_api/collection/#{name}")
-        batch.add_request('collection_properties', "GET", "/_api/collection/#{name}/properties")
+        batch.add_request(id: 'collection', get: "/_api/collection/#{name}")
+        batch.add_request(id: 'collection_properties', get: "/_api/collection/#{name}/properties")
         result = batch.execute
         from_results(result[:collection], result[:collection_properties], database: database)
       end
@@ -73,7 +100,7 @@ module Arango
       # @return [Array<String>] List of collection names.
       def list(exclude_system: true, database:)
         query = { excludeSystem: exclude_system }
-        result = database.request("GET", "_api/collection", query: query, key: :result)
+        result = database.request(get: '_api/collection', query: query).result
         result.map { |c| c[:name] }
       end
 
@@ -82,7 +109,7 @@ module Arango
       # @param database [Arango::Database]
       # @return nil
       def drop(name, database:)
-        database.request("DELETE", "_api/collection/#{name}")
+        database.request(delete: "_api/collection/#{name}")
         nil
       end
       alias delete drop
@@ -120,12 +147,12 @@ module Arango
     # @param wait_for_sync_replication
     # @param enforce_replication_factor
     # @return [Arango::Collection]
-    def initialize(name, database:, graph: nil, type: :document,
+    def initialize(name, database: Arango.current_database, graph: nil, type: :document,
                    status: nil,
                    distribute_shards_like: nil, do_compact: nil, enforce_replication_factor: nil, index_buckets: nil, is_system: false,
                    is_volatile: false, journal_size: nil, key_options: nil, number_of_shards: nil, replication_factor: nil, shard_keys: nil,
                    sharding_strategy: nil, smart_join_attribute: nil, wait_for_sync: nil, wait_for_sync_replication: nil)
-      assign_database(database)
+      send(:database=, database)
       #  assign_graph(graph)
       @aql = nil
       @batch_proc = nil
@@ -153,7 +180,8 @@ module Arango
       @wait_for_sync_replication = wait_for_sync_replication
     end
 
-    attr_reader :database, :graph, :server
+    attr_accessor :database
+    attr_reader :graph
 
     # @return [Boolean]
     attr_reader :cache_enabled
@@ -337,6 +365,10 @@ module Arango
       @name = n
     end
 
+    def arango_server
+      @database.arango_server
+    end
+
     def wait_for_sync=(boolean)
       @wait_for_sync_changed = true
       @wait_for_sync = boolean
@@ -365,10 +397,10 @@ module Arango
         query = {}
         query[:enforceReplicationFactor] = @enforce_replication_factor unless @enforce_replication_factor.nil?
         query[:waitForSyncReplication] = @wait_for_sync_replication unless @wait_for_sync_replication.nil?
-        result = @database.request("POST", "_api/collection", body: body, query: query)
+        result = @database.request(post: '_api/collection', body: body, query: query)
         _update_attributes(result)
       else
-        result = @database.request("POST", "_api/collection", body: body)
+        result = @database.request(post: '_api/collection', body: body)
         _update_attributes(result)
       end
       self
@@ -376,30 +408,34 @@ module Arango
 
     # Drops a collection.
     # @return [NilClass]
-    def drop
-      @database.request("DELETE", "_api/collection/#{@name}", query: { isSystem: @is_system })
-      nil
+    request_method :drop do
+      #@database.request(delete: "_api/collection/#{@name}", query: { isSystem: @is_system })
+      #nil
+      { delete: "_api/collection/#{@name}", query: { isSystem: @is_system }, block: ->(_) { nil }}
     end
 
     # Truncates a collection.
     # @return [Arango::Collection] self
-    def truncate
-      @database.request("PUT", "_api/collection/#{@name}/truncate")
-      self
+    request_method :truncate do
+      # @database.request(put: "_api/collection/#{@name}/truncate")
+      # self
+      { put: "_api/collection/#{@name}/truncate", block: ->(_) { self }}
     end
 
     # Counts the documents in a collection
     # @return [Integer]
-    def size
-      @database.request("GET", "_api/collection/#{@name}/count", key: :count)
+    request_method :size do
+      # @database.request(get: "_api/collection/#{@name}/count").count
+      { get: "_api/collection/#{@name}/count", block: ->(result) { result.count }}
     end
     alias count size
     alias length size
 
     # Fetch the statistics of a collection
     # @return [Hash]
-    def statistics
-      @database.request("GET", "_api/collection/#{@name}/figures", key: :figures)
+    request_method :statistics do
+      # @database.request(get: "_api/collection/#{@name}/figures").figures
+      { get: "_api/collection/#{@name}/figures", block: ->(result) { result.figures }}
     end
 
     # Return the shard ids of a collection
@@ -407,13 +443,13 @@ module Arango
     # @param details [Boolean] If set to true, the return value will also contain the responsible servers for the collections’ shards.
     # @return [Array, Hash]
     def shards(details: false)
-      @database.request("GET", "_api/collection/#{@name}/shards", key: :shards, query: { details: details }) if @server.coordinator?
+      @database.request(get: "_api/collection/#{@name}/shards", query: { details: details }).shards if @database.arango_server.coordinator?
     end
 
     # Retrieve the collections revision id
     # @return [String]
     def revision
-      @database.request("GET", "_api/collection/#{@name}/revision", key: :revision)
+      @database.request(get: "_api/collection/#{@name}/revision").revision
     end
 
     # Returns a checksum for the specified collection
@@ -424,13 +460,13 @@ module Arango
         withRevisions: with_revisions,
         withData: with_data
       }
-      @database.request("GET", "_api/collection/#{@name}/checksum", query: query, key: :checksum)
+      @database.request(get: "_api/collection/#{@name}/checksum", query: query).checksum
     end
 
     # Loads a collection into ArangoDBs memory. Returns the collection on success.
     # @return [Arango::Collection] self
     def load_into_memory
-      result = @database.request("PUT", "_api/collection/#{@name}/load", body: { count: false }, key: :status)
+      result = @database.request(put: "_api/collection/#{@name}/load", body: { count: false }).status
       _set_status(result)
       self
     end
@@ -438,7 +474,7 @@ module Arango
     # Unloads a collection into ArangoDBs memory. Returns the collection on success.
     # @return [Arango::Collection] self
     def unload_from_memory
-      result = @database.request("PUT", "_api/collection/#{@name}/unload", key: :status)
+      result = @database.request(put: "_api/collection/#{@name}/unload").status
       _set_status(result)
       self
     end
@@ -447,7 +483,7 @@ module Arango
     # Note: For the time being this function is only useful on RocksDB storage engine, as in MMFiles engine all indexes are in memory anyways.
     # @return [Arango::Collection] self
     def load_indexes_into_memory
-      @database.request("PUT", "_api/collection/#{@name}/loadIndexesIntoMemory") if @server.rocksdb?
+      @database.request(put: "_api/collection/#{@name}/loadIndexesIntoMemory") if @database.arango_server.rocksdb?
       self
     end
 
@@ -455,7 +491,7 @@ module Arango
     # Note: This method is specific for the MMFiles storage engine, and there it is not available in a cluster.
     # @return [Arango::Collection] self
     def rotate_journal
-      @database.request("PUT", "_api/collection/#{@name}/rotate") if @server.mmfiles?
+      @database.request(put: "_api/collection/#{@name}/rotate") if @database.arango_server.mmfiles?
       self
     end
 
@@ -463,7 +499,7 @@ module Arango
     # Note: This function is only useful on RocksDB storage engine.
     # @return [Arango::Collection] self
     def recalculate_count
-      @database.request("PUT", "_api/collection/#{@name}/recalculateCount") if @server.rocksdb?
+      @database.request(put: "_api/collection/#{@name}/recalculateCount") if @database.arango_server.rocksdb?
       size
     end
 
@@ -474,7 +510,7 @@ module Arango
       @name_changed = false
       @journal_size_changed = false
       @wait_for_sync_changed = false
-      result = @database.request("GET", "_api/collection/#{request_name}/properties")
+      result = @database.request(get: "_api/collection/#{request_name}/properties")
       _update_attributes(result)
       self
     end
@@ -489,16 +525,16 @@ module Arango
       if @name_changed
         request_name = @name_changed ? @original_name : @name
         @name_changed = false
-        @database.request("PUT", "_api/collection/#{request_name}/rename", body: { name: @name })
+        @database.request(put: "_api/collection/#{request_name}/rename", body: { name: @name })
         @original_name = @name
       end
       if @journal_size_changed || @wait_for_sync_changed
         body = {}
-        body[:journalSize] = @journal_size if @journal_size_changed && @server.mmfiles?
+        body[:journalSize] = @journal_size if @journal_size_changed && @database.arango_server.mmfiles?
         body[:waitForSync] = @wait_for_sync if @wait_for_sync_changed
         @journal_size_changed = false
         @wait_for_sync_changed = false
-        result = @database.request("GET", "_api/collection/#{@name}/properties", body: body)
+        result = @database.request(get: "_api/collection/#{@name}/properties", body: body)
         @journal_size = result.journal_size if result.key?(:journal_size)
         @wait_for_sync = result.wait_for_sync if result.key?(:wait_for_sync)
       end

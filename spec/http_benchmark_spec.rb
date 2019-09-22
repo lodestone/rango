@@ -7,11 +7,11 @@ describe Arango::Server do
       @server = connect
     end
 
-    it "force_version works" do
+    it "version works" do
       expect(@server.version).to be_a String
     end
 
-    it "force_version benchmark" do
+    it "version benchmark" do
       result = nil
       timings = Benchmark.measure do
         1000.times do

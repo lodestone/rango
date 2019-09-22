@@ -13,6 +13,7 @@ Gem::Specification.new do |s|
   s.files         = `git ls-files -- {lib,LICENSE,README.md}`.split("\n") + %w[arango_opal.js arango_opal_parser.js]
   s.add_dependency 'activesupport', '~> 5.2'
   s.add_dependency 'connection_pool', '~> 2.2.2', '>=  2.2.2'
+  s.add_dependency 'isomorfeus-redux', '~> 4.0.14'
   s.add_dependency 'oj', '>= 3.9.0'
   s.add_dependency 'opal', '>= 1.0.0'
   s.add_dependency 'typhoeus', '~> 1.3.1'

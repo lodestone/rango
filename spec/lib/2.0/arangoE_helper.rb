@@ -8,6 +8,13 @@ describe Arango::Edge do
       myEdgeDocument = @myEdgeCollection.edge(from: a, to: b)
       expect(myEdgeDocument.body[:_from]).to eq a.id
     end
+
+    it "create a new Edge instance" do
+      a = @collection.document("myA", { Hello: "World" }).create
+      b = @collection.document("myB", { Hello: "World" }).create
+      edge = @edge_collection.create_edge(from: a, to: b)
+      expect(edge.body[:_from]).to eq a.id
+    end
   end
 
   context "#create" do

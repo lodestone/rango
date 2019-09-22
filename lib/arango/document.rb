@@ -7,55 +7,220 @@ module Arango
     include Arango::Helper::CollectionAssignment
     include Arango::Helper::Traversal
 
-    def initialize(name: nil, collection:, body: {}, rev: nil, from: nil,
-      to: nil, cache_name: nil)
-      assign_collection(collection)
-      unless cache_name.nil?
-        @cache_name = cache_name
-        @server.cache.save(:document, cache_name, self)
+    class << self
+      def all(offset: 0, limit: nil, batch_size: nil, collection:)
+        bind_vars = {}
+        query = "FOR doc IN #{collection.name}"
+        if limit && offset
+          query << "\n LIMIT @offset, @limit"
+          bind_vars[:offset] = offset
+          bind_vars[:limit] = limit
+        end
+        raise Arango::Error.new err: "offset must be used with limit" if offset > 0 && !limit
+        query << "\n RETURN doc"
+        aql = Arango::AQL.new(database: collection.database, query: query, bind_vars: bind_vars, batch_size: batch_size)
+        result = aql.execute
+        result_proc = ->(b) { b.result.map { |d| Arango::Document.new(d, collection: collection) }}
+        final_result = result_proc.call(result)
+        if aql.has_more?
+          collection.instance_variable_set(:@aql, aql)
+          collection.instance_variable_set(:@batch_proc, result_proc)
+          unless batch_size
+            while aql.has_more?
+              final_result += collection.next_batch
+            end
+          end
+        end
+        final_result
       end
-      body[:_key]  ||= name
-      body[:_rev]  ||= rev
-      body[:_to]   ||= to
-      body[:_from] ||= from
-      body[:_id]   ||= "#{@collection.name}/#{name}" unless name.nil?
-      assign_attributes(body)
+
+      def list(offset: 0, limit: nil, batch_size: nil, collection:)
+        bind_vars = {}
+        query = "FOR doc IN #{collection.name}"
+        if limit && offset
+          query << "\n LIMIT @offset, @limit"
+          bind_vars[:offset] = offset
+          bind_vars[:limit] = limit
+        end
+        raise Arango::Error.new err: "offset must be used with limit" if offset > 0 && !limit
+        query << "\n RETURN doc._key"
+        aql = Arango::AQL.new(database: collection.database, query: query, bind_vars: bind_vars, batch_size: batch_size)
+        result = aql.execute
+        result_proc = ->(b) { b.result }
+        final_result = result_proc.call(result)
+        if aql.has_more?
+          collection.instance_variable_set(:@aql, aql)
+          collection.instance_variable_set(:@batch_proc, result_proc)
+          unless batch_size
+            while aql.has_more?
+              final_result += collection.next_batch
+            end
+          end
+        end
+        final_result
+      end
+
+      def exist?(document, match_rev: nil, collection:)
+        if document.class == String
+          # based on key
+          return _exist?(document, collection: collection)
+        elsif body.size == 2 && body.key?(:_key) && body.key?(:_rev)
+          # based on key and rev
+          body = _body_from_arg(document)
+          return _exist?(body[:_key], body[:_rev], match_rev: match_rev, collection: collection)
+        else
+          # TODO based on properties, maybe key, maybe rev
+        end
+      end
+
+      def create_documents()
+        document = [document] unless document.is_a? Array
+        document = document.map{|x| return_body(x)}
+        query = {
+          waitForSync: wait_for_sync,
+          returnNew:   return_new,
+          silent:      silent
+        }
+        results = @database.request("POST", "_api/document/#{@name}", body: document,
+                                    query: query)
+        return results if return_directly?(results) || silent
+        results.map.with_index do |result, index|
+          body2 = result.clone
+          if return_new
+            body2.delete(:new)
+            body2 = body2.merge(result[:new])
+          end
+          real_body = document[index]
+          real_body = real_body.merge(body2)
+          Arango::Document.new(result[:_key], collection: self, body: real_body)
+        end
+      end
+
+      def replace_documents
+        document.each{|x| x = x.body if x.is_a?(Arango::Document)}
+        query = {
+          waitForSync: wait_for_sync,
+          returnNew:   return_new,
+          returnOld:   return_old,
+          ignoreRevs:  ignore_revs
+        }
+        result = @database.request("PUT", "_api/document/#{@name}", body: document,
+                                   query: query)
+        return results if return_directly?(result)
+        results.map.with_index do |result, index|
+          body2 = result.clone
+          if return_new == true
+            body2.delete(:new)
+            body2 = body2.merge(result[:new])
+          end
+          real_body = document[index]
+          real_body = real_body.merge(body2)
+          Arango::Document.new(result[:_key], collection: self, body: real_body)
+        end
+      end
+
+      def update_documents(document: {}, wait_for_sync: nil, ignore_revs: nil,
+                           return_old: nil, return_new: nil, keep_null: nil, merge_objects: nil)
+        document.each{|x| x = x.body if x.is_a?(Arango::Document)}
+        query = {
+          waitForSync: wait_for_sync,
+          returnNew:   return_new,
+          returnOld:   return_old,
+          ignoreRevs:  ignore_revs,
+          keepNull:    keep_null,
+          mergeObject: merge_objects
+        }
+        result = @database.request("PATCH", "_api/document/#{@name}", body: document,
+                                   query: query, keep_null: keep_null)
+        return results if return_directly?(result)
+        results.map.with_index do |result, index|
+          body2 = result.clone
+          if return_new
+            body2.delete(:new)
+            body2 = body2.merge(result[:new])
+          end
+          real_body = document[index]
+          real_body = real_body.merge(body2)
+          Arango::Document.new(result[:_key], collection: self, body: real_body)
+        end
+      end
+
+      def drop_documents(document: {}, wait_for_sync: nil, return_old: nil,
+                         ignore_revs: nil)
+        document.each{|x| x = x.body if x.is_a?(Arango::Document)}
+        query = {
+          waitForSync: wait_for_sync,
+          returnOld:   return_old,
+          ignoreRevs:  ignore_revs
+        }
+        @database.request("DELETE", "_api/document/#{@id}", query: query, body: document)
+      end
+
+      private
+
+      def _body_from_arg(arg)
+        case arg
+        when String then { _key: arg }
+        when Hash
+          arg[:_id] = arg.delete(:id) if arg.key?(:id) && !arg.key?(:_id)
+          arg[:_key] = arg.delete(:key) if arg.key?(:key) && !arg.key?(:_key)
+          arg[:_rev] = arg.delete(:rev) if arg.key?(:rev) && !arg.key?(:_rev)
+        when Arango::Document then arg.to_h
+        else
+          raise "Unknown arg type, must be String, Hash or Arango::Document"
+        end
+      end
+
+      def _exist?(key, rev = nil, match_rev: nil, collection:)
+        result = if rev && match_rev == true
+                   collection.database.request("HEAD", "_api/document/#{collection.name}/#{key}", headers: {'If-Match' => rev })
+                 elsif rev && match_rev == false
+                   collection.database.request("HEAD", "_api/document/#{collection.name}/#{key}", headers: {'If-None-Match' => rev })
+                 else
+                   collection.database.request("HEAD", "_api/document/#{collection.name}/#{key}")
+                 end
+        case result.response_code
+        when 200 then return true # document was found
+        when 304 then return true # “If-None-Match” header is given and the document has the same version
+        when 412 then return true # “If-Match” header is given and the found document has a different version.
+        else
+          return false
+        end
+      end
     end
 
-    def name
-      return @body[:_key]
+    def initialize(document, collection:, wait_for_sync: nil)
+      @body = _body_from_arg(document)
+      @wait_for_sync = wait_for_sync
+      assign_collection(collection)
     end
-    alias key name
 
-    def rev
-      return @body[:_rev]
+    def key
+      @body[:_key]
+    end
+
+    def revision
+      @body[:_rev]
     end
 
     def id
-      return @body[:_id]
+      @body[:_id]
     end
 
-    def name=(att)
-      assign_attributes({_key: att})
-    end
-    alias key= name=
-
-    def rev=(att)
-      assign_attributes({_rev: att})
+    def key=(k)
+      @body[:_key] = k
     end
 
-    def id=(att)
-      assign_attributes({_id: id})
+    def rev=(r)
+      @body[_:rev] = r
     end
 
-    def from=(att)
-      att = att.id if att.is_a?(Arango::Document)
-      assign_attributes({_from: att})
+    def id=(i)
+      @body[:_id] = i
     end
 
-    def to=(att)
-      att = att.id if att.is_a?(Arango::Document)
-      assign_attributes({_to: att})
+    def to_h
+      @body.delete_if{|_,v| v.nil?}
     end
 
 # === DEFINE ==
@@ -87,20 +252,6 @@ module Arango
     alias assign_attributes body=
 
 # === TO HASH ===
-
-    def to_h
-      {
-        name:  @body[:_key],
-        id:    @body[:_id],
-        rev:   @body[:_rev],
-        from:  @body[:_from],
-        to:    @body[:_to],
-        body:  @body,
-        cache_name:  @cache_name,
-        collection: @collection.name,
-        graph: @graph&.name
-      }.delete_if{|k,v| v.nil?}
-    end
 
     def set_up_from_or_to(attrs, var)
       case var
@@ -141,9 +292,9 @@ module Arango
         return nil
       when String
         collection_name, document_name = var.split("/")
-        collection = Arango::Collection.new name: collection_name, database: @database
+        collection = Arango::Collection.new collection_name, database: @database
         if @graph.nil?
-          return Arango::Document.new(name: document_name, collection: collection)
+          return Arango::Document.new(document_name, collection: collection)
         else
           collection.graph = @graph
           return Arango::Vertex.new(name: document_name, collection: collection)
@@ -288,9 +439,8 @@ module Arango
       return result if return_directly?(result)
       result[:edges].map do |edge|
         collection_name, key = edge[:_id].split("/")
-        collection = Arango::Collection.new(name:     collection_name,
-                                            database: @database, type: :edge)
-        Arango::Document.new(name: key, body: edge, collection: collection)
+        collection = Arango::Collection.new(collection_name, database: @database, type: :edge)
+        Arango::Document.new(key, body: edge, collection: collection)
       end
     end
 
@@ -304,6 +454,21 @@ module Arango
 
     def in(collection)
       edges(collection: collection, direction: "in")
+    end
+
+    private
+
+    def _body_from_arg(arg)
+      case arg
+      when String then { _key: arg }
+      when Hash
+        arg[:_id] = arg.delete(:id) if arg.key?(:id) && !arg.key?(:_id)
+        arg[:_key] = arg.delete(:key) if arg.key?(:key) && !arg.key?(:_key)
+        arg[:_rev] = arg.delete(:rev) if arg.key?(:rev) && !arg.key?(:_rev)
+      when Arango::Document then arg.to_h
+      else
+        raise "Unknown arg type, must be String, Hash or Arango::Document"
+      end
     end
   end
 end

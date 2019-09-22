@@ -42,13 +42,11 @@ module Arango
       # @param database [Arango::Database] A database, optional if server is given.
       # @param server [Arango::Server] Server, optional if database is given.
       # @return [Arango::Task]
-      def drop(id, database: nil, server: nil)
+      def drop(id, database: nil, server: Arango.current_server)
         if database
-          database.request("DELETE", "_api/tasks/#{id}")
+          database.request(delete: "_api/tasks/#{id}")
         elsif server
-          server.request("DELETE", "_api/tasks/#{id}")
-        else
-          raise Arango::Error.new(err: :no_db_no_server)
+          server.request(delete: "_api/tasks/#{id}")
         end
         nil
       end
@@ -61,14 +59,12 @@ module Arango
       # @param database [Arango::Database] A database, optional if server is given.
       # @param server [Arango::Server] Server, optional if database is given.
       # @return [Arango::Task]
-      def get(id, database: nil, server: nil)
+      def get(id, database: nil, server: Arango.current_server)
         if database
-          result = database.request("GET", "_api/tasks/#{id}")
-          server = database.server
+          result = database.request(get: "_api/tasks/#{id}")
+          server = database.arango_server
         elsif server
-          result = server.request("GET", "_api/tasks/#{id}")
-        else
-          raise Arango::Error.new(err: :no_db_no_server)
+          result = server.request(get: "_api/tasks/#{id}")
         end
         Arango::Task.from_result(result, server: server)
       end
@@ -80,14 +76,12 @@ module Arango
       # @param database [Arango::Database] A database, optional if server is given.
       # @param server [Arango::Server] Server, optional if database is given.
       # @return [Array<Arango::Task>]
-      def all(database: nil, server: nil)
+      def all(database: nil, server: Arango.current_server)
         if database
-          result = database.request("GET", "_api/tasks")
-          server = database.server
+          result = database.request(get: "_api/tasks")
+          server = database.arango_server
         elsif server
-          result = server.request("GET", "_api/tasks")
-        else
-          raise Arango::Error.new(err: :no_db_no_server)
+          result = server.request(get: "_api/tasks")
         end
         result.map { |task| Arango::Task.from_h(task, server: server) }
       end
@@ -97,18 +91,16 @@ module Arango
       # @param database [Arango::Database] A database, optional if server is given.
       # @param server [Arango::Server] Server, optional if database is given.
       # @return [Array<String>]
-      def list(database: nil, server: nil)
+      def list(database: nil, server: Arango.current_server)
         if database
-          result = database.request("GET", "_api/tasks")
+          result = database.request(get: '_api/tasks')
         elsif server
-          result = server.request("GET", "_api/tasks")
-        else
-          raise Arango::Error.new(err: :no_db_no_server)
+          result = server.request(get: '_api/tasks')
         end
         result.map { |task| task[:id] }
       end
 
-      def exist?(id, database: nil, server: nil)
+      def exist?(id, database: nil, server: Arango.current_server)
         result = list(database: database, server: server)
         result.include?(id)
       end
@@ -164,15 +156,13 @@ module Arango
     # @param params [Hash] Hash of params to pass to the command, optional.
     # @param period [Integer] Number of seconds between executions, optional.
     # @return [Arango::Task]
-    def initialize(id = nil, command: nil, name: nil, offset: nil, params: nil, period: nil, database: nil, server: nil)
+    def initialize(id = nil, command: nil, name: nil, offset: nil, params: nil, period: nil, database: nil, server: Arango.current_server)
       if database
         assign_database(database)
         @requester = @database
       elsif server
         assign_server(server)
         @requester = @server
-      else
-        raise Arango::Error.new(err: :no_db_no_server)
       end
       @id = id
       @command = command
@@ -210,9 +200,9 @@ module Arango
         database: @database ? @database.name : nil
       }
       if @id
-        result = @requester.request("PUT", "_api/tasks/#{@id}", body: body)
+        result = @requester.request(put: "_api/tasks/#{@id}", body: body)
       else
-        result = @requester.request("POST", "_api/tasks", body: body)
+        result = @requester.request(post: "_api/tasks", body: body)
         @id = result.id
       end
       @type = result.type.to_sym
@@ -224,7 +214,7 @@ module Arango
     # Remove the task from the database.
     # return nil.
     def drop
-      @requester.request("DELETE", "_api/tasks/#{@id}")
+      @requester.request(delete: "_api/tasks/#{@id}")
       nil
     end
     alias delete drop

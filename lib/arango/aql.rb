@@ -61,7 +61,7 @@ module Arango
     end
 
     attr_accessor :count, :query, :batch_size, :ttl, :cache, :options, :bind_vars, :quantity
-    attr_reader :has_more, :id, :result, :id_cache, :server, :cached, :extra, :optimizer_rules, :database
+    attr_reader :id, :result, :id_cache, :server, :cached, :extra, :optimizer_rules, :database
 
     def has_more?
       @has_more
@@ -99,21 +99,13 @@ module Arango
 # === REQUEST ===
 
     def return_aql(result)
-      return result if @server.async != false
       @extra    = result[:extra]
       @cached   = result[:cached]
       @quantity = result[:count]
       @has_more = result[:hasMore]
       @id       = result[:id]
-      if (result[:result][0].nil? || !result[:result][0].is_a?(Hash) || !result[:result][0].key?(:_key))
-        @result = result[:result]
-      else
-        @result = result[:result].map do |x|
-          collection = Arango::Collection.new(name: x[:_id].split("/")[0], database: @database)
-          Arango::Document.new(name: x[:_key], collection: collection, body: x)
-        end
-      end
-      return return_directly?(result) ? result: self
+      @result   = result[:result]
+      result
     end
     private :return_aql
 

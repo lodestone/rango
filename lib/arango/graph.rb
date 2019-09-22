@@ -167,11 +167,10 @@ module Arango
 
 # === REQUEST ===
 
-    def request(action, url, body: {}, headers: {}, query: {}, key: nil, return_direct_result: false, skip_to_json: false)
+    def request(action, url, body: {}, headers: {}, query: {}, key: nil, return_direct_result: false)
       url = "_api/gharial/#{@name}/#{url}"
       @database.request(action, url, body: body, headers: headers,
-        query: query, key: key, return_direct_result: return_direct_result,
-        skip_to_json: skip_to_json)
+        query: query, key: key, return_direct_result: return_direct_result)
     end
 
 # === TO HASH ===
