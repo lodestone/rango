@@ -48,12 +48,17 @@ module Arango
     # @param action [String]
     # @param url [String]
     # @param body [Hash] optional
-    def add_request(id: @id, get: nil, head: nil, patch: nil, post: nil, put: nil, delete: nil, body: nil)
+    def add_request(id: @id, db: nil, get: nil, head: nil, patch: nil, post: nil, put: nil, delete: nil, body: nil, query: nil,
+                    block: nil, promise: nil)
       id = @id unless id
       id = id.to_s
       @requests[id] = {
-        id:      id,
-        body:    body
+        id:     id,
+        body:   body,
+        query:  query,
+        db: db,
+        block: block,
+        promise: promise
       }.delete_if{|_,v| v.nil?}
       @requests[id][:action] = if get then @requests[id][:url] = get; 'GET'
                                elsif head then @requests[id][:url] = head; 'HEAD'
@@ -80,10 +85,19 @@ module Arango
         body << "--#{@boundary}\r\n"
         body << "Content-Type: application/x-arango-batchpart\r\n"
         body << "Content-Id: #{id}\r\n\r\n"
-        body << "#{request[:action]} #{request[:url]} HTTP/1.1\r\n"
+        dbcontext = request.key?(:db) ? "_db/#{request[:db]}/" : nil
+        url = "/#{dbcontext}#{request[:url]}"
+        if request.key?(:query)
+          url << '?'
+          url << URI.encode_www_form(request[:query])
+        end
+        body << "#{request[:action]} #{url} HTTP/1.1\r\n"
         # TODO headers
         body << "\r\n"
-        body << "#{Oj.dump(request[:body], mode: :json)}\r\n" unless request[:body].nil?
+        unless request[:body].nil?
+          request[:body].delete_if{|_,v| v.nil?}
+          body << "#{Oj.dump(request[:body], mode: :json)}\r\n"
+        end
       end
       body << "--#{@boundary}--\r\n\r\n" if @requests.length > 0
       result = if @database

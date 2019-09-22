@@ -269,7 +269,7 @@ describe Arango::Collection do
 
     it "recalculate_count" do
       collection = Arango::Collection.new("MyCollection", sharding_strategy: :hash, database: @database).create
-      expect(collection.recalculate_count).to eq 0
+      expect(collection.recalculate_count).to eq collection
     end
   #   context "#import" do
   #     it "import" do
@@ -315,5 +315,45 @@ describe Arango::Collection do
   #       myIndex = collection.index(unique: false, fields: "num", type: "hash").create
   #       expect(myIndex.fields).to eq ["num"]
   #     end
+  end
+
+  context "Arango::Collection itself batched" do
+
+    it "all" do
+      start = Time.now
+      $cb1 = $cb2 = $cb3 = $cb4 = $cb5 = $cb6 = $cb7 = $cb8 = nil
+      Arango::Collection.new("MyCollection", database: @database).batch_create.fail { |u| STDERR.puts "failed 1 #{u}" }
+      Arango::Collection.batch_get("MyCollection", database: @database).then do |collection|
+        $cb1 = collection.name
+        $cb2 = collection.type
+      end.fail { |u| STDERR.puts "failed 2 #{u}" }
+      Arango::Collection.batch_drop("MyCollection", database: @database).fail { |u| STDERR.puts "failed 3 #{u}" }
+      Arango::Collection.new("MyCollection", type: :edge, database: @database).batch_create.fail { |u| STDERR.puts "failed 4 #{u}" }
+      Arango::Collection.batch_get("MyCollection", database: @database).then do |collection|
+        $cb3 = collection.name
+        $cb4 = collection.type
+      end.fail { |u| STDERR.puts "failed 5 #{u}" }
+      Arango::Collection.batch_drop("MyCollection", database: @database).fail { |u| STDERR.puts "failed 6 #{u}" }
+      Arango::Collection.new("MyCollection", database: @database).batch_create.fail { |u| STDERR.puts "failed 7 #{u}" }
+      Arango::Collection.batch_get("MyCollection", database: @database).then do |collection|
+        collection.batch_size.then { |r| $cb5 = r }
+        collection.batch_statistics.then { |r| $cb6 = r }
+        collection.batch_checksum.then { |r| $cb7 = r }
+        collection.batch_revision.then { |r| $cb8 = r }
+        @database.execute_batched_requests
+      end.fail { |u| STDERR.puts "failed 8 #{u}" }
+      p = Time.now
+      @database.execute_batched_requests
+      t = Time.now
+      STDERR.puts "\nBatched Collecion spec: Prepare time: #{p - start}  Execute time: #{t -p}  Total time: #{t - start}"
+      expect($cb1).to eq "MyCollection"
+      expect($cb2).to eq :document
+      expect($cb3).to eq "MyCollection"
+      expect($cb4).to eq :edge
+      expect($cb5).to eq 0
+      expect($cb6.cacheInUse).to eq false
+      expect($cb7).to be_a String
+      expect($cb8).to be_a String
+    end
   end
 end

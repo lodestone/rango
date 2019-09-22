@@ -144,24 +144,29 @@ module Arango
     end
 
     def request(get: nil, head: nil, patch: nil, post: nil, put: nil, delete: nil, body: nil, headers: nil, query: nil, block: nil)
-      # url = "_db/#{@name}/#{url}"
       @arango_server.request(get: get, head: head, patch: patch, post: post, put: put, delete: delete,
                              db: @name, body: body, headers: headers, query: query, block: block)
     end
 
     def execute_request(get: nil, head: nil, patch: nil, post: nil, put: nil, delete: nil, body: nil, headers: nil, query: nil, block: nil)
-      url = "_db/#{@name}/#{url}"
       @arango_server.request(get: get, head: head, patch: patch, post: post, put: put, delete: delete,
                              db: @name, body: body, headers: headers, query: query, block: block)
     end
 
-    def execute_requests(request_hash)
-      block = request_hash.delete(:block)
+    def execute_requests(requests)
       batch = Arango::RequestBatch.new(database: self)
-      request_hash[:requests].each { |request_h| batch.add_request(**request_h) }
-      result = batch.execute
-      return block.call(result) if block
-      result
+      requests.each { |request_h| batch.add_request(**request_h) }
+      results = batch.execute
+      final_result = nil
+      results.each do |id, result|
+        request = batch.requests[id.to_s]
+        if request.key?(:block) && request.key?(:promise)
+          final_result = request[:promise].resolve(request[:block].call(result))
+        elsif request.key?(:block)
+          final_result = request[:block].call(result)
+        end
+      end
+      final_result
     end
 
     def promise_request(request_hash)
@@ -172,10 +177,21 @@ module Arango
       promise
     end
 
-    def execute_promised_requests
-      batch = _promise_batch
-      batch.execute
+    def execute_batched_requests
+      batch = @_promise_batch
       @_promise_batch = nil
+      results = batch.execute
+      results.each_key do |id|
+        result = results[id]
+        request = batch.requests[id.to_s]
+        if request.key?(:block) && request.key?(:promise)
+          block_result = request[:block].call(result)
+          request[:promise].resolve(block_result)
+        elsif request.key?(:block)
+          request[:block].call(result)
+        end
+      end
+      nil
     end
 
     private

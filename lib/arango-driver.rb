@@ -4,6 +4,7 @@ require "json"
 require 'active_support/core_ext/string'
 require "connection_pool"
 require "isomorfeus/promise"
+require "arango"
 require "arango/helper/satisfaction"
 require "arango/helper/server_assignment"
 require "arango/helper/database_assignment"
@@ -54,5 +55,3 @@ require "arango/traversal"
 require "arango/user"
 require "arango/vertex"
 require "arango/view"
-require "arango"
-

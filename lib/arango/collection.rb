@@ -13,7 +13,7 @@ module Arango
 
     class << self
       def request_method(method_name, &block)
-        promise_method_name = "promise_#{method_name}".to_sym
+        promise_method_name = "batch_#{method_name}".to_sym
         define_method(method_name) do |*args|
           request_hash = instance_exec(*args, &block)
           @database.execute_request(request_hash)
@@ -25,18 +25,18 @@ module Arango
       end
 
       def multi_request_method(method_name, &block)
-        promise_method_name = "promise_#{method_name}".to_sym
+        promise_method_name = "batch_#{method_name}".to_sym
         define_method(method_name) do |*args|
-          request_hash_array = instance_exec(*args, &block)
-          @database.execute_requests(request_hash_array)
+          requests = instance_exec(*args, &block)
+          @database.execute_requests(requests)
         end
         define_method(promise_method_name) do |*args|
-          request_hash_array = instance_exec(*args, &block)
+          requests= instance_exec(*args, &block)
           promises = []
-          request_hash_array.each do |request_hash|
+          requests.each do |request_hash|
             promises << @database.promise_request(request_hash)
           end
-          Promise.when(promises)
+          Promise.when(*promises).then { |values| values.last }
         end
       end
 
@@ -74,22 +74,21 @@ module Arango
       # @param exclude_system [Boolean] Optional, default true, exclude system collections.
       # @param database [Arango::Database]
       # @return [Array<Arango::Collection>]
-      def all(exclude_system: true, database:)
+      Arango.request_class_method(Arango::Collection, :all) do |exclude_system: true, database: Arango.current_database|
         query = { excludeSystem: exclude_system }
-        result = database.request(get: '_api/collection', query: query)
-        result.result.map { |c| from_h(c.to_h, database: database) }
+        { get: '_api/collection', query: query, block: ->(result) { result.result.map { |c| from_h(c.to_h, database: database) }}}
       end
 
       # Get collection from the database.
       # @param name [String] The name of the collection.
       # @param database [Arango::Database]
       # @return [Arango::Database]
-      def get(name, database:)
-        batch = Arango::RequestBatch.new(database: database)
-        batch.add_request(id: 'collection', get: "/_api/collection/#{name}")
-        batch.add_request(id: 'collection_properties', get: "/_api/collection/#{name}/properties")
-        result = batch.execute
-        from_results(result[:collection], result[:collection_properties], database: database)
+      Arango.multi_request_class_method(Arango::Collection, :get) do |name, database: Arango.current_database|
+        requests = []
+        first_get_result = nil
+        requests << { get: "/_api/collection/#{name}", block: ->(result) { first_get_result = result }}
+        requests << { get: "/_api/collection/#{name}/properties", block: ->(result) { from_results(first_get_result, result, database: database) }}
+        requests
       end
       alias fetch get
       alias retrieve get
@@ -98,19 +97,17 @@ module Arango
       # @param exclude_system [Boolean] Optional, default true, exclude system collections.
       # @param database [Arango::Database]
       # @return [Array<String>] List of collection names.
-      def list(exclude_system: true, database:)
+      Arango.request_class_method(Arango::Collection, :list) do |exclude_system: true, database: Arango.current_database|
         query = { excludeSystem: exclude_system }
-        result = database.request(get: '_api/collection', query: query).result
-        result.map { |c| c[:name] }
+        { get: '_api/collection', query: query, block: ->(result) { result.result.map { |c| c[:name] }}}
       end
 
       # Removes a collection.
       # @param name [String] The name of the collection.
       # @param database [Arango::Database]
       # @return nil
-      def drop(name, database:)
-        database.request(delete: "_api/collection/#{name}")
-        nil
+      Arango.request_class_method(Arango::Collection, :drop) do |name, database: Arango.current_database|
+        { delete: "_api/collection/#{name}" , block: ->(_) { nil }}
       end
       alias delete drop
       alias destroy drop
@@ -119,9 +116,9 @@ module Arango
       # @param name [String] Name of the collection
       # @param database [Arango::Database]
       # @return [Boolean]
-      def exist?(name, exclude_system: true, database:)
-        result = list(exclude_system: exclude_system, database: database)
-        result.include?(name)
+      Arango.request_class_method(Arango::Collection, :exist?) do |name, exclude_system: true, database: Arango.current_database|
+        query = { excludeSystem: exclude_system }
+        { get: '_api/collection', query: query, block: ->(result) { result.result.map { |c| c[:name] }.include?(name) }}
       end
     end
 
@@ -376,7 +373,7 @@ module Arango
 
     # Stores the collection in the database.
     # @return [Arango::Collection] self
-    def create
+    request_method :create do
       @name_changed = false
       @journal_size_changed = false
       @wait_for_sync_changed = false
@@ -393,39 +390,30 @@ module Arango
         body[:keyOptions] = key_options_hash unless key_options_hash.empty?
       end
 
+      query = nil
       if @enforce_replication_factor || @wait_for_sync_replication
         query = {}
         query[:enforceReplicationFactor] = @enforce_replication_factor unless @enforce_replication_factor.nil?
         query[:waitForSyncReplication] = @wait_for_sync_replication unless @wait_for_sync_replication.nil?
-        result = @database.request(post: '_api/collection', body: body, query: query)
-        _update_attributes(result)
-      else
-        result = @database.request(post: '_api/collection', body: body)
-        _update_attributes(result)
       end
-      self
+      { post: '_api/collection', body: body, query: query, block: ->(result) { _update_attributes(result); self }}
     end
 
     # Drops a collection.
     # @return [NilClass]
     request_method :drop do
-      #@database.request(delete: "_api/collection/#{@name}", query: { isSystem: @is_system })
-      #nil
       { delete: "_api/collection/#{@name}", query: { isSystem: @is_system }, block: ->(_) { nil }}
     end
 
     # Truncates a collection.
     # @return [Arango::Collection] self
     request_method :truncate do
-      # @database.request(put: "_api/collection/#{@name}/truncate")
-      # self
       { put: "_api/collection/#{@name}/truncate", block: ->(_) { self }}
     end
 
     # Counts the documents in a collection
     # @return [Integer]
     request_method :size do
-      # @database.request(get: "_api/collection/#{@name}/count").count
       { get: "_api/collection/#{@name}/count", block: ->(result) { result.count }}
     end
     alias count size
@@ -434,8 +422,7 @@ module Arango
     # Fetch the statistics of a collection
     # @return [Hash]
     request_method :statistics do
-      # @database.request(get: "_api/collection/#{@name}/figures").figures
-      { get: "_api/collection/#{@name}/figures", block: ->(result) { result.figures }}
+      { get: "_api/collection/#{@name}/figures", block: ->(result) { Arango::Result.new(result.figures) }}
     end
 
     # Return the shard ids of a collection
@@ -448,19 +435,19 @@ module Arango
 
     # Retrieve the collections revision id
     # @return [String]
-    def revision
-      @database.request(get: "_api/collection/#{@name}/revision").revision
+    request_method :revision do
+      { get: "_api/collection/#{@name}/revision", block: -> (result) { result.revision }}
     end
 
     # Returns a checksum for the specified collection
     # @param with_revisions [Boolean] Whether or not to include document revision ids in the checksum calculation, optional, default: false.
     # @param with_data [Boolean] Whether or not to include document body data in the checksum calculation, optional, default: false.
-    def checksum(with_revisions: false, with_data: false)
+    request_method :checksum do |with_revisions: false, with_data: false|
       query = {
         withRevisions: with_revisions,
         withData: with_data
       }
-      @database.request(get: "_api/collection/#{@name}/checksum", query: query).checksum
+      { get: "_api/collection/#{@name}/checksum", query: query, block: ->(result) { result.checksum } }
     end
 
     # Loads a collection into ArangoDBs memory. Returns the collection on success.
@@ -500,19 +487,17 @@ module Arango
     # @return [Arango::Collection] self
     def recalculate_count
       @database.request(put: "_api/collection/#{@name}/recalculateCount") if @database.arango_server.rocksdb?
-      size
+      self
     end
 
     # Reload collection properties and name from the database, reverting any changes.
     # @return [Arango::Collection] self
-    def reload
+    request_method :reload do
       request_name = @name_changed ? @original_name : @name
       @name_changed = false
       @journal_size_changed = false
       @wait_for_sync_changed = false
-      result = @database.request(get: "_api/collection/#{request_name}/properties")
-      _update_attributes(result)
-      self
+      { get: "_api/collection/#{request_name}/properties", block: ->(result) { _update_attributes(result); self }}
     end
     alias refresh reload
     alias retrieve reload
@@ -521,11 +506,13 @@ module Arango
     # Save changed collection properties and name changed, to the database.
     # Note: except for wait_for_sync, journal_size and name, collection properties cannot be changed once a collection is created.
     # @return [Arango::Collection] self
-    def save
+    multi_request_method :save do
+      requests = []
       if @name_changed
         request_name = @name_changed ? @original_name : @name
         @name_changed = false
-        @database.request(put: "_api/collection/#{request_name}/rename", body: { name: @name })
+        # @database.request(put: "_api/collection/#{request_name}/rename", body: { name: @name })
+        requests << { put: "_api/collection/#{request_name}/rename", body: { name: @name }, block: -> (_) { self }}
         @original_name = @name
       end
       if @journal_size_changed || @wait_for_sync_changed
@@ -534,11 +521,14 @@ module Arango
         body[:waitForSync] = @wait_for_sync if @wait_for_sync_changed
         @journal_size_changed = false
         @wait_for_sync_changed = false
-        result = @database.request(get: "_api/collection/#{@name}/properties", body: body)
-        @journal_size = result.journal_size if result.key?(:journal_size)
-        @wait_for_sync = result.wait_for_sync if result.key?(:wait_for_sync)
+        # result = @database.request(get: "_api/collection/#{@name}/properties", body: body)
+        requests << { get: "_api/collection/#{@name}/properties", body: body, block: -> (result) {
+          @journal_size = result.journal_size if result.key?(:journal_size)
+          @wait_for_sync = result.wait_for_sync if result.key?(:wait_for_sync)
+          self
+        }}
       end
-      self
+      requests
     end
     alias update save
 
