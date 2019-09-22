@@ -92,6 +92,8 @@ module Arango
       end
       alias fetch get
       alias retrieve get
+      alias batch_fetch batch_get
+      alias batch_retrieve batch_get
 
       # Retrieves a list of all collections.
       # @param exclude_system [Boolean] Optional, default true, exclude system collections.
@@ -111,6 +113,8 @@ module Arango
       end
       alias delete drop
       alias destroy drop
+      alias batch_delete batch_drop
+      alias batch_destroy batch_drop
 
       # Check if collection exists.
       # @param name [String] Name of the collection
@@ -418,6 +422,8 @@ module Arango
     end
     alias count size
     alias length size
+    alias batch_count batch_size
+    alias batch_length batch_size
 
     # Fetch the statistics of a collection
     # @return [Hash]
@@ -502,6 +508,9 @@ module Arango
     alias refresh reload
     alias retrieve reload
     alias revert reload
+    alias batch_refresh batch_reload
+    alias batch_retrieve batch_reload
+    alias batch_revert batch_reload
 
     # Save changed collection properties and name changed, to the database.
     # Note: except for wait_for_sync, journal_size and name, collection properties cannot be changed once a collection is created.
@@ -531,6 +540,7 @@ module Arango
       requests
     end
     alias update save
+    alias batch_update batch_save
 
     # Request next batch from a batched request.
     # @return value depending on original batched request.
