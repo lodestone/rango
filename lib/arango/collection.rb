@@ -4,6 +4,7 @@ module Arango
   class Collection
     include Arango::Helper::Satisfaction
     include Arango::Helper::Return
+    extend Arango::Helper::RequestMethod
 
     include Arango::Collection::Documents
     include Arango::Collection::Indexes
@@ -12,34 +13,6 @@ module Arango
     TYPES = %i[unknown unknown document edge] # do not sort, index is used
 
     class << self
-      def request_method(method_name, &block)
-        promise_method_name = "batch_#{method_name}".to_sym
-        define_method(method_name) do |*args|
-          request_hash = instance_exec(*args, &block)
-          @database.execute_request(request_hash)
-        end
-        define_method(promise_method_name) do |*args|
-          request_hash = instance_exec(*args, &block)
-          @database.promise_request(request_hash)
-        end
-      end
-
-      def multi_request_method(method_name, &block)
-        promise_method_name = "batch_#{method_name}".to_sym
-        define_method(method_name) do |*args|
-          requests = instance_exec(*args, &block)
-          @database.execute_requests(requests)
-        end
-        define_method(promise_method_name) do |*args|
-          requests= instance_exec(*args, &block)
-          promises = []
-          requests.each do |request_hash|
-            promises << @database.promise_request(request_hash)
-          end
-          Promise.when(*promises).then { |values| values.last }
-        end
-      end
-
       # Takes a hash and instantiates a Arango::Collection object from it.
       # @param collection_hash [Hash]
       # @return [Arango::Collection]

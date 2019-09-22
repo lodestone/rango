@@ -5,6 +5,7 @@ require 'active_support/core_ext/string'
 require "connection_pool"
 require "isomorfeus/promise"
 require "arango"
+require "arango/helper/request_method"
 require "arango/helper/satisfaction"
 require "arango/helper/server_assignment"
 require "arango/helper/database_assignment"
