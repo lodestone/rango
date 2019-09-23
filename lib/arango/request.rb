@@ -13,7 +13,7 @@ module Arango
 
       if body.class == Hash
         body.delete_if{|_,v| v.nil?} unless keep_null
-        body = Oj.dump(body, mode: :json) unless body.nil?
+        body = Oj.dump(body, mode: :json)
       end
       options = @options.merge({ body: body })
 

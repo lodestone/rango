@@ -157,7 +157,7 @@ module Arango
               is_json = true
             elsif line.start_with?('{') || line.start_with?('[')
               if is_json
-                body = Oj.load(line, mode: :json)
+                body = Oj.load(line, mode: :json, smybol_keys: true)
               else
                 body = line
               end
