@@ -48,16 +48,15 @@ module Arango
     # @param action [String]
     # @param url [String]
     # @param body [Hash] optional
-    def add_request(id: @id, db: nil, get: nil, head: nil, patch: nil, post: nil, put: nil, delete: nil, body: nil, query: nil,
-                    block: nil, promise: nil)
-      id = @id unless id
-      id = id.to_s
+    def add_request(get: nil, head: nil, patch: nil, post: nil, put: nil, delete: nil, body: nil, query: nil, headers: nil, block: nil, promise: nil)
+      id = @id.to_s
+      @id += 1
       @requests[id] = {
         id:     id,
         body:   body,
         query:  query,
-        db: db,
         block: block,
+        headers: headers,
         promise: promise
       }.delete_if{|_,v| v.nil?}
       @requests[id][:action] = if get then @requests[id][:url] = get; 'GET'
@@ -67,7 +66,6 @@ module Arango
                                elsif put then @requests[id][:url] = put; 'PUT'
                                elsif delete then @requests[id][:url] = delete; 'DELETE'
                                end
-      @id += 1
       @requests[id]
     end
     alias modify_request add_request
@@ -78,21 +76,24 @@ module Arango
     end
 
     # Execute the request batch.
-    # @return [Array<Arango::Result]
+    # @return [Hash<Arango::Result]
     def execute
       body = ""
       @requests.each do |id, request|
         body << "--#{@boundary}\r\n"
         body << "Content-Type: application/x-arango-batchpart\r\n"
         body << "Content-Id: #{id}\r\n\r\n"
-        dbcontext = request.key?(:db) ? "_db/#{request[:db]}/" : nil
-        url = "/#{dbcontext}#{request[:url]}"
+        url = "/#{request[:url]}"
         if request.key?(:query)
           url << '?'
           url << URI.encode_www_form(request[:query])
         end
         body << "#{request[:action]} #{url} HTTP/1.1\r\n"
-        # TODO headers
+        if request.key?(:headers)
+          request[:headers].each do |header, value|
+            body << "#{header}: #{value}\r\n"
+          end
+        end
         body << "\r\n"
         unless request[:body].nil?
           request[:body].delete_if{|_,v| v.nil?}
@@ -107,6 +108,20 @@ module Arango
                end
       result_hash = _parse_result(result)
       _check_for_errors(result_hash)
+      final_result = result_hash
+      result_hash.each_key do |id|
+        request = @requests[id.to_s]
+        if request.key?(:block)
+          result = result_hash[id]
+          if request.key?(:promise)
+            block_result = request[:block].call(result)
+            final_result = request[:promise].resolve(block_result)
+          else
+            final_result = request[:block].call(result)
+          end
+        end
+      end
+      final_result
     end
 
     private

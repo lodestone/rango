@@ -23,7 +23,7 @@ module Arango
       # @param server [Arango::Server]
       # @return [Array<Arango::Database>]
       def all(server:)
-        result = server.request(get: '_api/database', key: :result)
+        result = server.request(get: '_api/database').result
         result.map{ |db| Arango::Database.new(db, server: server).reload }
       end
 
@@ -31,7 +31,7 @@ module Arango
       # @param server [Arango::Server]
       # @return [Array<Arango::Database>]
       def all_user_databases(server:)
-        result = server.request(get: '_api/database/user', key: :result)
+        result = server.request(get: '_api/database/user').result
         result.map{ |db| Arango::Database.new(db, server: server).reload }
       end
 
@@ -49,14 +49,14 @@ module Arango
       # @param server [Arango::Server]
       # @return [Array<String>] List of database names.
       def list(server:)
-        server.request(get: '_api/database', key: :result)
+        server.request(get: '_api/database').result
       end
 
       # Retrieves a list of all databases the current user can access.
       # @param server [Arango::Server]
       # @return [Array<String>] List of database names.
       def list_user_databases(server:)
-        server.request(get: '_api/database/user', key: :result)
+        server.request(get: '_api/database/user').result
       end
 
       # Removes a database.
@@ -152,25 +152,15 @@ module Arango
                              db: @name, body: body, headers: headers, query: query, block: block)
     end
 
-    def execute_aql_request(database:, query:, bind_vars: nil, batch_size: nil, block: nil)
-      aql = Arango::AQL.new(database: self, query: query, bind_vars: bind_vars, batch_size: batch_size)
+    def execute_aql_request(query:, bind_vars: nil, batch_size: nil, block: nil)
+      aql = Arango::AQL.new(database: self, query: query, bind_vars: bind_vars, batch_size: batch_size, block: block)
       aql.execute
     end
 
     def execute_requests(requests)
       batch = Arango::RequestBatch.new(database: self)
       requests.each { |request_h| batch.add_request(**request_h) }
-      results = batch.execute
-      final_result = nil
-      results.each do |id, result|
-        request = batch.requests[id.to_s]
-        if request.key?(:block) && request.key?(:promise)
-          final_result = request[:promise].resolve(request[:block].call(result))
-        elsif request.key?(:block)
-          final_result = request[:block].call(result)
-        end
-      end
-      final_result
+      batch.execute
     end
 
     def batch_request(request_hash)
@@ -181,7 +171,7 @@ module Arango
       promise
     end
 
-    def batch_aql_request(database:, query:, bind_vars: nil, batch_size: nil, block: nil)
+    def batch_aql_request(query:, bind_vars: nil, batch_size: nil, block: nil)
       aql = Arango::AQL.new(database: self, query: query, bind_vars: bind_vars, batch_size: batch_size, block: block)
       aql.batch_execute
     end
@@ -189,17 +179,7 @@ module Arango
     def execute_batched_requests
       batch = @_promise_batch
       @_promise_batch = nil
-      results = batch.execute
-      results.each_key do |id|
-        result = results[id]
-        request = batch.requests[id.to_s]
-        if request.key?(:block) && request.key?(:promise)
-          block_result = request[:block].call(result)
-          request[:promise].resolve(block_result)
-        elsif request.key?(:block)
-          request[:block].call(result)
-        end
-      end
+      batch.execute
       nil
     end
 

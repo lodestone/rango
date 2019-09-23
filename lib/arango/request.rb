@@ -8,7 +8,7 @@ module Arango
     attr_accessor :base_uri, :options
 
     def request(get: nil, head: nil, patch: nil, post: nil, put: nil, delete: nil,
-                db: nil, body: {}, headers: nil, query: nil, key: nil, keep_null: false, block: nil)
+                db: nil, body: {}, headers: nil, query: nil, keep_null: false, block: nil)
       # TODO uri safety, '..', etc., maybe arango is guarded? not sure.
 
       if body.class == Hash
@@ -69,11 +69,8 @@ module Arango
       if !result.is_array? && result.error?
         raise Arango::ErrorDB.new(message: result.error_message, code: result.code, data: result.to_h, error_num: result.error_num, request: options)
       end
-      if block
-        block.call(key ? result[key] : result)
-      else
-        key ? result[key] : result
-      end
+
+      block ? block.call(result) : result
     end
 
     def download(url:, path:, body: {}, headers: {}, query: {})
