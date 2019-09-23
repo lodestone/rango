@@ -8,7 +8,7 @@ module Arango
     include Arango::Helper::Traversal
 
     class << self
-      Arango.aql_request_class_method Arango::Document, :all do |offset: 0, limit: nil, batch_size: nil, collection:|
+      Arango.aql_request_class_method(Arango::Document, :all) do |offset: 0, limit: nil, batch_size: nil, collection:|
         bind_vars = {}
         query = "FOR doc IN #{collection.name}"
         if limit && offset
@@ -37,7 +37,7 @@ module Arango
         }
       end
 
-      Arango.aql_request_class_method Arango::Document, :list do |offset: 0, limit: nil, batch_size: nil, collection:|
+      Arango.aql_request_class_method(Arango::Document, :list) do |offset: 0, limit: nil, batch_size: nil, collection:|
         bind_vars = {}
         query = "FOR doc IN #{collection.name}"
         if limit && offset
@@ -66,7 +66,7 @@ module Arango
         }
       end
 
-      Arango.request_class_method Arango::Document, :exist? do |document, match_rev: nil, collection:|
+      Arango.request_class_method(Arango::Document, :exist?) do |document, match_rev: nil, collection:|
         body = _body_from_arg(document)
         raise Arango::Error err: "Document with key required!" unless body.key?(:_key)
         request = { head: "_api/document/#{collection.name}/#{body[:_key]}" }
@@ -87,50 +87,30 @@ module Arango
         request
       end
 
-      def create_documents(documents)
+      Arango.request_class_method(Arango::Document, :create_documents) do |documents, wait_for_sync: nil, collection:|
         documents = [documents] unless documents.is_a? Array
         documents = documents.map{ |d| _body_from_arg(d) }
-        query = {
-          waitForSync: wait_for_sync,
-          returnNew:   return_new,
-          silent:      silent
-        }
-        results = @database.request("POST", "_api/document/#{@name}", body: document,
-                                    query: query)
-        return results if return_directly?(results) || silent
-        results.map.with_index do |result, index|
-          body2 = result.clone
-          if return_new
-            body2.delete(:new)
-            body2 = body2.merge(result[:new])
+        query = { returnNew: true }
+        query[:waitForSync] = wait_for_sync if wait_for_sync
+        { post: "_api/document/#{collection.name}", body: documents, query: query, block: ->(result) do
+            result.map do |doc|
+              Arango::Document.new(doc[:new], collection: collection)
+            end
           end
-          real_body = document[index]
-          real_body = real_body.merge(body2)
-          Arango::Document.new(result[:_key], collection: self, body: real_body)
-        end
+        }
       end
 
-      def replace_documents
-        document.each{|x| x = x.body if x.is_a?(Arango::Document)}
-        query = {
-          waitForSync: wait_for_sync,
-          returnNew:   return_new,
-          returnOld:   return_old,
-          ignoreRevs:  ignore_revs
-        }
-        result = @database.request("PUT", "_api/document/#{@name}", body: document,
-                                   query: query)
-        return results if return_directly?(result)
-        results.map.with_index do |result, index|
-          body2 = result.clone
-          if return_new == true
-            body2.delete(:new)
-            body2 = body2.merge(result[:new])
+      Arango.request_class_method(Arango::Document, :replace_documents) do |documents, ignore_revs: false, wait_for_sync: nil, collection:|
+        documents = [documents] unless documents.is_a? Array
+        documents = documents.map{ |d| _body_from_arg(d) }
+        query = { returnNew: true, ignoreRevs: ignore_revs }
+        query[:waitForSync] = wait_for_sync if wait_for_sync
+        { put: "_api/document/#{collection.name}", body: documents, query: query, block: -> (result) do
+            result.map do |doc|
+              Arango::Document.new(doc[:new], collection: collection)
+            end
           end
-          real_body = document[index]
-          real_body = real_body.merge(body2)
-          Arango::Document.new(result[:_key], collection: self, body: real_body)
-        end
+        }
       end
 
       def update_documents(document: {}, wait_for_sync: nil, ignore_revs: nil,

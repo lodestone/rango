@@ -55,13 +55,27 @@ describe Arango::Document do
     end
 
     it "create_documents" do
-      document = @collection.create_documents([{ test1: 'value', test2: 100 }, { test3: 'value', test4: 100 }])
-      expect(document.collection.name).to eq "DocumentCollection"
+      documents = @collection.create_documents([{ test1: 'value', test2: 100 }, { test3: 'value', test4: 100 }])
+      expect(documents.size).to eq(2)
+      expect(@collection.document_exist?(documents.first)).to be true
+      expect(@collection.document_exist?(documents.last)).to be true
+      expect(documents.first.collection.name).to eq "DocumentCollection"
     end
 
     it "create_documents with key" do
-      document = @collection.create_documents([{ key: 'key1', test1: 'value', test2: 100 }, { key: 'key2', test3: 'value', test4: 100 }])
-      expect(document.collection.name).to eq "DocumentCollection"
+      documents = @collection.create_documents([{ key: 'key1', test1: 'value', test2: 100 }, { key: 'key2', test3: 'value', test4: 100 }])
+      expect(documents.size).to eq(2)
+      expect(@collection.document_exist?(documents.first)).to be true
+      expect(@collection.document_exist?(documents.last)).to be true
+      expect(documents.first.collection.name).to eq "DocumentCollection"
+    end
+
+    it "create_documents by key" do
+      documents = @collection.create_documents(['key1', 'key2'])
+      expect(documents.size).to eq(2)
+      expect(@collection.document_exist?(documents.first)).to be true
+      expect(@collection.document_exist?(documents.last)).to be true
+      expect(documents.first.collection.name).to eq "DocumentCollection"
     end
 
     it "all_documents" do
@@ -126,9 +140,28 @@ describe Arango::Document do
       expect(document[0].body[:Hello]).to eq "World"
     end
 
-    it "create new Documents in the Collection" do
-      document = @collection.create_documents document: [{Ciao: "Mondo", num: 1}, {Hallo: "Welt", num: 2}]
-      expect(document[0].body[:Ciao]).to eq "Mondo"
+    it "create_documents" do
+      documents = Arango::Document.create_documents([{ test1: 'value', test2: 100 }, { test3: 'value', test4: 100 }], collection: @collection)
+      expect(documents.size).to eq(2)
+      expect(@collection.document_exist?(documents.first)).to be true
+      expect(@collection.document_exist?(documents.last)).to be true
+      expect(documents.first.collection.name).to eq "DocumentCollection"
+    end
+
+    it "create_documents with key" do
+      documents = Arango::Document.create_documents([{ key: 'key1', test1: 'value', test2: 100 }, { key: 'key2', test3: 'value', test4: 100 }], collection: @collection)
+      expect(documents.size).to eq(2)
+      expect(@collection.document_exist?(documents.first)).to be true
+      expect(@collection.document_exist?(documents.last)).to be true
+      expect(documents.first.collection.name).to eq "DocumentCollection"
+    end
+
+    it "create_documents by key" do
+      documents = Arango::Document.create_documents(['key1', 'key2'], collection: @collection)
+      expect(documents.size).to eq(2)
+      expect(@collection.document_exist?(documents.first)).to be true
+      expect(@collection.document_exist?(documents.last)).to be true
+      expect(documents.first.collection.name).to eq "DocumentCollection"
     end
 
     it "create a new Edge in the Collection" do
