@@ -6,7 +6,7 @@ module Arango
         @collection = collection
         @graph = @collection.graph
         @database = @collection.database
-        @server = @database.server
+        @arango_server = @database.arango_server
       end
     end
   end

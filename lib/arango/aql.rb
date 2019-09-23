@@ -4,27 +4,29 @@ module Arango
   class AQL
     include Arango::Helper::Satisfaction
     include Arango::Helper::Return
-    include Arango::Helper::DatabaseAssignment
+    extend Arango::Helper::RequestMethod
 
     def initialize(query:, database:, count: nil, batch_size: nil, cache: nil,
       memory_limit: nil, ttl: nil, bind_vars: nil, fail_on_warning: nil,
       profile: nil, max_transaction_size: nil, skip_inaccessible_collections: nil,
       max_warning_count: nil, intermediate_commit_count: nil,
       satellite_sync_wait: nil, full_count: nil, intermediate_commit_size: nil,
-      optimizer_rules: nil, max_plans: nil)
+      optimizer_rules: nil, max_plans: nil, block: nil)
       satisfy_class?(query, [String])
       @query = query
-      assign_database(database)
+      send(:database=, database)
 
-      @count       = count
-      @batch_size  = batch_size
-      @cache       = cache
+      @block        = block
+
+      @count        = count
+      @batch_size   = batch_size
+      @cache        = cache
       @memory_limit = memory_limit
-      @ttl         = ttl
-      @bind_vars   = bind_vars
+      @ttl          = ttl
+      @bind_vars    = bind_vars
 
       @quantity = nil
-      @has_more  = false
+      @has_more = false
       @id       = ""
       @result   = []
       @options  = {}
@@ -41,7 +43,8 @@ module Arango
       send(:optimizer_rules=, optimizer_rules) if optimizer_rules
     end
 
-# === DEFINE ===
+    attr_accessor :database
+
     def optimizer_rules=(attrs)
       @optimizer_rules = attrs
       if attrs.nil?
@@ -61,7 +64,7 @@ module Arango
     end
 
     attr_accessor :count, :query, :batch_size, :ttl, :cache, :options, :bind_vars, :quantity
-    attr_reader :id, :result, :id_cache, :server, :cached, :extra, :optimizer_rules, :database
+    attr_reader :id, :result, :id_cache, :server, :cached, :extra, :optimizer_rules
 
     def has_more?
       @has_more
@@ -77,8 +80,6 @@ module Arango
     end
     private :set_option
 
-  # === TO HASH ===
-
     def to_h
       {
         query:       @query,
@@ -93,25 +94,10 @@ module Arango
         idCache:     @id_cache,
         memoryLimit: @memory_limit,
         database:    @database.name
-      }.delete_if{|k,v| v.nil?}
+      }.delete_if{|_,v| v.nil?}
     end
 
-# === REQUEST ===
-
-    def return_aql(result)
-      @extra    = result[:extra]
-      @cached   = result[:cached]
-      @quantity = result[:count]
-      @has_more = result[:hasMore]
-      @id       = result[:id]
-      @result   = result[:result]
-      result
-    end
-    private :return_aql
-
-  # === EXECUTE QUERY ===
-
-    def execute
+    request_method :execute do
       body = {
         query:       @query,
         count:       @count,
@@ -122,40 +108,61 @@ module Arango
         bindVars:    @bind_vars,
         memoryLimit: @memory_limit
       }
-      result = @database.request("POST", "_api/cursor", body: body)
-      return_aql(result)
+      { post: "_api/cursor", body: body, block: ->(result) {
+        aql_result = return_aql(result)
+        if @block
+          block.call(self, aql_result)
+        else
+          aql_result
+        end
+      }}
     end
 
-    def next
+    request_method :next do
       if @has_more
-        result = @database.request("PUT", "_api/cursor/#{@id}")
-        return_aql(result)
+        { put: "_api/cursor/#{@id}", block: ->(result) { return_aql(result) }}
       else
-        raise Arango::Error.new err: :no_other_aql_next, data: {hasMore: false}
+        raise Arango::Error.new err: :no_other_aql_next, data: { hasMore: false }
       end
     end
 
-    def destroy
-      @database.request("DELETE", "_api/cursor/#{@id}")
+    request_method :drop do
+      { delete: "_api/cursor/#{@id}" }
     end
+    alias delete drop
+    alias destroy drop
+    alias batch_delete batch_drop
+    alias batch_destroy batch_drop
 
-    def kill
-      @database.request("DELETE", "_api/query/#{@id}")
+    request_method :kill do
+      { delete: "_api/query/#{@id}", block: ->(_) { nil }}
     end
 
 # === PROPERTY QUERY ===
 
-    def explain
+    request_method :explain do
       body = {
         query:    @query,
         options:  @options,
         bindVars: @bind_vars
       }
-      @database.request("POST", "_api/explain", body: body)
+      { post: "_api/explain", body: body, block: ->(result) { result }}
     end
 
-    def parse
-      @database.request("POST", "_api/query", body: {query: @query})
+    request_method :parse do
+      { post: "_api/query", body: {query: @query} , block: ->(result) { result }}
+    end
+
+    private
+
+    def return_aql(result)
+      @extra    = result[:extra]
+      @cached   = result[:cached]
+      @quantity = result[:count]
+      @has_more = result[:hasMore]
+      @id       = result[:id]
+      @result   = result[:result]
+      result
     end
   end
 end

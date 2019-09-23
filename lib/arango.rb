@@ -31,7 +31,7 @@ module Arango
     end
     target_class.define_singleton_method(promise_method_name) do |*args|
       request_hash = instance_exec(*args, &block)
-      args.last[:database].promise_request(request_hash)
+      args.last[:database].batch_request(request_hash)
     end
   end
 
@@ -45,9 +45,21 @@ module Arango
       requests = instance_exec(*args, &block)
       promises = []
       requests.each do |request_hash|
-        promises << args.last[:database].promise_request(request_hash)
+        promises << args.last[:database].batch_request(request_hash)
       end
       Promise.when(*promises).then { |values| values.last }
+    end
+  end
+
+  def self.aql_request_class_method(target_class, method_name, &block)
+    promise_method_name = "batch_#{method_name}".to_sym
+    target_class.define_singleton_method(method_name) do |*args|
+      request_hash = instance_exec(*args, &block)
+      args.last[:database].execute_aql_request(request_hash)
+    end
+    target_class.define_singleton_method(promise_method_name) do |*args|
+      request_hash = instance_exec(*args, &block)
+      args.last[:database].batch_aql_request(request_hash)
     end
   end
 end

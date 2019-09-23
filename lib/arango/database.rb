@@ -139,8 +139,7 @@ module Arango
     # Returns the database version that this server requires.
     # @return [String]
     def target_version
-      result = request(get: '_admin/database/target-version')
-      result.version
+      request(get: '_admin/database/target-version').version
     end
 
     def request(get: nil, head: nil, patch: nil, post: nil, put: nil, delete: nil, body: nil, headers: nil, query: nil, block: nil)
@@ -151,6 +150,11 @@ module Arango
     def execute_request(get: nil, head: nil, patch: nil, post: nil, put: nil, delete: nil, body: nil, headers: nil, query: nil, block: nil)
       @arango_server.request(get: get, head: head, patch: patch, post: post, put: put, delete: delete,
                              db: @name, body: body, headers: headers, query: query, block: block)
+    end
+
+    def execute_aql_request(database:, query:, bind_vars: nil, batch_size: nil, block: nil)
+      aql = Arango::AQL.new(database: self, query: query, bind_vars: bind_vars, batch_size: batch_size)
+      aql.execute
     end
 
     def execute_requests(requests)
@@ -169,12 +173,17 @@ module Arango
       final_result
     end
 
-    def promise_request(request_hash)
+    def batch_request(request_hash)
       promise = Promise.new
       request_hash[:promise] = promise
       batch = _promise_batch
       batch.add_request(**request_hash)
       promise
+    end
+
+    def batch_aql_request(database:, query:, bind_vars: nil, batch_size: nil, block: nil)
+      aql = Arango::AQL.new(database: self, query: query, bind_vars: bind_vars, batch_size: batch_size, block: block)
+      aql.batch_execute
     end
 
     def execute_batched_requests

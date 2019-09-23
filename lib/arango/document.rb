@@ -8,7 +8,7 @@ module Arango
     include Arango::Helper::Traversal
 
     class << self
-      def all(offset: 0, limit: nil, batch_size: nil, collection:)
+      Arango.aql_request_class_method Arango::Document, :all do |offset: 0, limit: nil, batch_size: nil, collection:|
         bind_vars = {}
         query = "FOR doc IN #{collection.name}"
         if limit && offset
@@ -18,23 +18,26 @@ module Arango
         end
         raise Arango::Error.new err: "offset must be used with limit" if offset > 0 && !limit
         query << "\n RETURN doc"
-        aql = Arango::AQL.new(database: collection.database, query: query, bind_vars: bind_vars, batch_size: batch_size)
-        result = aql.execute
-        result_proc = ->(b) { b.result.map { |d| Arango::Document.new(d, collection: collection) }}
-        final_result = result_proc.call(result)
-        if aql.has_more?
-          collection.instance_variable_set(:@aql, aql)
-          collection.instance_variable_set(:@batch_proc, result_proc)
-          unless batch_size
-            while aql.has_more?
-              final_result += collection.next_batch
+        # aql = Arango::AQL.new(database: collection.database, query: query, bind_vars: bind_vars, batch_size: batch_size)
+        # result = aql.execute
+        { query: query, bind_vars: bind_vars, batch_size: batch_size, block: -> (aql, result) do
+            result_proc = ->(b) { b.result.map { |d| Arango::Document.new(d, collection: collection) }}
+            final_result = result_proc.call(result)
+            if aql.has_more?
+              collection.instance_variable_set(:@aql, aql)
+              collection.instance_variable_set(:@batch_proc, result_proc)
+              unless batch_size
+                while aql.has_more?
+                  final_result += collection.next_batch
+                end
+              end
             end
+            final_result
           end
-        end
-        final_result
+        }
       end
 
-      def list(offset: 0, limit: nil, batch_size: nil, collection:)
+      Arango.aql_request_class_method Arango::Document, :list do |offset: 0, limit: nil, batch_size: nil, collection:|
         bind_vars = {}
         query = "FOR doc IN #{collection.name}"
         if limit && offset
@@ -44,20 +47,23 @@ module Arango
         end
         raise Arango::Error.new err: "offset must be used with limit" if offset > 0 && !limit
         query << "\n RETURN doc._key"
-        aql = Arango::AQL.new(database: collection.database, query: query, bind_vars: bind_vars, batch_size: batch_size)
-        result = aql.execute
-        result_proc = ->(b) { b.result }
-        final_result = result_proc.call(result)
-        if aql.has_more?
-          collection.instance_variable_set(:@aql, aql)
-          collection.instance_variable_set(:@batch_proc, result_proc)
-          unless batch_size
-            while aql.has_more?
-              final_result += collection.next_batch
+        # aql = Arango::AQL.new(database: collection.database, query: query, bind_vars: bind_vars, batch_size: batch_size)
+        # result = aql.execute
+        { database: collection.database, query: query, bind_vars: bind_vars, batch_size: batch_size, block: -> (aql, result) do
+            result_proc = ->(b) { b.result }
+            final_result = result_proc.call(result)
+            if aql.has_more?
+              collection.instance_variable_set(:@aql, aql)
+              collection.instance_variable_set(:@batch_proc, result_proc)
+              unless batch_size
+                while aql.has_more?
+                  final_result += collection.next_batch
+                end
+              end
             end
+            final_result
           end
-        end
-        final_result
+        }
       end
 
       def exist?(document, match_rev: nil, collection:)
@@ -73,9 +79,9 @@ module Arango
         end
       end
 
-      def create_documents()
-        document = [document] unless document.is_a? Array
-        document = document.map{|x| return_body(x)}
+      def create_documents(documents)
+        documents = [documents] unless documents.is_a? Array
+        documents = documents.map{|x| return_body(x)}
         query = {
           waitForSync: wait_for_sync,
           returnNew:   return_new,
@@ -195,28 +201,28 @@ module Arango
       assign_collection(collection)
     end
 
-    def key
-      @body[:_key]
-    end
-
-    def revision
-      @body[:_rev]
-    end
-
     def id
       @body[:_id]
+    end
+
+    def id=(i)
+      @body[:_id] = i
+    end
+
+    def key
+      @body[:_key]
     end
 
     def key=(k)
       @body[:_key] = k
     end
 
-    def rev=(r)
-      @body[_:rev] = r
+    def revision
+      @body[:_rev]
     end
 
-    def id=(i)
-      @body[:_id] = i
+    def rev=(r)
+      @body[_:rev] = r
     end
 
     def to_h
