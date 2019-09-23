@@ -66,22 +66,30 @@ module Arango
         }
       end
 
-      def exist?(document, match_rev: nil, collection:)
-        if document.class == String
-          # based on key
-          return _exist?(document, collection: collection)
-        elsif body.size == 2 && body.key?(:_key) && body.key?(:_rev)
-          # based on key and rev
-          body = _body_from_arg(document)
-          return _exist?(body[:_key], body[:_rev], match_rev: match_rev, collection: collection)
-        else
-          # TODO based on properties, maybe key, maybe rev
+      Arango.request_class_method Arango::Document, :exist? do |document, match_rev: nil, collection:|
+        body = _body_from_arg(document)
+        raise Arango::Error err: "Document with key required!" unless body.key?(:_key)
+        request = { head: "_api/document/#{collection.name}/#{body[:_key]}" }
+        if body.key?(:_key) && body.key?(:_rev) && match_rev == true
+          request[:headers] = {'If-Match' => body[:_rev] }
+        elsif body.key?(:_key) && body.key?(:_rev) && match_rev == false
+          request[:headers] = {'If-None-Match' => body[:_rev] }
         end
+        request[:block] = ->(result) do
+          case result.response_code
+          when 200 then true # document was found
+          when 304 then true # “If-None-Match” header is given and the document has the same version
+          when 412 then true # “If-Match” header is given and the found document has a different version.
+          else
+            false
+          end
+        end
+        request
       end
 
       def create_documents(documents)
         documents = [documents] unless documents.is_a? Array
-        documents = documents.map{|x| return_body(x)}
+        documents = documents.map{ |d| _body_from_arg(d) }
         query = {
           waitForSync: wait_for_sync,
           returnNew:   return_new,
@@ -171,26 +179,10 @@ module Arango
           arg[:_id] = arg.delete(:id) if arg.key?(:id) && !arg.key?(:_id)
           arg[:_key] = arg.delete(:key) if arg.key?(:key) && !arg.key?(:_key)
           arg[:_rev] = arg.delete(:rev) if arg.key?(:rev) && !arg.key?(:_rev)
+          arg
         when Arango::Document then arg.to_h
         else
           raise "Unknown arg type, must be String, Hash or Arango::Document"
-        end
-      end
-
-      def _exist?(key, rev = nil, match_rev: nil, collection:)
-        result = if rev && match_rev == true
-                   collection.database.request("HEAD", "_api/document/#{collection.name}/#{key}", headers: {'If-Match' => rev })
-                 elsif rev && match_rev == false
-                   collection.database.request("HEAD", "_api/document/#{collection.name}/#{key}", headers: {'If-None-Match' => rev })
-                 else
-                   collection.database.request("HEAD", "_api/document/#{collection.name}/#{key}")
-                 end
-        case result.response_code
-        when 200 then return true # document was found
-        when 304 then return true # “If-None-Match” header is given and the document has the same version
-        when 412 then return true # “If-Match” header is given and the found document has a different version.
-        else
-          return false
         end
       end
     end
@@ -471,6 +463,7 @@ module Arango
         arg[:_id] = arg.delete(:id) if arg.key?(:id) && !arg.key?(:_id)
         arg[:_key] = arg.delete(:key) if arg.key?(:key) && !arg.key?(:_key)
         arg[:_rev] = arg.delete(:rev) if arg.key?(:rev) && !arg.key?(:_rev)
+        arg
       when Arango::Document then arg.to_h
       else
         raise "Unknown arg type, must be String, Hash or Arango::Document"
