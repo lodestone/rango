@@ -27,11 +27,21 @@ module Arango
     promise_method_name = "batch_#{method_name}".to_sym
     target_class.define_singleton_method(method_name) do |*args|
       request_hash = instance_exec(*args, &block)
-      args.last[:database].execute_request(request_hash)
+      db = if args.last.key?(:collection)
+             args.last[:collection].database
+           elsif args.last.key?(:database)
+             args.last[:database]
+           end
+      db.execute_request(request_hash)
     end
     target_class.define_singleton_method(promise_method_name) do |*args|
       request_hash = instance_exec(*args, &block)
-      args.last[:database].batch_request(request_hash)
+      db = if args.last.key?(:collection)
+             args.last[:collection].database
+           elsif args.last.key?(:database)
+             args.last[:database]
+           end
+      db.batch_request(request_hash)
     end
   end
 
@@ -39,13 +49,23 @@ module Arango
     promise_method_name = "batch_#{method_name}".to_sym
     target_class.define_singleton_method(method_name) do |*args|
       requests = instance_exec(*args, &block)
-      args.last[:database].execute_requests(requests)
+      db = if args.last.key?(:collection)
+             args.last[:collection].database
+           elsif args.last.key?(:database)
+             args.last[:database]
+           end
+      db.execute_requests(requests)
     end
     target_class.define_singleton_method(promise_method_name) do |*args|
       requests = instance_exec(*args, &block)
       promises = []
+      db = if args.last.key?(:collection)
+             args.last[:collection].database
+           elsif args.last.key?(:database)
+             args.last[:database]
+           end
       requests.each do |request_hash|
-        promises << args.last[:database].batch_request(request_hash)
+        promises << db.batch_request(request_hash)
       end
       Promise.when(*promises).then { |values| values.last }
     end
@@ -55,11 +75,21 @@ module Arango
     promise_method_name = "batch_#{method_name}".to_sym
     target_class.define_singleton_method(method_name) do |*args|
       request_hash = instance_exec(*args, &block)
-      args.last[:database].execute_aql_request(request_hash)
+      db = if args.last.key?(:collection)
+             args.last[:collection].database
+           elsif args.last.key?(:database)
+             args.last[:database]
+           end
+      db.execute_aql_request(request_hash)
     end
     target_class.define_singleton_method(promise_method_name) do |*args|
       request_hash = instance_exec(*args, &block)
-      args.last[:database].batch_aql_request(request_hash)
+      db = if args.last.key?(:collection)
+             args.last[:collection].database
+           elsif args.last.key?(:database)
+             args.last[:database]
+           end
+      db.batch_aql_request(request_hash)
     end
   end
 end
