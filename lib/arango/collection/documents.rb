@@ -28,22 +28,22 @@ module Arango
       alias document_exist? exist_document?
       alias batch_document_exist? batch_exist_document?
 
-      def get_document(name, rev: nil, from: nil, to: nil)
-        Arango::Document.get(name: name, collection: self, body: body, rev: rev, from: from, to: to)
+      def get_document(key)
+        Arango::Document.get(key, collection: self)
       end
-      def batch_get_document(name, rev: nil, from: nil, to: nil)
-        Arango::Document.batch_get(name: name, collection: self, body: body, rev: rev, from: from, to: to)
+      def batch_get_document(key)
+        Arango::Document.batch_get(key, collection: self)
       end
       alias fetch_document get_document
       alias retrieve_document get_document
       alias batch_fetch_document batch_get_document
       alias batch_retrieve_document batch_get_document
 
-      def get_documents(name, rev: nil, from: nil, to: nil)
-        Arango::Document.get_documents(name: name, collection: self, body: body, rev: rev, from: from, to: to)
+      def get_documents(keys)
+        Arango::Document.get_documents(keys, collection: self)
       end
-      def batch_get_documents(name, rev: nil, from: nil, to: nil)
-        Arango::Document.batch_get_documents(name: name, collection: self, body: body, rev: rev, from: from, to: to)
+      def batch_get_documents(name)
+        Arango::Document.batch_get_documents(name: name, collection: self)
       end
       alias fetch_documents get_documents
       alias retrieve_documents get_documents
@@ -97,10 +97,10 @@ module Arango
       alias update_documents save_documents
 
       def drop_document(document)
-        Arango::Document.drop(document)
+        Arango::Document.drop(document, collection: self)
       end
       def batch_drop_document(document)
-        Arango::Document.batch_drop(document)
+        Arango::Document.batch_drop(document, collection: self)
       end
       alias delete_document drop_document
       alias destroy_document drop_document

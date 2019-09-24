@@ -115,7 +115,7 @@ describe Arango::Document do
     end
 
     it "drop_document" do
-      document = @collection.create_document
+      document = @collection.create_document({})
       expect(@collection.list_documents).to include(document.key)
       @collection.drop_document(document.key)
       expect(@collection.list_documents).not_to include(document.key)

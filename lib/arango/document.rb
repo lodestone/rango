@@ -7,6 +7,8 @@ module Arango
     include Arango::Helper::CollectionAssignment
     include Arango::Helper::Traversal
 
+    extend Arango::Helper::RequestMethod
+
     class << self
       Arango.aql_request_class_method(Arango::Document, :all) do |offset: 0, limit: nil, batch_size: nil, collection:|
         bind_vars = {}
@@ -91,7 +93,7 @@ module Arango
         documents = [documents] unless documents.is_a? Array
         documents = documents.map{ |d| _body_from_arg(d) }
         query = { returnNew: true }
-        query[:waitForSync] = wait_for_sync if wait_for_sync
+        query[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
         { post: "_api/document/#{collection.name}", body: documents, query: query, block: ->(result) do
             result.map do |doc|
               Arango::Document.new(doc[:new], collection: collection)
@@ -100,12 +102,32 @@ module Arango
         }
       end
 
+      Arango.request_class_method(Arango::Document, :get) do |document, collection:|
+        document = _body_from_arg(document)
+        { get: "_api/document/#{collection.name}/#{document[:_key]}", block: ->(result) { Arango::Document.new(result, collection: collection) }}
+      end
+
+      Arango.multi_request_class_method(Arango::Document, :get_documents) do |documents, collection:|
+        documents = [documents] unless documents.is_a? Array
+        documents = documents.map{ |d| _body_from_arg(d) }
+        requests = []
+        documents.each do |document|
+          requests << { get: "_api/document/#{collection.name}/#{document[:_key]}", block: ->(result) do
+              result.map do |doc|
+                Arango::Document.new(doc, collection: collection)
+              end
+            end
+          }
+        end
+        requests
+      end
+
       Arango.request_class_method(Arango::Document, :replace_documents) do |documents, ignore_revs: false, wait_for_sync: nil, collection:|
         documents = [documents] unless documents.is_a? Array
         documents = documents.map{ |d| _body_from_arg(d) }
         query = { returnNew: true, ignoreRevs: ignore_revs }
-        query[:waitForSync] = wait_for_sync if wait_for_sync
-        { put: "_api/document/#{collection.name}", body: documents, query: query, block: -> (result) do
+        query[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
+        { put: "_api/document/#{collection.name}", body: documents, query: query, block: ->(result) do
             result.map do |doc|
               Arango::Document.new(doc[:new], collection: collection)
             end
@@ -113,41 +135,35 @@ module Arango
         }
       end
 
-      def update_documents(document: {}, wait_for_sync: nil, ignore_revs: nil,
-                           return_old: nil, return_new: nil, keep_null: nil, merge_objects: nil)
-        document.each{|x| x = x.body if x.is_a?(Arango::Document)}
-        query = {
-          waitForSync: wait_for_sync,
-          returnNew:   return_new,
-          returnOld:   return_old,
-          ignoreRevs:  ignore_revs,
-          keepNull:    keep_null,
-          mergeObject: merge_objects
-        }
-        result = @database.request("PATCH", "_api/document/#{@name}", body: document,
-                                   query: query, keep_null: keep_null)
-        return results if return_directly?(result)
-        results.map.with_index do |result, index|
-          body2 = result.clone
-          if return_new
-            body2.delete(:new)
-            body2 = body2.merge(result[:new])
+      Arango.request_class_method(Arango::Document, :update_documents) do |documents, ignore_revs: false, wait_for_sync: nil, merge_objects: nil, collection:|
+        documents = [documents] unless documents.is_a? Array
+        documents = documents.map{ |d| _body_from_arg(d) }
+        query = { returnNew: true, ignoreRevs: ignore_revs }
+        query[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
+        query[:mergeObjects] = merge_objects unless merge_objects.nil?
+        { patch: "_api/document/#{collection.name}", body: documents, query: query, block: ->(result) do
+            result.map do |doc|
+              Arango::Document.new(doc[:new], collection: collection)
+            end
           end
-          real_body = document[index]
-          real_body = real_body.merge(body2)
-          Arango::Document.new(result[:_key], collection: self, body: real_body)
-        end
+        }
       end
 
-      def drop_documents(document: {}, wait_for_sync: nil, return_old: nil,
-                         ignore_revs: nil)
-        document.each{|x| x = x.body if x.is_a?(Arango::Document)}
-        query = {
-          waitForSync: wait_for_sync,
-          returnOld:   return_old,
-          ignoreRevs:  ignore_revs
-        }
-        @database.request("DELETE", "_api/document/#{@id}", query: query, body: document)
+      Arango.request_class_method(Arango::Document, :drop) do |document, ignore_revs: false, wait_for_sync: nil, collection:|
+        document = _body_from_arg(document)
+        query = { ignoreRevs:  ignore_revs }
+        query[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
+        headers = nil
+        headers = { "If-Match": document[:_rev] } if !ignore_revs && document.key?(:_rev)
+        { delete: "_api/document/#{collection.name}/#{document[:_key]}", query: query, headers: headers, block: ->(_) { nil }}
+      end
+
+      Arango.request_class_method(Arango::Document, :drop_documents) do |documents, ignore_revs: false, wait_for_sync: nil, collection:|
+        documents = [documents] unless documents.is_a? Array
+        documents = documents.map{ |d| _body_from_arg(d) }
+        query = { ignoreRevs:  ignore_revs }
+        query[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
+        { delete: "_api/document/#{collection.name}", body: documents, query: query, block: ->(_) { nil }}
       end
 
       private
@@ -156,80 +172,86 @@ module Arango
         case arg
         when String then { _key: arg }
         when Hash
+          arg.transform_keys!(&:to_sym)
           arg[:_id] = arg.delete(:id) if arg.key?(:id) && !arg.key?(:_id)
           arg[:_key] = arg.delete(:key) if arg.key?(:key) && !arg.key?(:_key)
           arg[:_rev] = arg.delete(:rev) if arg.key?(:rev) && !arg.key?(:_rev)
+          arg.delete_if{|_,v| v.nil?}
           arg
         when Arango::Document then arg.to_h
+        when Arango::Result then arg.to_h
         else
-          raise "Unknown arg type, must be String, Hash or Arango::Document"
+          raise "Unknown arg type, must be String, Hash, Arango::Result or Arango::Document"
         end
       end
     end
 
     def initialize(document, collection:, wait_for_sync: nil)
       @body = _body_from_arg(document)
+      @changed_body = {}
       @wait_for_sync = wait_for_sync
       assign_collection(collection)
     end
 
     def id
+      return @changed_body[:_id] if @changed_body.key?(:_id)
       @body[:_id]
     end
 
     def id=(i)
-      @body[:_id] = i
+      @changed_body[:_id] = i
     end
 
     def key
+      return @changed_body[:_key] if @changed_body.key?(:_key)
       @body[:_key]
     end
 
     def key=(k)
-      @body[:_key] = k
+      @changed_body[:_key] = k
     end
 
     def revision
+      return @changed_body[:_rev] if @changed_body.key?(:_rev)
       @body[:_rev]
     end
 
     def rev=(r)
-      @body[_:rev] = r
+      @changed_body[:_rev] = r
     end
 
     def to_h
       @body.delete_if{|_,v| v.nil?}
     end
 
-# === DEFINE ==
+    attr_accessor :wait_for_sync
 
     attr_reader :collection, :graph, :database, :server, :body, :cache_name
 
-    def body=(result)
-      result.delete_if{|k,v| v.nil?}
-      @body ||= {}
-      # binding.pry if @body[:_key] == "Second_Key"
-      hash = {
-        _key:  @body[:_key],
-        _id:   @body[:_id],
-        _rev:  @body[:_rev],
-        _from: @body[:_from],
-        _to:   @body[:_to]
-      }
-      @body = hash.merge(result)
-      if @body[:_id].nil? && !@body[:_key].nil?
-        @body[:_id] = "#{@collection.name}/#{@body[:_key]}"
-      end
+    def body=(doc)
+      @changed_body = _body_from_arg(doc)
       set_up_from_or_to("from", result[:_from])
       set_up_from_or_to("to", result[:_to])
-      if @server.active_cache && @cache_name.nil? && !@body[:_id].nil?
-        @cache_name = "#{@database.name}/#{@body[:_id]}"
-        @server.cache.save(:document, @cache_name, self)
-      end
     end
     alias assign_attributes body=
 
-# === TO HASH ===
+    def method_missing(name, *args, &block)
+      name_s = name.to_s
+      set_attr = false
+      have_attr = false
+      attribute_name_s = name_s.end_with?('=') ? (set_attr = true; name_s.chop) : name_s
+      attribute_name_y = attribute_name_s.start_with?('attribute_') ? (have_attr = true; attribute_name_s[9..-1].to_sym) : attribute_name_s.to_sym
+      if set_attr
+        return @changed_body[attribute_name_y] = args[0]
+      elsif @changed_body.key?(attribute_name_y)
+        return @changed_body[attribute_name_y]
+      elsif @body.key?(attribute_name_y)
+        return @body[attribute_name_y]
+      elsif have_attr
+        return nil
+      end
+      super(name, *args, &block)
+    end
 
     def set_up_from_or_to(attrs, var)
       case var
@@ -281,8 +303,6 @@ module Arango
     end
     private :retrieve_instance_from_and_to
 
-# == GET ==
-
     def retrieve(if_none_match: false, if_match: false)
       headers = {}
       headers[:"If-None-Match"] = @body[:_rev] if if_none_match
@@ -291,8 +311,6 @@ module Arango
       return_element(result)
     end
 
-# == HEAD ==
-
     def head(if_none_match: false, if_match: false)
       headers = {}
       headers[:"If-None-Match"] = @body[:_rev] if if_none_match
@@ -300,87 +318,31 @@ module Arango
       @database.request("HEAD", "_api/document/#{@body[:_id]}", headers: headers)
     end
 
-# == POST ==
-
-    def create(body: {}, wait_for_sync: nil, return_new: nil, silent: nil)
-      body = @body.merge(body)
-      query = {
-        waitForSync: wait_for_sync,
-        returnNew:   return_new,
-        silent:      silent
-      }
-      result = @database.request("POST", "_api/document/#{@collection.name}", body: body,
-        query: query)
-      return result if @server.async != false || silent
-      body2 = result.clone
-      if return_new
-        body2.delete(:new)
-        body2 = body2.merge(result[:new])
-      end
-      body = body.merge(body2)
-      assign_attributes(body)
-      return return_directly?(result) ? result : self
+    request_method :create do
+      query = { returnNew: true }
+      query[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
+      { post: "_api/document/#{@collection.name}", body: @body, query: query, block: ->(result) { @body.merge!(result[:new]); self }}
     end
 
-# == PUT ==
-
-    def replace(body: {}, wait_for_sync: nil, ignore_revs: nil, return_old: nil,
-      return_new: nil, silent: nil, if_match: false)
-      query = {
-        waitForSync: wait_for_sync,
-        returnNew:   return_new,
-        returnOld:   return_old,
-        ignoreRevs:  ignore_revs,
-        silent:      silent
-      }
-      headers = {}
-      headers[:"If-Match"] = @body[:_rev] if if_match
-      result = @database.request("PUT", "_api/document/#{@body[:_id]}", body: body,
-        query: query, headers: headers)
-      return result if @server.async != false || silent
-      body2 = result.clone
-      if return_new
-        body2.delete(:new)
-        body2 = body2.merge(result[:new])
-      end
-      body = body.merge(body2)
-      assign_attributes(body)
-      return return_directly?(result) ? result : self
+    request_method :replace do |ignore_revs: false|
+      query = { returnNew: true, ignore_revs: ignore_revs }
+      query[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
+      headers = nil
+      body = @changed_body
+      body[:_id] = @body[:_id]
+      body[:_key] = @body[:_key]
+      body[:_rev] = @body[:_rev]
+      headers = { "If-Match": @body[:_rev] } if !ignore_revs && @body.key?(:_rev)
+      { put: "_api/document/#{@body[:_id]}", body: body, query: query, headers: headers, block: ->(result) { @body.merge!(result[:new]); self }}
     end
 
-    def update(body: {}, wait_for_sync: nil, ignore_revs: nil,
-      return_old: nil, return_new: nil, keep_null: nil,
-      merge_objects: nil, silent: nil, if_match: false)
-      query = {
-        waitForSync:  wait_for_sync,
-        returnNew:    return_new,
-        returnOld:    return_old,
-        ignoreRevs:   ignore_revs,
-        keepNull:     keep_null,
-        mergeObjects: merge_objects,
-        silent:       silent
-      }
-      headers = {}
-      headers[:"If-Match"] = @body[:_rev] if if_match
-      result = @database.request("PATCH", "_api/document/#{@body[:_id]}", body: body,
-        query: query, headers: headers, keep_null: keep_null)
-      return result if @server.async != false || silent
-      body2 = result.clone
-      if return_new
-        body2.delete(:new)
-        body2 = body2.merge(result[:new])
-      end
-      body = body.merge(body2)
-      if merge_objects
-        @body = @body.merge(body)
-      else
-        body.each{|key, value| @body[key] = value}
-      end
-      assign_attributes(@body)
-      return return_directly?(result) ? result : self
+    request_method :update do |ignore_revs: false|
+      query = { returnNew: true, ignore_revs: ignore_revs }
+      query[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
+      headers = nil
+      headers = { "If-Match": @body[:_rev] } if !ignore_revs && @body.key?(:_rev)
+      { patch: "_api/document/#{@body[:_id]}", body: @changed_body, query: query, headers: headers, block: ->(result) { @body.merge!(result[:new]); self }}
     end
-
-  # === DELETE ===
 
     def destroy(wait_for_sync: nil, silent: nil, return_old: nil, if_match: false)
       query = {
@@ -418,7 +380,7 @@ module Arango
       result[:edges].map do |edge|
         collection_name, key = edge[:_id].split("/")
         collection = Arango::Collection.new(collection_name, database: @database, type: :edge)
-        Arango::Document.new(key, body: edge, collection: collection)
+        Arango::Document.new(edge, collection: collection)
       end
     end
 
@@ -440,13 +402,16 @@ module Arango
       case arg
       when String then { _key: arg }
       when Hash
+        arg.transform_keys!(&:to_sym)
         arg[:_id] = arg.delete(:id) if arg.key?(:id) && !arg.key?(:_id)
         arg[:_key] = arg.delete(:key) if arg.key?(:key) && !arg.key?(:_key)
         arg[:_rev] = arg.delete(:rev) if arg.key?(:rev) && !arg.key?(:_rev)
+        arg.delete_if{|_,v| v.nil?}
         arg
       when Arango::Document then arg.to_h
+      when Arango::Result then arg.to_h
       else
-        raise "Unknown arg type, must be String, Hash or Arango::Document"
+        raise "Unknown arg type, must be String, Hash, Arango::Result or Arango::Document"
       end
     end
   end
