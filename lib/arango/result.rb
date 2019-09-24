@@ -3,32 +3,29 @@ module Arango
     def initialize(result)
       @result = result ? result : {}
       @is_array = @result.class == Array
+      @result.transform_keys!(&:to_sym) unless @is_array
     end
 
     attr_accessor :response_code
 
     # standard fields
     def code
-      return @result['code'] if @result.key?('code')
       return @result[:code] if @result.key?(:code)
       nil
     end
 
     def error?
-      return @result['error'] if @result.key?('error')
       return @result[:error] if @result.key?(:error)
       false
     end
 
     def error_message
-      return @result['errorMessage'] if @result.key?('errorMessage')
       return @result[:errorMessage] if @result.key?(:errorMessage)
       nil
     end
     alias errorMessage error_message
 
     def error_num
-      return @result['errorNum'] if @result.key?('errorNum')
       return @result[:errorNum] if @result.key?(:errorNum)
       nil
     end
@@ -40,14 +37,9 @@ module Arango
       field_name_y = field_name_or_index.to_sym
       return @result[field_name_y] if @result.key?(field_name_y)
       field_name_s = field_name_or_index.to_s
-      return @result[field_name_s] if @result.key?(field_name_s)
-      field_name_lcy_s = field_name_s.camelize(:lower)
-      return @result[field_name_lcy_s] if @result.key?(field_name_lcy_s)
-      field_name_lcy = field_name_lcy_s.to_sym
+      field_name_lcy = field_name_s.camelize(:lower).to_sym
       return @result[field_name_lcy] if @result.key?(field_name_lcy)
-      field_name_ucy_s = field_name_s.camelize(:upper)
-      return @result[field_name_ucy_s] if @result.key?(field_name_ucy_s)
-      field_name_ucy = field_name_ucy_s.to_sym
+      field_name_ucy = field_name_s.camelize(:upper).to_sym
       return @result[field_name_ucy] if @result.key?(field_name_ucy)
       nil
     end
@@ -57,21 +49,17 @@ module Arango
       field_name_y = field_name_or_index.to_sym
       return @result[field_name_y] = value if @result.key?(field_name_y)
       field_name_s = field_name_or_index.to_s
-      return @result[field_name_s] = value if @result.key?(field_name_s)
-      field_name_lcy_s = field_name_s.camelize(:lower)
-      return @result[field_name_lcy_s] = value if @result.key?(field_name_lcy_s)
-      field_name_lcy = field_name_lcy_s.to_sym
+      field_name_lcy = field_name_s.camelize(:lower).to_sym
       return @result[field_name_lcy] = value if @result.key?(field_name_lcy)
-      field_name_ucy_s = field_name_s.camelize(:upper)
-      return @result[field_name_ucy_s] = value if @result.key?(field_name_ucy_s)
-      field_name_ucy = field_name_ucy_s.to_sym
+      field_name_ucy = field_name_s.camelize(:upper).to_sym
       return @result[field_name_ucy] = value if @result.key?(field_name_ucy)
       nil
     end
 
     def method_missing(field_name_or_index, *args, &block)
       return self[field_name_or_index] = args[0] if field_name_or_index.to_s.end_with?('=')
-      return self[field_name_or_index] if field_name_or_index.class == Integer
+      return self[field_name_or_index] if @is_array
+      field_name_or_index = field_name_or_index.to_sym
       return self[field_name_or_index] if key?(field_name_or_index)
       @result.send(field_name_or_index, *args, &block)
     end
@@ -98,13 +86,10 @@ module Arango
       field_name_y = key.to_sym
       return true if @result.key?(field_name_y)
       field_name_s = key.to_s
-      return true if @result.key?(field_name_s)
-      field_name_lcy_s = field_name_s.camelize(:lower)
-      return true if @result.key?(field_name_lcy_s)
-      return true if @result.key?(field_name_lcy_s.to_sym)
-      field_name_ucy_s = field_name_s.camelize(:upper)
-      return true if @result.key?(field_name_ucy_s)
-      return true if @result.key?(field_name_ucy_s.to_sym)
+      field_name_lcy = field_name_s.camelize(:lower).to_sym
+      return true if @result.key?(field_name_lcy)
+      field_name_ucy = field_name_s.camelize(:upper).to_sym
+      return true if @result.key?(field_name_ucy)
       false
     end
     alias has_key? key?
