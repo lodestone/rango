@@ -129,50 +129,39 @@ describe Arango::Document do
   end
 
   context "Arango::Document itself" do
-    it "create a new Document instance without global" do
-      document = @collection.document "myKey"
+    it "create a new Document instance " do
+      document = Arango::Document.new "myKey", collection: @collection
       expect(document.collection.name).to eq "DocumentCollection"
     end
 
     it "create a new Document in the Collection" do
-      document = @collection.create_documents document:
-        {Hello: "World", num: 1}
-      expect(document[0].body[:Hello]).to eq "World"
+      document = Arango::Document.new({Hello: "World", num: 1}, collection: @collection).create
+      expect(document.Hello).to eq "World"
     end
 
-    it "create_documents" do
-      documents = Arango::Document.create_documents([{ test1: 'value', test2: 100 }, { test3: 'value', test4: 100 }], collection: @collection)
-      expect(documents.size).to eq(2)
-      expect(@collection.document_exist?(documents.first)).to be true
-      expect(@collection.document_exist?(documents.last)).to be true
-      expect(documents.first.collection.name).to eq "DocumentCollection"
+    it "create a duplicate Document" do
+      error = ""
+      begin
+        Arango::Document.new('mykey', collection: @collection).create
+        Arango::Document.new('mykey', collection: @collection).create
+      rescue Arango::ErrorDB => e
+        error = e.error_num
+      end
+      expect(error).to eq 1210
     end
 
-    it "create_documents with key" do
-      documents = Arango::Document.create_documents([{ key: 'key1', test1: 'value', test2: 100 }, { key: 'key2', test3: 'value', test4: 100 }], collection: @collection)
-      expect(documents.size).to eq(2)
-      expect(@collection.document_exist?(documents.first)).to be true
-      expect(@collection.document_exist?(documents.last)).to be true
-      expect(documents.first.collection.name).to eq "DocumentCollection"
+    it "delete a Document" do
+      document = Arango::Document.new('mykey', collection: @collection).create
+      result = document.destroy
+      expect(result).to eq nil
+      expect(Arango::Document.exist?('mykey', collection: @collection)).to be false
     end
 
-    it "create_documents by key" do
-      documents = Arango::Document.create_documents(['key1', 'key2'], collection: @collection)
-      expect(documents.size).to eq(2)
-      expect(@collection.document_exist?(documents.first)).to be true
-      expect(@collection.document_exist?(documents.last)).to be true
-      expect(documents.first.collection.name).to eq "DocumentCollection"
-    end
-
-    it "create a new Edge in the Collection" do
-      myDoc = @collection.create_documents document: [{A: "B", num: 1}, {C: "D", num: 3}]
-      myEdge = @edge_collection.create_edges from: myDoc[0].id, to: myDoc[1].id
-      expect(myEdge[0].body[:_from]).to eq myDoc[0].id
-    end
-    it "list Documents" do
-      info = collection.all_documents
-      expect(info.length).to eq 5
-    end
+    # it "create a new Edge in the Collection" do
+    #   myDoc = @collection.create_documents document: [{A: "B", num: 1}, {C: "D", num: 3}]
+    #   myEdge = @edge_collection.create_edges from: myDoc[0].id, to: myDoc[1].id
+    #   expect(myEdge[0].body[:_from]).to eq myDoc[0].id
+    # end
 
     it "search Documents by match" do
       info = collection.documents_match match: {num: 1}
@@ -221,29 +210,12 @@ describe Arango::Document do
   end
 
   context "#create" do
-    it "create a new Document" do
-      @document.destroy
-      @document.body = {Hello: "World"}
-      document = @document.create
-      expect(document.body[:Hello]).to eq "World"
-    end
-
-    it "create a duplicate Document" do
-      error = ""
-      begin
-        document = @document.create
-      rescue Arango::ErrorDB => e
-        error = e.error_num
-      end
-      expect(error).to eq 1210
-    end
-
-    it "create a new Edge" do
-      myDoc = @collection.create_documents document: [{A: "B", num: 1}, {C: "D", num: 3}]
-      myEdge = @edge_collection.document from: myDoc[0].id, to: myDoc[1].id
-      myEdge = myEdge.create
-      expect(myEdge.body[:_from]).to eq myDoc[0].id
-    end
+    # it "create a new Edge" do
+    #   myDoc = @collection.create_documents document: [{A: "B", num: 1}, {C: "D", num: 3}]
+    #   myEdge = @edge_collection.document from: myDoc[0].id, to: myDoc[1].id
+    #   myEdge = myEdge.create
+    #   expect(myEdge.body[:_from]).to eq myDoc[0].id
+    # end
   end
 
   context "#info" do
@@ -252,26 +224,17 @@ describe Arango::Document do
       expect(document.body[:Hello]).to eq "World"
     end
 
-    it "retrieve Document as Hash" do
-      @server.return_output = true
-      document = @document.retrieve
-      expect(document.class).to be Hash
-      @server.return_output = false
-      document = @document.retrieve
-      expect(document.class).to be Arango::Document
-    end
+    # it "retrieve Edges" do
+    #   @edge_collection.create_edges from: ["MyCollection/myA", "MyCollection/myB"],
+    #                                  to: @document
+    #   myEdges = @document.edges(collection: @edge_collection)
+    #   expect(myEdges.length).to eq 2
+    # end
 
-    it "retrieve Edges" do
-      @edge_collection.create_edges from: ["MyCollection/myA", "MyCollection/myB"],
-                                     to: @document
-      myEdges = @document.edges(collection: @edge_collection)
-      expect(myEdges.length).to eq 2
-    end
-
-    it "going in different directions" do
-      document = @document.in("MyEdgeCollection")[0].from.out(@edge_collection)[0].to
-      expect(document.id).to eq @document.id
-    end
+    # it "going in different directions" do
+    #   document = @document.in("MyEdgeCollection")[0].from.out(@edge_collection)[0].to
+    #   expect(document.id).to eq @document.id
+    # end
   end
 
   context "#modify" do
@@ -286,10 +249,4 @@ describe Arango::Document do
     end
   end
 
-  context "#destroy" do
-    it "delete a Document" do
-      result = @document.destroy
-      expect(result).to eq true
-    end
-  end
 end

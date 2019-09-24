@@ -381,6 +381,10 @@ module Arango
     request_method :drop do
       { delete: "_api/collection/#{@name}", query: { isSystem: @is_system }, block: ->(_) { nil }}
     end
+    alias delete drop
+    alias destroy drop
+    alias batch_delete batch_drop
+    alias batch_destroy batch_drop
 
     # Truncates a collection.
     # @return [Arango::Collection] self

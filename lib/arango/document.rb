@@ -106,6 +106,10 @@ module Arango
         document = _body_from_arg(document)
         { get: "_api/document/#{collection.name}/#{document[:_key]}", block: ->(result) { Arango::Document.new(result, collection: collection) }}
       end
+      alias fetch get
+      alias retrieve get
+      alias batch_fetch batch_get
+      alias batch_retrieve batch_get
 
       Arango.multi_request_class_method(Arango::Document, :get_documents) do |documents, collection:|
         documents = [documents] unless documents.is_a? Array
@@ -157,6 +161,10 @@ module Arango
         headers = { "If-Match": document[:_rev] } if !ignore_revs && document.key?(:_rev)
         { delete: "_api/document/#{collection.name}/#{document[:_key]}", query: query, headers: headers, block: ->(_) { nil }}
       end
+      alias delete drop
+      alias destroy drop
+      alias batch_delete batch_drop
+      alias batch_destroy batch_drop
 
       Arango.request_class_method(Arango::Document, :drop_documents) do |documents, ignore_revs: false, wait_for_sync: nil, collection:|
         documents = [documents] unless documents.is_a? Array
@@ -186,9 +194,10 @@ module Arango
       end
     end
 
-    def initialize(document, collection:, wait_for_sync: nil)
+    def initialize(document, collection:, ignore_revs: false, wait_for_sync: nil)
       @body = _body_from_arg(document)
       @changed_body = {}
+      @ignore_revs = ignore_revs
       @wait_for_sync = wait_for_sync
       assign_collection(collection)
     end
@@ -224,10 +233,11 @@ module Arango
       @body.delete_if{|_,v| v.nil?}
     end
 
-    attr_accessor :wait_for_sync
+    attr_accessor :ignore_revs, :wait_for_sync
 
-    attr_reader :collection, :graph, :database, :server, :body, :cache_name
+    attr_reader :collection, :graph, :database, :server, :body
 
+    # todo body= -> replace_body, update_body
     def body=(doc)
       @changed_body = _body_from_arg(doc)
       set_up_from_or_to("from", result[:_from])
@@ -303,13 +313,23 @@ module Arango
     end
     private :retrieve_instance_from_and_to
 
-    def retrieve(if_none_match: false, if_match: false)
-      headers = {}
-      headers[:"If-None-Match"] = @body[:_rev] if if_none_match
-      headers[:"If-Match"]      = @body[:_rev] if if_match
-      result = @database.request("GET",  "_api/document/#{@body[:_id]}", headers: headers)
-      return_element(result)
+    request_method :reload do
+      headers = nil
+      headers[:"If-Match"] = @body[:_rev] if !@ignore_revs && @body.key?(:_rev)
+      { get: "_api/document/#{@collection.name}/#{@body[:_key]}", headers: headers,
+        block: ->(result) do
+          @body = _body_from_arg(result)
+          @changed_body = {}
+          self
+        end
+      }
     end
+    alias refresh reload
+    alias retrieve reload
+    alias revert reload
+    alias batch_refresh batch_reload
+    alias batch_retrieve batch_reload
+    alias batch_revert batch_reload
 
     def head(if_none_match: false, if_match: false)
       headers = {}
@@ -321,50 +341,60 @@ module Arango
     request_method :create do
       query = { returnNew: true }
       query[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
-      { post: "_api/document/#{@collection.name}", body: @body, query: query, block: ->(result) { @body.merge!(result[:new]); self }}
+      body = @body.merge(@changed_body)
+      { post: "_api/document/#{@collection.name}", body: @body, query: query,
+        block: ->(result) do
+          @body.merge!(result[:new])
+          @changed_body = {}
+          self
+        end
+      }
     end
 
-    request_method :replace do |ignore_revs: false|
-      query = { returnNew: true, ignore_revs: ignore_revs }
+    request_method :replace do
+      query = { returnNew: true, ignore_revs: @ignore_revs }
       query[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
       headers = nil
       body = @changed_body
       body[:_id] = @body[:_id]
       body[:_key] = @body[:_key]
       body[:_rev] = @body[:_rev]
-      headers = { "If-Match": @body[:_rev] } if !ignore_revs && @body.key?(:_rev)
-      { put: "_api/document/#{@body[:_id]}", body: body, query: query, headers: headers, block: ->(result) { @body.merge!(result[:new]); self }}
+      headers = { "If-Match": @body[:_rev] } if !@ignore_revs && @body.key?(:_rev)
+      { put: "_api/document/#{@body[:_id]}", body: body, query: query, headers: headers,
+        block: ->(result) do
+          @body.merge!(result[:new])
+          @changed_body = {}
+          self
+        end
+      }
     end
 
-    request_method :update do |ignore_revs: false|
-      query = { returnNew: true, ignore_revs: ignore_revs }
+    request_method :save do
+      query = { returnNew: true, ignore_revs: @ignore_revs }
       query[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
       headers = nil
-      headers = { "If-Match": @body[:_rev] } if !ignore_revs && @body.key?(:_rev)
-      { patch: "_api/document/#{@body[:_id]}", body: @changed_body, query: query, headers: headers, block: ->(result) { @body.merge!(result[:new]); self }}
-    end
-
-    def destroy(wait_for_sync: nil, silent: nil, return_old: nil, if_match: false)
-      query = {
-        waitForSync: wait_for_sync,
-        returnOld:   return_old,
-        silent:      silent
+      headers = { "If-Match": @body[:_rev] } if !@ignore_revs && @body.key?(:_rev)
+      { patch: "_api/document/#{@body[:_id]}", body: @changed_body, query: query, headers: headers,
+        block: ->(result) do
+          @body.merge!(result[:new])
+          @changed_body = {}
+          self
+        end
       }
-      headers = {}
-      headers[:"If-Match"] = @body[:_rev] if if_match
-      result = @database.request("DELETE", "_api/document/#{@body[:_id]}", query: query,
-        headers: headers)
-      return result if @server.async != false || silent
-      body2 = result.clone
-      if return_old
-        body2.delete(:old)
-        body2 = body2.merge(result[:old])
-      else
-        body2 = body2.merge(@body)
-      end
-      return_element(body2)
-      return true
     end
+    alias update save
+    alias batch_update batch_save
+
+    request_method :drop do
+      query = { waitForSync: @wait_for_sync }
+      headers = nil
+      headers = { "If-Match": @body[:_rev] } if !@ignore_revs && @body.key?(:_rev)
+      { delete: "_api/document/#{@body[:_id]}", query: query, headers: headers, block: ->(_) { nil }}
+    end
+    alias delete drop
+    alias destroy drop
+    alias batch_delete batch_drop
+    alias batch_destroy batch_drop
 
   # === EDGE ===
 
