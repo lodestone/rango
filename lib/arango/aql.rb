@@ -6,12 +6,9 @@ module Arango
     include Arango::Helper::Return
     extend Arango::Helper::RequestMethod
 
-    def initialize(query:, database:, count: nil, batch_size: nil, cache: nil,
-      memory_limit: nil, ttl: nil, bind_vars: nil, fail_on_warning: nil,
-      profile: nil, max_transaction_size: nil, skip_inaccessible_collections: nil,
-      max_warning_count: nil, intermediate_commit_count: nil,
-      satellite_sync_wait: nil, full_count: nil, intermediate_commit_size: nil,
-      optimizer_rules: nil, max_plans: nil, block: nil)
+    def initialize(query:, database:, count: nil, batch_size: nil, cache: nil, memory_limit: nil, ttl: nil, bind_vars: nil, fail_on_warning: nil,
+      profile: nil, max_transaction_size: nil, skip_inaccessible_collections: nil, max_warning_count: nil, intermediate_commit_count: nil,
+      satellite_sync_wait: nil, full_count: nil, intermediate_commit_size: nil, optimizer_rules: nil, max_plans: nil, block: nil)
       satisfy_class?(query, [String])
       @query = query
       send(:database=, database)
@@ -110,11 +107,7 @@ module Arango
       }
       { post: "_api/cursor", body: body, block: ->(result) {
         aql_result = return_aql(result)
-        if @block
-          block.call(self, aql_result)
-        else
-          aql_result
-        end
+        @block ? @block.call(self, aql_result) : aql_result
       }}
     end
 
