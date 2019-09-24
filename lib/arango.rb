@@ -80,6 +80,7 @@ module Arango
            elsif args.last.key?(:database)
              args.last[:database]
            end
+      request_hash.delete(:database)
       db.execute_aql_request(request_hash)
     end
     target_class.define_singleton_method(promise_method_name) do |*args|
