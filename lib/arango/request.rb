@@ -2,10 +2,10 @@ module Arango
   class Request
     def initialize(base_uri:, options:)
       @base_uri = base_uri
-      @options = options
+      @default_options = options
     end
 
-    attr_accessor :base_uri, :options
+    attr_accessor :base_uri, :default_options
 
     def request(get: nil, head: nil, patch: nil, post: nil, put: nil, delete: nil,
                 db: nil, body: {}, headers: nil, query: nil, keep_null: false, block: nil)
@@ -18,7 +18,7 @@ module Arango
         body = Oj.dump(body, mode: :json)
       end
 
-      options = @options.merge({ body: body })
+      options = @default_options.merge({ body: body })
 
       if query
         query.delete_if{|_,v| v.nil?}
@@ -27,26 +27,23 @@ module Arango
 
       if headers
         headers.delete_if{|_,v| v.nil?}
-        options[:headers].merge!(headers)
+        options[:headers] = {} unless options.key?(:headers)
+        options[:headers] = options[:headers].merge(headers)
       end
 
       options.delete_if{|_,v| v.nil? || v.empty?}
 
       dbcontext = db ? "_db/#{db}/" : nil
 
+      #STDERR.puts "ROPTS #{options} P g #{get} u #{put} s #{post} d #{delete} c #{patch} h #{head}"
+
       begin
-        response = if get
-                     options.delete(:body)
-                     Typhoeus.get("#{@base_uri}/#{dbcontext}#{get}", options)
-                   elsif head
-                     options.delete(:body)
-                     Typhoeus.head("#{@base_uri}/#{dbcontext}#{head}", options)
+        response = if get then Typhoeus.get("#{@base_uri}/#{dbcontext}#{get}", options)
+                   elsif head then Typhoeus.head("#{@base_uri}/#{dbcontext}#{head}", options)
                    elsif patch then Typhoeus.patch("#{@base_uri}/#{dbcontext}#{patch}", options)
                    elsif post then Typhoeus.post("#{@base_uri}/#{dbcontext}#{post}", options)
                    elsif put then Typhoeus.put("#{@base_uri}/#{dbcontext}#{put}", options)
-                   elsif delete
-                     options.delete(:body)
-                     Typhoeus.delete("#{@base_uri}/#{dbcontext}#{delete}", options)
+                   elsif delete then Typhoeus.delete("#{@base_uri}/#{dbcontext}#{delete}", options)
                    end
       rescue Exception => e
         raise Arango::Error.new err: :impossible_to_connect_with_database, data: { error: e.message }
@@ -83,7 +80,7 @@ module Arango
       query.delete_if{|_,v| v.nil?}
       headers.delete_if{|_,v| v.nil?}
       body = Oj.dump(body, mode: :json)
-      options = @options.merge({body: body, query: query, headers: headers, stream_body: true})
+      options = @default_options.merge({body: body, query: query, headers: headers, stream_body: true})
       File.open(path, "w") do |file|
         file.binmode
         Typhoeus.post(send_url, options) do |fragment|
