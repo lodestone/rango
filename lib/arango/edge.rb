@@ -110,5 +110,55 @@ module Arango
       att = att.id if att.is_a?(Arango::Document)
       assign_attributes({_to: att})
     end
+
+    def set_up_from_or_to(attrs, var)
+      case var
+      when NilClass
+        @body[:"_#{attrs}"] = nil
+      when String
+        unless var.include?("/")
+          raise Arango::Error.new err: :attribute_is_not_valid, data:
+              {attribute: attrs, wrong_value: var}
+        end
+        @body[:"_#{attrs}"] = var
+      when Arango::Document
+        @body[:"_#{attrs}"] = var.id
+        @from = var if attrs == "from"
+        @to   = var if attrs == "to"
+      else
+        raise Arango::Error.new err: :attribute_is_not_valid, data:
+            {attribute: attrs, wrong_value: var}
+      end
+    end
+    private :set_up_from_or_to
+
+    def from(string: false)
+      return @body[:_from] if string
+      @from ||= retrieve_instance_from_and_to(@body[:_from])
+      return @from
+    end
+
+    def to(string: false)
+      return @body[:_to] if string
+      @to ||= retrieve_instance_from_and_to(@body[:_to])
+      return @to
+    end
+
+    def retrieve_instance_from_and_to(var)
+      case var
+      when NilClass
+        return nil
+      when String
+        collection_name, document_name = var.split("/")
+        collection = Arango::Collection.new collection_name, database: @database
+        if @graph.nil?
+          return Arango::Document.new(document_name, collection: collection)
+        else
+          collection.graph = @graph
+          return Arango::Vertex.new(name: document_name, collection: collection)
+        end
+      end
+    end
+    private :retrieve_instance_from_and_to
   end
 end
