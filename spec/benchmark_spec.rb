@@ -23,11 +23,12 @@ describe Arango::Server do
 
     it "version works" do
       expect(@server.version).to be_a String
+      puts
     end
 
     it "doc benchmark in kops" do
       result = nil
-      n = 20000
+      n = 10000
       elapsed = Benchmark.realtime do
         # n sets, n get
         n.times do |i|
@@ -46,7 +47,7 @@ describe Arango::Server do
 
     it "doc benchmark in kops batched" do
       result = nil
-      n = 20000
+      n = 10000
       elapsed = Benchmark.realtime do
         # n sets, n get
         n.times do |i|
@@ -65,7 +66,7 @@ describe Arango::Server do
     end
 
     it "doc write benchmark in kops" do
-      n = 20000
+      n = 10000
       elapsed = Benchmark.realtime do
         # n sets, n get
         n.times do |i|
@@ -82,7 +83,7 @@ describe Arango::Server do
 
     it "doc read benchmark in kops" do
       result = nil
-      n = 20000
+      n = 10000
       n.times do |i|
         key = "foo#{i}"
         @collection.create_document({key: key, value: key * 10})
@@ -104,7 +105,7 @@ describe Arango::Server do
 
     it "version benchmark in kops" do
       result = nil
-      n = 20000
+      n = 10000
       elapsed = Benchmark.realtime do
         # n sets, n get
         n.times do |i|
