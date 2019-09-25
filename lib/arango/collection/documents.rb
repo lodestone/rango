@@ -107,11 +107,11 @@ module Arango
       alias batch_delete_document batch_drop_document
       alias batch_destroy_document batch_drop_document
 
-      def drop_documents(documents_array, wait_for_sync: nil, return_old: nil)
-        Arango::Document.drop_documents(documents_array)
+      def drop_documents(documents_array)
+        Arango::Document.drop_documents(documents_array, collection: self)
       end
-      def batch_drop_documents(documents_array, wait_for_sync: nil, return_old: nil)
-        Arango::Document.batch_drop_documents(documents_array)
+      def batch_drop_documents(documents_array)
+        Arango::Document.batch_drop_documents(documents_array, collection: self)
       end
       alias delete_documents drop_documents
       alias destroy_documents drop_documents

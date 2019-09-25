@@ -114,11 +114,25 @@ describe Arango::Document do
       expect(document.test1).to eq 'value'
     end
 
+    it "get_documents" do
+      @collection.create_document(key: '1234567890', test1: 'value', test2: 100)
+      @collection.create_document(key: '1234567891', test1: 'value', test2: 100)
+      documents = @collection.get_documents(['1234567890', '1234567891'])
+      expect(documents.size).to eq 2
+    end
+
     it "drop_document" do
       document = @collection.create_document({})
       expect(@collection.list_documents).to include(document.key)
       @collection.drop_document(document.key)
       expect(@collection.list_documents).not_to include(document.key)
+    end
+
+    it "drop_documents" do
+      @collection.create_document(key: '1234567890', test1: 'value', test2: 100)
+      @collection.create_document(key: '1234567891', test1: 'value', test2: 100)
+      @collection.drop_documents(['1234567890', '1234567891'])
+      expect(@collection.size).to eq 0
     end
 
     it "exist_document?" do
@@ -157,56 +171,91 @@ describe Arango::Document do
       expect(Arango::Document.exist?('mykey', collection: @collection)).to be false
     end
 
+    it "update" do
+      document = Arango::Document.new('mykey', collection: @collection).create
+      document.time = 13
+      document.update
+      expect(document.time).to eq 13
+      document = Arango::Document.get('mykey', collection: @collection)
+      expect(document.time).to eq 13
+    end
+
+    it "replace" do
+      document = Arango::Document.new({key: 'mykey', test: 1}, collection: @collection).create
+      document.body = {value: 3}
+      document.replace
+      expect(document.value).to eq 3
+      expect(document.attribute_test).to be_nil
+    end
+
+    it "retrieve Document" do
+      document = Arango::Document.new({key: 'mykey', test: 1}, collection: @collection).create
+      document.test = 2
+      document.retrieve
+      expect(document.test).to eq 1
+    end
+
+    it "same_revision?" do
+      document = Arango::Document.new('mykey', collection: @collection).create
+      document_two = Arango::Document.get('mykey', collection: @collection)
+      expect(document.same_revision?).to be true
+      expect(document_two.same_revision?).to be true
+      document.time = 13
+      document.update
+      expect(document.same_revision?).to be true
+      expect(document_two.same_revision?).to be false
+    end
+
     # it "create a new Edge in the Collection" do
     #   myDoc = @collection.create_documents document: [{A: "B", num: 1}, {C: "D", num: 3}]
     #   myEdge = @edge_collection.create_edges from: myDoc[0].id, to: myDoc[1].id
     #   expect(myEdge[0].body[:_from]).to eq myDoc[0].id
     # end
 
-    it "search Documents by match" do
-      info = collection.documents_match match: {num: 1}
-      expect(info.length).to eq 3
-    end
+    # it "search Documents by match" do
+    #   info = collection.documents_match match: {num: 1}
+    #   expect(info.length).to eq 3
+    # end
+    #
+    # it "search Document by match" do
+    #   info = collection.document_match match: {num: 1}
+    #   expect(info.collection.name).to eq "DocumentCollection"
+    # end
+    #
+    # it "search Document by key match" do
+    #   docs = collection.create_documents document: [{_key: "ThisIsATest1", test: "fantastic"}, {_key: "ThisIsATest2"}]
+    #   result = collection.documents_by_keys keys: ["ThisIsATest1", docs[1]]
+    #   expect(result[0].body[:test]).to eq "fantastic"
+    # end
+    #
+    # it "remove Document by key match" do
+    #   docs = collection.create_documents document: [{_key: "ThisIsATest3", test: "fantastic"}, {_key: "ThisIsATest4"}]
+    #   result = collection.remove_by_keys keys: ["ThisIsATest3", docs[1]]
+    #   expect(result[:removed]).to eq 2
+    # end
+    #
+    # it "remove Document by match" do
+    #   collection.create_documents document: [{_key: "ThisIsATest5", test: "fantastic"}, {_key: "ThisIsATest6"}]
+    #   result = collection.remove_match match: {test: "fantastic"}
+    #   expect(result).to eq 2
+    # end
+    #
+    # it "replace Document by match" do
+    #   collection.create_documents document: {test: "fantastic", val: 4}
+    #   result = collection.replace_match match: {test: "fantastic"}, newValue: {val: 5}
+    #   expect(result).to eq 1
+    # end
+    #
+    # it "update Document by match" do
+    #   collection.create_documents document: {test: "fantastic2", val: 5}
+    #   result = collection.update_match match: {val: 5}, newValue: {val: 6}
+    #   expect(result).to eq 2
+    # end
 
-    it "search Document by match" do
-      info = collection.document_match match: {num: 1}
-      expect(info.collection.name).to eq "DocumentCollection"
-    end
-
-    it "search Document by key match" do
-      docs = collection.create_documents document: [{_key: "ThisIsATest1", test: "fantastic"}, {_key: "ThisIsATest2"}]
-      result = collection.documents_by_keys keys: ["ThisIsATest1", docs[1]]
-      expect(result[0].body[:test]).to eq "fantastic"
-    end
-
-    it "remove Document by key match" do
-      docs = collection.create_documents document: [{_key: "ThisIsATest3", test: "fantastic"}, {_key: "ThisIsATest4"}]
-      result = collection.remove_by_keys keys: ["ThisIsATest3", docs[1]]
-      expect(result[:removed]).to eq 2
-    end
-
-    it "remove Document by match" do
-      collection.create_documents document: [{_key: "ThisIsATest5", test: "fantastic"}, {_key: "ThisIsATest6"}]
-      result = collection.remove_match match: {test: "fantastic"}
-      expect(result).to eq 2
-    end
-
-    it "replace Document by match" do
-      collection.create_documents document: {test: "fantastic", val: 4}
-      result = collection.replace_match match: {test: "fantastic"}, newValue: {val: 5}
-      expect(result).to eq 1
-    end
-
-    it "update Document by match" do
-      collection.create_documents document: {test: "fantastic2", val: 5}
-      result = collection.update_match match: {val: 5}, newValue: {val: 6}
-      expect(result).to eq 2
-    end
-
-    it "search random Document" do
-      info = collection.random
-      expect(info.collection.name).to eq "DocumentCollection"
-    end
+    # it "search random Document" do
+    #   info = collection.random
+    #   expect(info.collection.name).to eq "DocumentCollection"
+    # end
   end
 
   context "#create" do
@@ -219,10 +268,6 @@ describe Arango::Document do
   end
 
   context "#info" do
-    it "retrieve Document" do
-      document = @document.retrieve
-      expect(document.body[:Hello]).to eq "World"
-    end
 
     # it "retrieve Edges" do
     #   @edge_collection.create_edges from: ["MyCollection/myA", "MyCollection/myB"],
@@ -235,18 +280,6 @@ describe Arango::Document do
     #   document = @document.in("MyEdgeCollection")[0].from.out(@edge_collection)[0].to
     #   expect(document.id).to eq @document.id
     # end
-  end
-
-  context "#modify" do
-    it "replace" do
-      document = @document.replace body: {value: 3}
-      expect(document.body[:value]).to eq 3
-    end
-
-    it "update" do
-      document = @document.update body: {time: 13}
-      expect(document.body[:value]).to eq 3
-    end
   end
 
 end
