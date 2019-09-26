@@ -9,6 +9,7 @@ module Arango
     include Arango::Server::Databases
     include Arango::Server::Monitoring
     include Arango::Server::Tasks
+    include Arango::Server::OpalSupport
 
     # Connect to a ArangoDB server.
     # @param username [String]

@@ -50,14 +50,14 @@ describe Arango::AQL do
   end
 
   context "#execute" do
-    it "execute Transaction" do
+    it "execute" do
       myAQL = @database.new_aql query: "FOR u IN MyCollection RETURN u.num"
       myAQL.batch_size = 5
       myAQL.execute
       expect(myAQL.result.length).to eq 5
     end
 
-    it "execute again Transaction" do
+    it "execute next" do
       myAQL = @database.new_aql query: "FOR u IN MyCollection RETURN u.num"
       myAQL.batch_size = 5
       myAQL.execute
@@ -65,7 +65,7 @@ describe Arango::AQL do
       expect(myAQL.result.length).to eq 5
     end
 
-    it "execute Transaction" do
+    it "execute 2" do
       result = @database.execute_aql query: "FOR u IN MyCollection RETURN u.num"
       expect(result.result.length).to eq 14
     end
@@ -116,6 +116,42 @@ describe Arango::AQL do
     it "changeProperties" do
       result = @database.set_query_tracking_properties max_slow_queries: 65
       expect(result[:maxSlowQueries]).to eq 65
+    end
+  end
+
+  context "opal support for functions" do
+    it "can install opal" do
+      @server.install_opal_module(@database)
+      collection = @database.get_collection('_modules')
+      expect(collection.name).to eq '_modules'
+      document = collection.get_document({path: '/opal'})
+      expect(document.content).to be_a String
+      STDERR.puts "Size: #{document.content.size}"
+    end
+
+    it "can use opal" do
+      # skip "works only sometimes"
+      @server.install_opal_module(@database)
+      @database.create_aql_function('RUBY::VERSION', code: <<~JAVASCRIPT
+        function() {
+          require('opal');
+          return Opal.RUBY_VERSION;
+        }
+      JAVASCRIPT
+      )
+      result = @database.execute_query('RETURN RUBY::VERSION()')
+      expect(result.result.first).to be_a String
+      expect(result.result.first).to eq '2.5.3'
+    end
+
+    it "can execute opal" do
+      # skip "works only sometimes"
+      @server.install_opal_module(@database)
+      @database.create_aql_function('RUBY::ADD') do
+        1 + 1
+      end
+      result = @database.execute_query('RETURN RUBY::ADD()')
+      expect(result.result.first).to eq 2
     end
   end
 end
