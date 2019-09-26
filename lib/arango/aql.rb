@@ -13,9 +13,9 @@ module Arango
       # runTime: the query’s run time up to the point the list of queries was queried
       # state: the query’s current execution state (as a string)
       # stream: whether or not the query uses a streaming cursor
-
-      def from_result(query_hash)
+      def from_result_hash(query_hash)
         new_query_hash = query_hash.transform_keys { |k| k.to_s.underscore.to_sym }
+        new_query_hash[:query_id] = query_hash.delete(:id)
         Arango::AQL.new(**new_query_hash)
       end
     end
@@ -24,7 +24,7 @@ module Arango
                    intermediate_commit_count: nil, intermediate_commit_size: nil, max_plans: nil, max_transaction_size: nil,
                    max_warning_count: nil, memory_limit: nil, optimizer_rules: nil, profile: nil, satellite_sync_wait: nil,
                    skip_inaccessible_collections: nil, ttl: nil,
-                   run_time: nil, started: nil, state: nil, stream: nil,
+                   query_id: nil, run_time: nil, started: nil, state: nil, stream: nil,
                    block: nil, &ruby_block)
       block = ruby_block if block_given?
       satisfy_class?(query, [String])
@@ -41,9 +41,9 @@ module Arango
       @ttl          = ttl
       @bind_vars    = bind_vars
 
-      @quantity = nil
       @has_more = false
-      @id       = nil
+      @id       = nil # cursor id
+      @query_id = query_id
       @result   = nil
 
       @run_time = run_time
@@ -83,7 +83,7 @@ module Arango
       end
     end
 
-    attr_accessor :batch_size, :bind_vars, :cache, :count, :options, :quantity, :query, :ttl
+    attr_accessor :batch_size, :bind_vars, :cache, :count, :options, :query, :ttl
 
     attr_reader :arango_server, :cached, :database, :extra, :id, :id_cache, :optimizer_rules, :result
     attr_reader :run_time, :started, :state, :stream
@@ -102,7 +102,6 @@ module Arango
         idCache:     @id_cache,
         memoryLimit: @memory_limit,
         options:     @options,
-        quantity:    @quantity,
         query:       @query,
         result:      @result,
         ttl:         @ttl
@@ -135,7 +134,7 @@ module Arango
     end
 
     request_method :drop do
-      { delete: "_api/cursor/#{@id}" }
+      { delete: "_api/cursor/#{@id}", block: ->(result) { result.response_code == 200 }}
     end
     alias delete drop
     alias destroy drop
@@ -143,7 +142,7 @@ module Arango
     alias batch_destroy batch_drop
 
     request_method :kill do
-      { delete: "_api/query/#{@id}", block: ->(result) { result.response_code == 200 }}
+      { delete: "_api/query/#{@query_id}", block: ->(result) { result.response_code == 200 }}
     end
 
 # === PROPERTY QUERY ===
@@ -177,7 +176,7 @@ module Arango
       @extra    = result[:extra]
       @has_more = result[:hasMore]
       @id       = result[:id]
-      @quantity = result[:count]
+      @count    = result[:count]
       @result   = result[:result]
     end
   end
