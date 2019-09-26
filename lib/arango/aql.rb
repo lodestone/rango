@@ -109,21 +109,25 @@ module Arango
       }.delete_if{|_,v| v.nil?}
     end
 
-    request_method :execute do
+    def request
       body = {
-        batchSize:   @batch_size,
-        bindVars:    @bind_vars,
-        cache:       @cache,
-        count:       @count,
-        memoryLimit: @memory_limit,
-        options:     @options,
-        query:       @query,
-        ttl:         @ttl
+          batchSize:   @batch_size,
+          bindVars:    @bind_vars,
+          cache:       @cache,
+          count:       @count,
+          memoryLimit: @memory_limit,
+          options:     @options,
+          query:       @query,
+          ttl:         @ttl
       }
       { post: "_api/cursor", body: body, block: ->(result) {
         set_instance_vars(result)
         @block ? @block.call(self, result) : self
       }}
+    end
+
+    request_method :execute do
+      request
     end
 
     request_method :next do

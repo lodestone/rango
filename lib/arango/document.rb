@@ -104,7 +104,26 @@ module Arango
 
       Arango.request_class_method(Arango::Document, :get) do |document, collection:|
         document = _body_from_arg(document)
-        { get: "_api/document/#{collection.name}/#{document[:_key]}", block: ->(result) { Arango::Document.new(result, collection: collection) }}
+        if document.key?(:_key)
+          { get: "_api/document/#{collection.name}/#{document[:_key]}", block: ->(result) { Arango::Document.new(result, collection: collection) }}
+        else
+          bind_vars = {}
+          query = "FOR doc IN #{collection.name}"
+          i = 0
+          document.each do |k,v|
+            i += 1
+            query << "\n FILTER doc.@key#{i} == @value#{i}"
+            bind_vars["key#{i}"] = k.to_s
+            bind_vars["value#{i}"] = v
+          end
+          query << "\n LIMIT 1"
+          query << "\n RETURN doc"
+          aql = AQL.new(query: query, database: collection.database, bind_vars: bind_vars, block: ->(_, result) do
+              Arango::Document.new(result.result.first, collection: collection) if result.result.first
+            end
+          )
+          aql.request
+        end
       end
       alias fetch get
       alias retrieve get
@@ -117,10 +136,30 @@ module Arango
         requests = []
         result_documents = []
         documents.each do |document|
-          requests << { get: "_api/document/#{collection.name}/#{document[:_key]}", block: ->(result) do
-              result_documents << Arango::Document.new(result, collection: collection)
+          if document.key?(:_key)
+            requests << { get: "_api/document/#{collection.name}/#{document[:_key]}", block: ->(result) do
+                result_documents << Arango::Document.new(result, collection: collection)
+              end
+            }
+          else
+            bind_vars = {}
+            query = "FOR doc IN #{collection.name}"
+            i = 0
+            document.each do |k,v|
+              i += 1
+              query << "\n FILTER doc.@key#{i} == @value#{i}"
+              bind_vars["key#{i}"] = k.to_s
+              bind_vars["value#{i}"] = v
             end
-          }
+            query << "\n LIMIT 1"
+            query << "\n RETURN doc"
+            aql = AQL.new(query: query, database: collection.database, bind_vars: bind_vars, block: ->(_, result) do
+              result_documents << Arango::Document.new(result.result.first, collection: collection) if result.result.first
+              result_documents
+            end
+            )
+            requests << aql.request
+          end
         end
         requests
       end

@@ -114,10 +114,23 @@ describe Arango::Document do
       expect(document.test1).to eq 'value'
     end
 
+    it "get_document by example" do
+      @collection.create_document(test1: 'value', test2: 100)
+      document = @collection.get_document(test2: 100)
+      expect(document.test1).to eq 'value'
+    end
+
     it "get_documents" do
       @collection.create_document(key: '1234567890', test1: 'value', test2: 100)
-      @collection.create_document(key: '1234567891', test1: 'value', test2: 100)
+      @collection.create_document(key: '1234567891', test1: 'value', test2: 200)
       documents = @collection.get_documents(['1234567890', '1234567891'])
+      expect(documents.size).to eq 2
+    end
+
+    it "get_documents by example" do
+      @collection.create_document(key: '1234567890', test1: 'value', test2: 100)
+      @collection.create_document(key: '1234567891', test1: 'value', test2: 200)
+      documents = @collection.get_documents([{test2: 100}, {test2: 200}])
       expect(documents.size).to eq 2
     end
 
