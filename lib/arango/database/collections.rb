@@ -15,11 +15,11 @@ module Arango
       # @param name [String] The name of the collection.
       # @param type [Symbol] One of :document or :edge, the collection type, optional, default: :document.
       # @return [Arango::Collection] The instance of the collection created.
-      def create_collection(name, type: :document)
-        Arango::Collection.new(name, type: type, database: self).create
+      def create_collection(name, type: :document, is_system: false)
+        Arango::Collection.new(name, type: type, database: self, is_system: is_system).create
       end
-      def batch_create_collection(name, type: :document)
-        Arango::Collection.new(name, type: type, database: self).batch_create
+      def batch_create_collection(name, type: :document, is_system: false)
+        Arango::Collection.new(name, type: type, database: self, is_system: is_system).batch_create
       end
 
       # Creates a new edge collection.
