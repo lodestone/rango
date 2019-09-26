@@ -5,7 +5,7 @@ require "arango-driver"
 
 module Helpers
 	def connect
-		Arango::connect_to username: "root", password: "root", host: "localhost", port: "8529", pool: true
+		Arango::connect_to username: "root", password: "root", host: "localhost", port: "8529"
 	end
 end
 

@@ -16,9 +16,9 @@ module Arango
   end
 
   def self.connect_to(username: "root", password:, host: "localhost", warning: true, port: "8529", return_output: false,
-      pool: true, pool_size: 5, timeout: 5, tls: false, database: nil)
+      timeout: 5, tls: false, database: nil)
     @current_server = Arango::Server.new(username: username, password: password, host: host, warning: warning, port: port,
-                                         return_output: return_output, pool: pool, pool_size: pool_size, timeout: timeout, tls: tls)
+                                         return_output: return_output, timeout: timeout, tls: tls)
     @current_database = @current_server.get_database(database) if database
     @current_server
   end

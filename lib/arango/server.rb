@@ -8,7 +8,6 @@ module Arango
     include Arango::Server::Config
     include Arango::Server::Databases
     include Arango::Server::Monitoring
-    include Arango::Server::Pool
     include Arango::Server::Tasks
 
     # Connect to a ArangoDB server.
@@ -16,12 +15,9 @@ module Arango
     # @param password [String]
     # @param host [String]
     # @param port [String]
-    # @param pool [Boolean] Use connection pooling, optional, default: true.
-    # @param pool_size [Integer] Connection pool size, optional, default 5.
     # @param tls [Boolean] Use TLS for the connection, optional, default: false.
     # @return [Arango::Server]
-    def initialize(username: "root", password:, host: "localhost", warning: true, port: "8529", return_output: false,
-                   pool: true, pool_size: 5, timeout: 5, tls: false)
+    def initialize(username: "root", password:, host: "localhost", warning: true, port: "8529", return_output: false, timeout: 5, tls: false)
       @tls = tls
       @host = host
       @port = port
@@ -31,12 +27,9 @@ module Arango
       @return_output = return_output
       @warning = warning
       @active_cache = active_cache
-      @pool = pool
-      @pool_size = pool_size
       @timeout = timeout
       set_base_uri
       @request = Arango::Request.new(base_uri: @base_uri, options: @options)
-      @internal_request = ConnectionPool.new(size: @pool_size, timeout: @timeout) { @request } if @pool
     end
 
     def endpoint
@@ -44,11 +37,7 @@ module Arango
     end
 
     def request(*args)
-      if @pool
-        @internal_request.with { |request| request.request(*args) }
-      else
-        @request.request(*args)
-      end
+      @request.request(*args)
     end
 
     # Returns information about the currently running transactions.
@@ -66,11 +55,7 @@ module Arango
     private
 
     def download(*args)
-      if @pool
-        @internal_request.with{|request| request.download(*args)}
-      else
-        @request.download(*args)
-      end
+      @request.download(*args)
     end
 
     def set_base_uri
