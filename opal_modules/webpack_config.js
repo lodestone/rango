@@ -4,7 +4,7 @@ const OwlResolver = require('opal-webpack-loader/resolver'); // to resolve ruby 
 const common_config = {
     mode: 'production',
     optimization: {
-        minimize: true
+        minimize: false
     },
     performance: {
         maxAssetSize: 20000000,
@@ -13,10 +13,10 @@ const common_config = {
     output: {
         path: path.resolve(__dirname, '..'),
         filename: '[name].js',
-        libraryTarget: 'var',
-        // globalObject: 'this',
-        // libraryExport: 'default',
-        library: '[name]'
+        libraryTarget: 'commonjs',
+        //globalObject: 'this',
+        //libraryExport: 'default',
+        //library: '[name]'
     },
     resolve: {
         plugins: [
