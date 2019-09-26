@@ -6,6 +6,7 @@ module Arango
     include Arango::Helper::Return
     extend Arango::Helper::RequestMethod
     class << self
+
       # id: the query’s id
       # query: the query string (potentially truncated)
       # bindVars: the bind parameter values used by the query

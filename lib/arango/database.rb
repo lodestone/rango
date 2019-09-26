@@ -11,7 +11,7 @@ module Arango
     include Arango::Database::GraphAccess
     include Arango::Database::HTTPRoute
     include Arango::Database::AQLQueries
-    include Arango::Database::QueryCache
+    include Arango::Database::AQLQueryCache
     include Arango::Database::Replication
     include Arango::Database::StreamTransactions
     include Arango::Database::Tasks
