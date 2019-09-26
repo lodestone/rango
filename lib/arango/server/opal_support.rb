@@ -57,30 +57,38 @@ module Arango
       #
       #  So this is what we use for storing the opal module in arango and making it available.
 
-      def install_opal_module(force: false)
+      def install_opal_module(database = '_system', force: false)
+        database = database.name unless database.class == String
         dirname = File.dirname(__FILE__)
         filename = File.expand_path(File.join(dirname, '..', '..', '..', 'arango_opal.js'))
         content = File.read(filename)
-        document = {
-            path: '/opal',
-            content: content
-        }
-        system_db = get_database('_system')
+        system_db = get_database(database)
         system_db.create_collection('_modules', is_system: true) unless system_db.collection_exist?('_modules')
         modules_collection = system_db.get_collection('_modules')
+        opal_module_doc = modules_collection.get_document(path: '/opal')
+        if opal_module_doc
+          opal_module_doc.content = content
+          opal_module_doc.update
+        else
+          modules_collection.create_document({ path: '/opal', content: content })
+        end
       end
 
-      def install_opal_parser_module(force: false)
+      def install_opal_parser_module(database = '_system', force: false)
+        database = database.name unless database.class == String
         dirname = File.dirname(__FILE__)
         filename = File.expand_path(File.join(dirname, '..', '..', '..', 'arango_opal_parser.js'))
         content = File.read(filename)
-        document = {
-            path: '/opal-parser',
-            content: content
-        }
-        system_db = get_database('_system')
+        system_db = get_database(database)
         system_db.create_collection('_modules', is_system: true) unless system_db.collection_exist?('_modules')
         modules_collection = system_db.get_collection('_modules')
+        opal_module_doc = modules_collection.get_document(path: '/opal-parser')
+        if opal_module_doc
+          opal_module_doc.content = content
+          opal_module_doc.update
+        else
+          modules_collection.create_document({ path: '/opal-parser', content: content })
+        end
       end
     end
   end
