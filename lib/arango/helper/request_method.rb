@@ -33,11 +33,11 @@ module Arango
         promise_method_name = "batch_#{method_name}".to_sym
         define_method(method_name) do |*args|
           request_hash = instance_exec(*args, &block)
-          @database.execute_aql_request(request_hash)
+          @database.execute_aql(request_hash)
         end
         define_method(promise_method_name) do |*args|
           request_hash = instance_exec(*args, &block)
-          @database.batch_aql_request(request_hash)
+          @database.batch_execute_aql(request_hash)
         end
       end
     end

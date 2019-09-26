@@ -5,13 +5,32 @@ module Arango
     include Arango::Helper::Satisfaction
     include Arango::Helper::Return
     extend Arango::Helper::RequestMethod
+    class << self
+      # id: the query’s id
+      # query: the query string (potentially truncated)
+      # bindVars: the bind parameter values used by the query
+      # started: the date and time when the query was started
+      # runTime: the query’s run time up to the point the list of queries was queried
+      # state: the query’s current execution state (as a string)
+      # stream: whether or not the query uses a streaming cursor
 
-    def initialize(query:, database:, count: nil, batch_size: nil, cache: nil, memory_limit: nil, ttl: nil, bind_vars: nil, fail_on_warning: nil,
-      profile: nil, max_transaction_size: nil, skip_inaccessible_collections: nil, max_warning_count: nil, intermediate_commit_count: nil,
-      satellite_sync_wait: nil, full_count: nil, intermediate_commit_size: nil, optimizer_rules: nil, max_plans: nil, block: nil)
+      def from_result(query_hash)
+        new_query_hash = query_hash.transform_keys { |k| k.to_s.underscore.to_sym }
+        Arango::AQL.new(**new_query_hash)
+      end
+    end
+
+    def initialize(query:, database:, batch_size: nil, bind_vars: nil, cache: nil, count: nil, fail_on_warning: nil, full_count: nil,
+                   intermediate_commit_count: nil, intermediate_commit_size: nil, max_plans: nil, max_transaction_size: nil,
+                   max_warning_count: nil, memory_limit: nil, optimizer_rules: nil, profile: nil, satellite_sync_wait: nil,
+                   skip_inaccessible_collections: nil, ttl: nil,
+                   run_time: nil, started: nil, state: nil, stream: nil,
+                   block: nil, &ruby_block)
+      block = ruby_block if block_given?
       satisfy_class?(query, [String])
       @query = query
-      send(:database=, database)
+      @database = database
+      @arango_server = database.arango_server
 
       @block        = block
 
@@ -24,8 +43,14 @@ module Arango
 
       @quantity = nil
       @has_more = false
-      @id       = ""
-      @result   = []
+      @id       = nil
+      @result   = nil
+
+      @run_time = run_time
+      @started = started
+      @state = state
+      @stream = stream
+
       @options  = {}
       set_option(fail_on_warning, 'failOnWarning', :fail_on_warning) if fail_on_warning
       set_option(full_count, 'fullCount', :full_count) if full_count
@@ -39,8 +64,6 @@ module Arango
       set_option(skip_inaccessible_collections, 'skipInaccessibleCollections', :skip_inaccessible_collections) if skip_inaccessible_collections
       send(:optimizer_rules=, optimizer_rules) if optimizer_rules
     end
-
-    attr_accessor :database
 
     def optimizer_rules=(attrs)
       @optimizer_rules = attrs
@@ -60,60 +83,52 @@ module Arango
       end
     end
 
-    attr_accessor :count, :query, :batch_size, :ttl, :cache, :options, :bind_vars, :quantity
-    attr_reader :id, :result, :id_cache, :server, :cached, :extra, :optimizer_rules
+    attr_accessor :batch_size, :bind_vars, :cache, :count, :options, :quantity, :query, :ttl
+
+    attr_reader :arango_server, :cached, :database, :extra, :id, :id_cache, :optimizer_rules, :result
+    attr_reader :run_time, :started, :state, :stream
 
     def has_more?
       @has_more
     end
 
-    def set_option(attrs, name, var_name)
-      instance_variable_set("@#{var_name}", attrs)
-      if attrs.nil?
-        @options.delete(name)
-      else
-        @options[name] = attrs
-      end
-    end
-    private :set_option
-
     def to_h
       {
-        query:       @query,
-        result:      @result,
-        count:       @count,
-        quantity:    @quantity,
-        ttl:         @ttl,
-        cache:       @cache,
         batchSize:   @batch_size,
         bindVars:    @bind_vars,
-        options:     @options,
+        cache:       @cache,
+        count:       @count,
+        database:    @database.name,
         idCache:     @id_cache,
         memoryLimit: @memory_limit,
-        database:    @database.name
+        options:     @options,
+        quantity:    @quantity,
+        query:       @query,
+        result:      @result,
+        ttl:         @ttl
       }.delete_if{|_,v| v.nil?}
     end
 
     request_method :execute do
       body = {
-        query:       @query,
-        count:       @count,
         batchSize:   @batch_size,
-        ttl:         @ttl,
-        cache:       @cache,
-        options:     @options,
         bindVars:    @bind_vars,
-        memoryLimit: @memory_limit
+        cache:       @cache,
+        count:       @count,
+        memoryLimit: @memory_limit,
+        options:     @options,
+        query:       @query,
+        ttl:         @ttl
       }
       { post: "_api/cursor", body: body, block: ->(result) {
-        aql_result = return_aql(result)
-        @block ? @block.call(self, aql_result) : aql_result
+        set_instance_vars(result)
+        @block ? @block.call(self, result) : self
       }}
     end
 
     request_method :next do
       if @has_more
-        { put: "_api/cursor/#{@id}", block: ->(result) { return_aql(result) }}
+        { put: "_api/cursor/#{@id}", block: ->(result) { set_instance_vars(result); self }}
       else
         raise Arango::Error.new err: :no_other_aql_next, data: { hasMore: false }
       end
@@ -128,7 +143,7 @@ module Arango
     alias batch_destroy batch_drop
 
     request_method :kill do
-      { delete: "_api/query/#{@id}", block: ->(_) { nil }}
+      { delete: "_api/query/#{@id}", block: ->(result) { result.response_code == 200 }}
     end
 
 # === PROPERTY QUERY ===
@@ -148,14 +163,22 @@ module Arango
 
     private
 
-    def return_aql(result)
-      @extra    = result[:extra]
+    def set_option(attrs, name, var_name)
+      instance_variable_set("@#{var_name}", attrs)
+      if attrs.nil?
+        @options.delete(name)
+      else
+        @options[name] = attrs
+      end
+    end
+
+    def set_instance_vars(result)
       @cached   = result[:cached]
-      @quantity = result[:count]
+      @extra    = result[:extra]
       @has_more = result[:hasMore]
       @id       = result[:id]
+      @quantity = result[:count]
       @result   = result[:result]
-      result
     end
   end
 end

@@ -81,7 +81,7 @@ module Arango
              args.last[:database]
            end
       request_hash.delete(:database)
-      db.execute_aql_request(request_hash)
+      db.execute_aql(request_hash)
     end
     target_class.define_singleton_method(promise_method_name) do |*args|
       request_hash = instance_exec(*args, &block)
@@ -90,7 +90,7 @@ module Arango
            elsif args.last.key?(:database)
              args.last[:database]
            end
-      db.batch_aql_request(request_hash)
+      db.batch_execute_aql(request_hash)
     end
   end
 end
