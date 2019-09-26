@@ -126,7 +126,6 @@ describe Arango::AQL do
       expect(collection.name).to eq '_modules'
       document = collection.get_document({path: '/opal'})
       expect(document.content).to be_a String
-      STDERR.puts "Size: #{document.content.size}"
     end
 
     it "can use opal" do
