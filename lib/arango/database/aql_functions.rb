@@ -26,7 +26,14 @@ module Arango
           function() {
             require('opal');
             var original_arguments = Array.prototype.slice.call(arguments);
-            return #{compiled_ruby}
+            for (i=0; i<original_arguments.length; i++) {
+              if (typeof original_arguments[i] === "object" && !(original_arguments[i] instanceof Array)) {
+                original_arguments[i] = Opal.Hash.$new(original_arguments[i]);
+              }
+            }
+            var result = #{compiled_ruby}
+            if (typeof result['$to_n'] === "function") { result = result['$to_n'](); }
+            return result;
           }
           JAVASCRIPT
         end

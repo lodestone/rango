@@ -151,5 +151,15 @@ describe Arango::AQL do
       result = @database.execute_query('RETURN RUBY::ADD(1, 2)')
       expect(result.result.first).to eq 3
     end
+
+    it "can execute opal with doc" do
+      @server.install_opal_module(@database)
+      @database.create_aql_function('RUBY::DOC') do
+        doc = args[0]
+        doc[:num] = doc[:num] + 10
+      end
+      result = @database.execute_query('FOR d IN MyCollection RETURN RUBY::DOC(d)')
+      expect(result.result.sort).to eq  [11, 11, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 13, 15]
+    end
   end
 end
