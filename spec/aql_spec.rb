@@ -154,12 +154,14 @@ describe Arango::AQL do
 
     it "can execute opal with doc" do
       @server.install_opal_module(@database)
-      @database.create_aql_function('RUBY::DOC') do
+      @database.create_aql_function('RUBY::DOCMOD') do
         doc = args[0]
         doc[:num] = doc[:num] + 10
+        doc
       end
-      result = @database.execute_query('FOR d IN MyCollection RETURN RUBY::DOC(d)')
-      expect(result.result.sort).to eq  [11, 11, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 13, 15]
+      result = @database.execute_query('FOR d IN MyCollection FILTER d._key == "FirstKey" RETURN RUBY::DOCMOD(d)')
+      expect(result.result.first[:_key]).to eq('FirstKey')
+      expect(result.result.first[:num]).to eq(11)
     end
   end
 end
