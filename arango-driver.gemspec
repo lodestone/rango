@@ -10,7 +10,7 @@ Gem::Specification.new do |s|
   s.summary     = 'A simple ruby client for ArangoDB >= 3.5'
   s.description = "Ruby driver for ArangoDB's HTTP API"
   s.require_paths = ['lib']
-  s.files         = `git ls-files -- {lib,LICENSE,README.md}`.split("\n") + %w[arango_opal.js arango_opal_parser.js]
+  s.files         = `git ls-files -- {lib,LICENSE,README.md}`.split("\n") + %w[arango_opal.js]
   s.add_dependency 'activesupport', '~> 5.2'
   s.add_dependency 'isomorfeus-redux', '~> 4.0.14'
   s.add_dependency 'oj', '>= 3.9.0'

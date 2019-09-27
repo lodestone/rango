@@ -52,7 +52,7 @@ const node_config = {
     target: 'node',
     entry: {
         arango_opal: path.resolve(__dirname, 'entry_opal_node.js'),
-        arango_opal_parser: path.resolve(__dirname, 'entry_opal_parser.js'),
+        // arango_opal_parser: path.resolve(__dirname, 'entry_opal_parser.js'),
     }
 };
 
