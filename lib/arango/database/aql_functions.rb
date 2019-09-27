@@ -14,7 +14,10 @@ module Arango
           source_block = Parser::CurrentRuby.parse(block.source).children.last
           source_block = source_block.children.last if source_block.type == :block
           source_code = Unparser.unparse(source_block)
-          compiled_ruby= Opal.compile(source_code, parse_comments: false)
+          ruby_header = <<~RUBY
+          args = `original_arguments`
+          RUBY
+          compiled_ruby= Opal.compile(ruby_header + source_code, parse_comments: false)
           if compiled_ruby.start_with?('/*')
             start_of_code = compiled_ruby.index('*/') + 3
             compiled_ruby = compiled_ruby[start_of_code..-1]
@@ -22,6 +25,7 @@ module Arango
           code = <<~JAVASCRIPT
           function() {
             require('opal');
+            var original_arguments = Array.prototype.slice.call(arguments);
             return #{compiled_ruby}
           }
           JAVASCRIPT

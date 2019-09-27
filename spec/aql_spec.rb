@@ -129,11 +129,11 @@ describe Arango::AQL do
     end
 
     it "can use opal" do
-      # skip "works only sometimes"
       @server.install_opal_module(@database)
       @database.create_aql_function('RUBY::VERSION', code: <<~JAVASCRIPT
         function() {
           require('opal');
+          Opal.top
           return Opal.RUBY_VERSION;
         }
       JAVASCRIPT
@@ -144,13 +144,12 @@ describe Arango::AQL do
     end
 
     it "can execute opal" do
-      # skip "works only sometimes"
       @server.install_opal_module(@database)
       @database.create_aql_function('RUBY::ADD') do
-        1 + 1
+        args[0] + args[1]
       end
-      result = @database.execute_query('RETURN RUBY::ADD()')
-      expect(result.result.first).to eq 2
+      result = @database.execute_query('RETURN RUBY::ADD(1, 2)')
+      expect(result.result.first).to eq 3
     end
   end
 end
