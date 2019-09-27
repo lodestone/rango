@@ -24,9 +24,10 @@ module Arango
           end
           code = <<~JAVASCRIPT
           function() {
+            "use strict";
             require('opal');
             var original_arguments = Array.prototype.slice.call(arguments);
-            for (i=0; i<original_arguments.length; i++) {
+            for (var i=0; i<original_arguments.length; i++) {
               if (typeof original_arguments[i] === "object" && !(original_arguments[i] instanceof Array)) {
                 original_arguments[i] = Opal.Hash.$new(original_arguments[i]);
               }
