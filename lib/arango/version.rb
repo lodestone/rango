@@ -1,3 +1,3 @@
 module Arango
-  VERSION = '3.5.0.pre1'
+  VERSION = '3.5.0.alpha0'
 end
