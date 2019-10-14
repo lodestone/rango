@@ -1,6 +1,6 @@
 module Arango
   module Collection
-    module Edges
+    module EdgeAccess
       # === GRAPH ===
       def graph=(graph)
         satisfy_class?(graph, [Arango::Graph, NilClass])
@@ -17,7 +17,7 @@ module Arango
           raise Arango::Error.new err: :is_a_edge_collection, data: {type:  @type}
         end
         if @graph.nil?
-          Arango::Document.new(name: name, body: body, rev: rev, collection: self)
+          Arango::Document::Base.new(name: name, body: body, rev: rev, collection: self)
         else
           Arango::Vertex.new(name: name, body: body, rev: rev, collection: self)
         end
@@ -28,9 +28,9 @@ module Arango
           raise Arango::Error.new err: :is_a_document_collection, data: {type:  @type}
         end
         if @graph.nil?
-          Arango::Document.new(name: name, body: body, rev: rev, collection: self)
+          Arango::Document::Base.new(name: name, body: body, rev: rev, collection: self)
         else
-          Arango::Edge.new(name: name, body: body, rev: rev, from: from, to: to,
+          Arango::Edge::Base.new(name: name, body: body, rev: rev, from: from, to: to,
                            collection: self)
         end
       end
@@ -41,7 +41,7 @@ module Arango
       alias edge_exists? edge_exist?
 
       def edge(name: nil, body: {}, rev: nil, from: nil, to: nil)
-        Arango::Document.new(name: name, collection: self, body: body, rev: rev,
+        Arango::Document::Base.new(name: name, collection: self, body: body, rev: rev,
                              from: from, to: to)
       end
 
@@ -60,7 +60,7 @@ module Arango
         return result if return_directly?(result)
         return result[:result] unless @return_edge
         if @return_edge
-          result[:result].map{|key| Arango::Document.new(name: key, collection: self)}
+          result[:result].map{|key| Arango::Document::Base.new(name: key, collection: self)}
         end
       end
 
@@ -96,7 +96,7 @@ module Arango
           end
           real_body = edge[index]
           real_body = real_body.merge(body2)
-          Arango::Document.new(name: result[:_key], collection: self, body: real_body)
+          Arango::Document::Base.new(name: result[:_key], collection: self, body: real_body)
         end
       end
 
@@ -126,7 +126,7 @@ module Arango
           end
           real_body = edge[index]
           real_body = real_body.merge(body2)
-          Arango::Document.new(name: result[:_key], collection: self,
+          Arango::Document::Base.new(name: result[:_key], collection: self,
                                body: real_body)
         end
       end

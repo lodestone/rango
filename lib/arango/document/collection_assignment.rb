@@ -1,7 +1,7 @@
 module Arango
-  module Helper
+  module Document
     module CollectionAssignment
-      def assign_collection(collection)
+      def collection=(collection)
         satisfy_class?(collection, [Arango::Collection])
         @collection = collection
         @graph = @collection.graph

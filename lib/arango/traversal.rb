@@ -95,7 +95,7 @@ module Arango
         elsif vertex.include? "/"
           val = vertex.split("/")
           @collection = Arango::Collection.new(database: @database, name: val[0])
-          @vertex = Arango::Document.new(collection: @collection, name: val[1])
+          @vertex = Arango::Document::Base.new(collection: @collection, name: val[1])
           return
         end
       end
@@ -189,20 +189,20 @@ module Arango
       @vertices = result[:result][:visited][:vertices].map do |x|
         collection = Arango::Collection.new(name:     x[:_id].split("/")[0],
                                             database: @database)
-        Arango::Document.new(name: x[:_key], collection: collection, body: x)
+        Arango::Document::Base.new(name: x[:_key], collection: collection, body: x)
       end
       @paths = result[:result][:visited][:paths].map do |x|
         {
           edges: x[:edges].map do |e|
             collection_edge = Arango::Collection.new(name:     e[:_id].split("/")[0],
                                                      database: @database, type: :edge)
-            Arango::Document.new(name: e[:_key], collection: collection_edge,
+            Arango::Document::Base.new(name: e[:_key], collection: collection_edge,
               body: e, from: e[:_from], to: e[:_to])
           end,
           vertices: x[:vertices].map do |v|
             collection_vertex = Arango::Collection.new(name:     v[:_id].split("/")[0],
                                                        database: @database)
-            Arango::Document.new(name: v[:_key], collection: collection_vertex, body: v)
+            Arango::Document::Base.new(name: v[:_key], collection: collection_vertex, body: v)
           end
         }
       end
