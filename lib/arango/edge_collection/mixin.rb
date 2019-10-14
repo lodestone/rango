@@ -2,7 +2,8 @@ module Arango
   module EdgeCollection
     module Mixin
       def included(base)
-        base.include(Arango::EdgeCollection::EdgeAccess)
+        base.extend(Arango::EdgeCollection::ClassMethods)
+        base.include(Arango::EdgeCollection::Edges)
       end
     end
   end

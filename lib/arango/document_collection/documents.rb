@@ -1,6 +1,6 @@
 module Arango
   module DocumentCollection
-    module DocumentAccess
+    module Documents
       def new_document(document, wait_for_sync: nil)
         Arango::Document::Base.new(document, collection: self, wait_for_sync: wait_for_sync)
       end

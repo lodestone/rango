@@ -157,20 +157,20 @@ describe Arango::Document do
 
   context "Arango::Document itself" do
     it "create a new Document instance " do
-      document = Arango::Document.new "myKey", collection: @collection
+      document = Arango::Document::Base.new "myKey", collection: @collection
       expect(document.collection.name).to eq "DocumentCollection"
     end
 
     it "create a new Document in the Collection" do
-      document = Arango::Document.new({Hello: "World", num: 1}, collection: @collection).create
+      document = Arango::Document::Base.new({Hello: "World", num: 1}, collection: @collection).create
       expect(document.Hello).to eq "World"
     end
 
     it "create a duplicate Document" do
       error = ""
       begin
-        Arango::Document.new('mykey', collection: @collection).create
-        Arango::Document.new('mykey', collection: @collection).create
+        Arango::Document::Base.new('mykey', collection: @collection).create
+        Arango::Document::Base.new('mykey', collection: @collection).create
       rescue Arango::ErrorDB => e
         error = e.error_num
       end
@@ -178,23 +178,23 @@ describe Arango::Document do
     end
 
     it "delete a Document" do
-      document = Arango::Document.new('mykey', collection: @collection).create
+      document = Arango::Document::Base.new('mykey', collection: @collection).create
       result = document.destroy
       expect(result).to eq nil
-      expect(Arango::Document.exist?('mykey', collection: @collection)).to be false
+      expect(Arango::Document::Base.exist?('mykey', collection: @collection)).to be false
     end
 
     it "update" do
-      document = Arango::Document.new('mykey', collection: @collection).create
+      document = Arango::Document::Base.new('mykey', collection: @collection).create
       document.time = 13
       document.update
       expect(document.time).to eq 13
-      document = Arango::Document.get('mykey', collection: @collection)
+      document = Arango::Document::Base.get('mykey', collection: @collection)
       expect(document.time).to eq 13
     end
 
     it "replace" do
-      document = Arango::Document.new({key: 'mykey', test: 1}, collection: @collection).create
+      document = Arango::Document::Base.new({key: 'mykey', test: 1}, collection: @collection).create
       document.body = {value: 3}
       document.replace
       expect(document.value).to eq 3
@@ -202,15 +202,15 @@ describe Arango::Document do
     end
 
     it "retrieve Document" do
-      document = Arango::Document.new({key: 'mykey', test: 1}, collection: @collection).create
+      document = Arango::Document::Base.new({key: 'mykey', test: 1}, collection: @collection).create
       document.test = 2
       document.retrieve
       expect(document.test).to eq 1
     end
 
     it "same_revision?" do
-      document = Arango::Document.new('mykey', collection: @collection).create
-      document_two = Arango::Document.get('mykey', collection: @collection)
+      document = Arango::Document::Base.new('mykey', collection: @collection).create
+      document_two = Arango::Document::Base.get('mykey', collection: @collection)
       expect(document.same_revision?).to be true
       expect(document_two.same_revision?).to be true
       document.time = 13

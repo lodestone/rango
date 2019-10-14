@@ -1,13 +1,12 @@
 module Arango
-  module Edge
+  module Vertex
     module InstanceMethods
-
-      def initialize(edge, from: nil, to: nil, edge_collection:, ignore_revs: false, wait_for_sync: nil)
-        @body = _body_from_arg(edge)
+      def initialize(vertex, collection:, ignore_revs: false, wait_for_sync: nil)
+        @body = _body_from_arg(vertex)
         @changed_body = {}
         @ignore_revs = ignore_revs
         @wait_for_sync = wait_for_sync
-        send(:collection=, edge_collection)
+        send(:collection=, collection)
       end
 
       def id
@@ -52,7 +51,7 @@ module Arango
       end
 
       def collection=(collection)
-        satisfy_class?(collection, [Arango::EdgeCollection::Mixin])
+        satisfy_class?(collection, [Arango::Collection])
         @collection = collection
         @graph = @collection.graph
         @database = @collection.database
@@ -160,49 +159,42 @@ module Arango
       alias batch_delete batch_drop
       alias batch_destroy batch_drop
 
-      def from
-        # TODO return instance
-        return @changed_body[:_from] if @changed_body.key?(:_from)
-        @body[:_from]
+      def edges(direction: nil)
+        query = { vertex: id }
+        query[:direction] = direction if direction
+        result = @database.request("GET", "_api/edges/#{@collection}", query: query)
+        result[:edges].map do |edge|
+          collection_name, key = edge[:_id].split("/")
+          collection = Arango::Collection.new(collection_name, database: @database, type: :edge)
+          Arango::Document::Base.new(edge, collection: collection)
+        end
       end
 
-      def from=(vertex)
-        vertex = vertex.id if vertex.is_a?(Arango::Vertex::Mixin)
-        @changed_body[:_from] = vertex
+      def out(collection)
+        edges(collection: collection, direction: :out)
       end
 
-      def to
-        # TODO return instance
-        return @changed_body[:_to] if @changed_body.key?(:_to)
-        @body[:_to]
-      end
-
-      def to=(vertex)
-        vertex = vertex.id if vertex.is_a?(Arango::Vertex::Mixin)
-        @changed_body[:_to] = vertex
+      def in(collection)
+        edges(collection: collection, direction: :in)
       end
 
       private
 
       def _body_from_arg(arg)
-        body = case arg
-                when String then { _key: arg }
-                when Hash
-                  arg.transform_keys!(&:to_sym)
-                  arg[:_id] = arg.delete(:id) if arg.key?(:id) && !arg.key?(:_id)
-                  arg[:_key] = arg.delete(:key) if arg.key?(:key) && !arg.key?(:_key)
-                  arg[:_rev] = arg.delete(:rev) if arg.key?(:rev) && !arg.key?(:_rev)
-                  arg[:_from] = arg.delete(:from) if arg.key?(:from) && !arg.key?(:_from)
-                  arg[:_to] = arg.delete(:to) if arg.key?(:to) && !arg.key?(:_to)
-                  arg.delete_if{|_,v| v.nil?}
-                  arg
-                when Arango::Edge::Mixin then arg.to_h
-                when Arango::Result then arg.to_h
-                else
-                  raise "Unknown arg type, must be String, Hash, Arango::Result or Arango::Edge::Mixin."
-               end
-        raise "Edge is missing a from:" unless body.key?(:_from)
-        raise "Edge is missing a to:" unless body.key?(:_to)
+        case arg
+        when String then { _key: arg }
+        when Hash
+          arg.transform_keys!(&:to_sym)
+          arg[:_id] = arg.delete(:id) if arg.key?(:id) && !arg.key?(:_id)
+          arg[:_key] = arg.delete(:key) if arg.key?(:key) && !arg.key?(:_key)
+          arg[:_rev] = arg.delete(:rev) if arg.key?(:rev) && !arg.key?(:_rev)
+          arg.delete_if{|_,v| v.nil?}
+          arg
+        when Arango::Vertex::Base. then arg.to_h
+        when Arango::Result then arg.to_h
+        else
+          raise "Unknown arg type, must be String, Hash, Arango::Result or Arango::Vertex::Mixin."
+        end
       end
     end
   end

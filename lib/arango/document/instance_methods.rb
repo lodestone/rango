@@ -32,7 +32,7 @@ module Arango
         @body[:_rev]
       end
 
-      def rev=(r)
+      def revision=(r)
         @changed_body[:_rev] = r
       end
 
@@ -41,14 +41,20 @@ module Arango
       end
 
       attr_accessor :ignore_revs, :wait_for_sync
-
-      attr_reader :collection, :graph, :database, :server, :body
+      attr_reader :collection, :database, :server, :body
 
       # todo body= -> replace_body, update_body
       def body=(doc)
         @changed_body = _body_from_arg(doc)
         #set_up_from_or_to("from", result[:_from])
         #set_up_from_or_to("to", result[:_to])
+      end
+
+      def collection=(collection)
+        satisfy_class?(collection, [Arango::DocumentCollection::Mixin])
+        @collection = collection
+        @database = @collection.database
+        @arango_server = @database.arango_server
       end
 
       def method_missing(name, *args, &block)
@@ -152,35 +158,6 @@ module Arango
       alias batch_delete batch_drop
       alias batch_destroy batch_drop
 
-      # === EDGE ===
-
-      def edges(collection:, direction: nil)
-        satisfy_class?(collection, [Arango::Collection, String])
-        collection = collection.is_a?(Arango::Collection) ? collection.name : collection
-        query = {
-          vertex:    @body[:_id],
-          direction: direction
-        }
-        result = @database.request("GET", "_api/edges/#{collection}", query: query)
-        result[:edges].map do |edge|
-          collection_name, key = edge[:_id].split("/")
-          collection = Arango::Collection.new(collection_name, database: @database, type: :edge)
-          Arango::Document::Base.new(edge, collection: collection)
-        end
-      end
-
-      def any(collection)
-        edges(collection: collection)
-      end
-
-      def out(collection)
-        edges(collection: collection, direction: "out")
-      end
-
-      def in(collection)
-        edges(collection: collection, direction: "in")
-      end
-
       private
 
       def _body_from_arg(arg)
@@ -193,7 +170,7 @@ module Arango
           arg[:_rev] = arg.delete(:rev) if arg.key?(:rev) && !arg.key?(:_rev)
           arg.delete_if{|_,v| v.nil?}
           arg
-        when Arango::Document then arg.to_h
+        when Arango::Document::Mixin then arg.to_h
         when Arango::Result then arg.to_h
         else
           raise "Unknown arg type, must be String, Hash, Arango::Result or Arango::Document"

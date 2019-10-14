@@ -5,7 +5,6 @@ module Arango
         base.include Arango::Helper::Satisfaction
         base.extend(Arango::Helper::RequestMethod)
         base.extend(Arango::Document::ClassMethods)
-        base.include Arango::Helper::CollectionAssignment
         base.include(Arango::Document::InstanceMethods)
 
         # not sure

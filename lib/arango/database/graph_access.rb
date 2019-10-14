@@ -6,6 +6,7 @@ module Arango
       def create_graph
 
       end
+
       def graphs
         result = request("GET", "_api/gharial")
         return result if return_directly?(result)
