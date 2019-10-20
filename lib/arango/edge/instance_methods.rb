@@ -7,6 +7,8 @@ module Arango
         @changed_body = {}
         @ignore_revs = ignore_revs
         @wait_for_sync = wait_for_sync
+        @from_instance = nil
+        @to_instance = nil
         send(:collection=, edge_collection)
       end
 
@@ -162,12 +164,17 @@ module Arango
 
       def from
         # TODO return instance
+        @to_instance ||= getinstancefromgraph
+      end
+
+      def from_id
         return @changed_body[:_from] if @changed_body.key?(:_from)
         @body[:_from]
       end
 
       def from=(vertex)
         vertex = vertex.id if vertex.is_a?(Arango::Vertex::Mixin)
+        @from_instance = nil
         @changed_body[:_from] = vertex
       end
 
@@ -177,8 +184,14 @@ module Arango
         @body[:_to]
       end
 
+      def to_id
+        return @changed_body[:_to] if @changed_body.key?(:_to)
+        @body[:_to]
+      end
+
       def to=(vertex)
         vertex = vertex.id if vertex.is_a?(Arango::Vertex::Mixin)
+        @to_instance = nil
         @changed_body[:_to] = vertex
       end
 
