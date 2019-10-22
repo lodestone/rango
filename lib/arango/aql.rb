@@ -3,7 +3,7 @@
 module Arango
   class AQL
     include Arango::Helper::Satisfaction
-    include Arango::Helper::Return
+
     extend Arango::Helper::RequestMethod
     class << self
 

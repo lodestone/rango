@@ -3,7 +3,7 @@
 module Arango
   class Transaction
     include Arango::Helper::Satisfaction
-    include Arango::Helper::Return
+
     include Arango::Helper::DatabaseAssignment
 
     def initialize(action:, database:, intermediate_commit_size: nil, intermediate_commit_count: nil, lock_timeout: nil, max_transaction_size: nil,

@@ -3,7 +3,7 @@
 module Arango
   class Foxx
     include Arango::Helper::Satisfaction
-    include Arango::Helper::Return
+
     include Arango::Helper::DatabaseAssignment
 
     def initialize(database:, body: {}, mount:, development: nil, legacy: nil,

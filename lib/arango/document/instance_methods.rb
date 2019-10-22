@@ -7,6 +7,7 @@ module Arango
         @ignore_revs = ignore_revs
         @wait_for_sync = wait_for_sync
         send(:collection=, collection)
+        send(:graph=, collection.graph) if collection.graph
       end
 
       def id
@@ -40,10 +41,13 @@ module Arango
         @body.delete_if{|_,v| v.nil?}
       end
 
-      attr_accessor :ignore_revs, :wait_for_sync
-      attr_reader :collection, :database, :server, :body
+      def vertex?
+        !!@graph
+      end
 
-      # todo body= -> replace_body, update_body
+      attr_accessor :ignore_revs, :wait_for_sync
+      attr_reader :graph, :collection, :database, :server, :body
+
       def body=(doc)
         @changed_body = _body_from_arg(doc)
         #set_up_from_or_to("from", result[:_from])
@@ -55,6 +59,11 @@ module Arango
         @collection = collection
         @database = @collection.database
         @arango_server = @database.arango_server
+      end
+
+      def graph=(graph)
+        satisfy_class?(collection, [Arango::Graph::Mixin])
+        @graph = graph
       end
 
       def method_missing(name, *args, &block)
@@ -76,6 +85,12 @@ module Arango
       end
 
       request_method :reload do
+        # TODO conditional
+        if @graph
+        headers = {}
+        headers[:"If-Match"] = @body[:_rev] if if_match
+        result = @graph.request("GET", "vertex/#{@collection.name}/#{@body[:_key]}", headers: headers, key: :vertex)
+        end
         headers = nil
         headers = { "If-Match": @body[:_rev] } if !@ignore_revs && @body.key?(:_rev)
         { get: "_api/document/#{@collection.name}/#{@body[:_key]}", headers: headers,
@@ -99,6 +114,11 @@ module Arango
       end
 
       request_method :create do
+        # TODO conditional
+        if @graph
+          result = @graph.request("POST", "vertex/#{@collection.name}", body: body,
+                                  query: query, key: :vertex)
+        end
         query = { returnNew: true }
         query[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
         @body = @body.merge(@changed_body)
@@ -112,6 +132,12 @@ module Arango
       end
 
       request_method :replace do
+        # TODO conditional
+        if @graph
+        headers[:"If-Match"] = @body[:_rev] if if_match
+        result = @graph.request("PUT", "vertex/#{@collection.name}/#{@body[:_key]}",
+                                body: body, query: query, headers: headers, key: :vertex)
+        end
         query = { returnNew: true, ignoreRevs: @ignore_revs }
         query[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
         headers = nil
@@ -131,6 +157,12 @@ module Arango
       end
 
       request_method :save do
+        # TODO conditional
+        if @graph
+          headers[:"If-Match"] = @body[:_rev] if if_match
+          result = @graph.request("PATCH", "vertex/#{@collection.name}/#{@body[:_key]}", body: body,
+                                  query: query, headers: headers, key: :vertex)
+        end
         query = { returnNew: true, ignoreRevs: @ignore_revs }
         query[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
         headers = nil
@@ -148,6 +180,11 @@ module Arango
       alias batch_update batch_save
 
       request_method :drop do
+        # TODO conditional
+        if @graph
+          headers[:"If-Match"] = @body[:_rev] if if_match
+          result = @graph.request("DELETE", "vertex/#{@collection.name}/#{@body[:_key]}",
+        end
         query = { waitForSync: @wait_for_sync }
         headers = nil
         headers = { "If-Match": @body[:_rev] } if !@ignore_revs && @body.key?(:_rev)

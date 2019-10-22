@@ -1,7 +1,7 @@
 module Arango
   class RequestBatch
     include Arango::Helper::Satisfaction
-    include Arango::Helper::Return
+
     include Arango::Helper::DatabaseAssignment
     include Arango::Helper::ServerAssignment
 

@@ -11,27 +11,6 @@ module Arango
         Arango::Collection.batch_all(exclude_system: exclude_system, database: self)
       end
 
-      # Creates a new collection.
-      # @param name [String] The name of the collection.
-      # @param type [Symbol] One of :document or :edge, the collection type, optional, default: :document.
-      # @return [Arango::Collection] The instance of the collection created.
-      def create_collection(name, type: :document, is_system: false)
-        Arango::Collection.new(name, type: type, database: self, is_system: is_system).create
-      end
-      def batch_create_collection(name, type: :document, is_system: false)
-        Arango::Collection.new(name, type: type, database: self, is_system: is_system).batch_create
-      end
-
-      # Creates a new edge collection.
-      # @param name [String] The name of the collection.
-      # @return [Arango::Collection] The instance of the collection created.
-      def create_edge_collection(name)
-        Arango::Collection.new(name, type: :edge, database: self).create
-      end
-      def batch_create_edge_collection(name)
-        Arango::Collection.new(name, type: :edge, database: self).batch_create
-      end
-
       # Get collection from the database.
       # @param name [String] The name of the collection.
       # @return [Arango::Database]
@@ -45,21 +24,6 @@ module Arango
       alias retrieve_collection get_collection
       alias batch_fetch_collection batch_get_collection
       alias batch_retrieve_collection batch_get_collection
-
-      # Instantiates a new collection.
-      # @param name [String] The name of the collection.
-      # @param type [Symbol] One of :document or :edge, the collection type, optional, default: :document.
-      # @return [Arango::Collection]
-      def new_collection(name, type: :document)
-        Arango::Collection.new(name, type: type, database: self)
-      end
-
-      # Instantiates a new edge collection.
-      # @param name [String] The name of the collection.
-      # @return [Arango::Collection]
-      def new_edge_collection(name)
-        Arango::Collection.new(name, type: :edge, database: self)
-      end
 
       # Retrieves a list of all collections.
       # @param exclude_system [Boolean] Optional, default true, exclude system collections.

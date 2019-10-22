@@ -3,7 +3,7 @@
 module Arango
   class Graph
     include Arango::Helper::Satisfaction
-    include Arango::Helper::Return
+
     include Arango::Helper::DatabaseAssignment
 
     def initialize(name:, database:, body: {}, cache_name: nil, edge_definitions: [], is_smart: nil, number_of_shards: nil, orphan_collections: [],

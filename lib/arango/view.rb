@@ -3,7 +3,7 @@
 module Arango
   class View
     include Arango::Helper::Satisfaction
-    include Arango::Helper::Return
+
     include Arango::Helper::DatabaseAssignment
 
     def initialize(database:, type: "arangosearch", name:, id: nil, cache_name: nil)

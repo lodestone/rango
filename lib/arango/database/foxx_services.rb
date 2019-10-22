@@ -15,7 +15,7 @@ module Arango
       end
 
       def uninstall_service
-
+        # TODO
       end
 
       def list_services

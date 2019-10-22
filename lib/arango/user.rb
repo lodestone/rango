@@ -3,7 +3,7 @@
 module Arango
   class User
     include Arango::Helper::Satisfaction
-    include Arango::Helper::Return
+
     include Arango::Helper::ServerAssignment
 
     def initialize(server:, password: "", name:, extra: {}, active: nil, cache_name: nil)

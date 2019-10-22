@@ -15,6 +15,7 @@ module Arango
       # @param params [Hash] Hash of params to pass to the command, optional.
       # @param period [Integer] Number of seconds between executions, optional.
       # @return [Arango::Task]
+      # TODO Ruby block
       def create_task(id, command:, name: nil, offset: nil, params: nil, period: nil)
         Arango::Task.new(id, command: command, name: name, offset: offset, params: params, period: period, database: self).create
       end

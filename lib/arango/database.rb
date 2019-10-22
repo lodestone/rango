@@ -3,7 +3,7 @@
 module Arango
   class Database
     include Arango::Helper::Satisfaction
-    include Arango::Helper::Return
+
 
     include Arango::Database::AQLFunctions
     include Arango::Database::Collections

@@ -10,7 +10,7 @@ module Arango
         base.include(Arango::DocumentCollection::DocumentAccess)
 
         include Arango::Helper::Satisfaction
-        include Arango::Helper::Return
+
         extend Arango::Helper::RequestMethod
 
         include Arango::Collection::Documents

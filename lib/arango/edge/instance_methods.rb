@@ -44,7 +44,6 @@ module Arango
       attr_accessor :ignore_revs, :wait_for_sync
       attr_reader :collection, :graph, :database, :server, :body
 
-      # todo body= -> replace_body, update_body
       def body=(doc)
         @changed_body = _body_from_arg(doc)
         #set_up_from_or_to("from", result[:_from])

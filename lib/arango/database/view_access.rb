@@ -1,10 +1,8 @@
 module Arango
   class Database
     module ViewAccess
-      # === VIEW ===
-
       def create_search_view
-
+        # TODO
       end
 
       def search_view(name)

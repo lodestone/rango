@@ -3,7 +3,7 @@
 module Arango
   class Index
     include Arango::Helper::Satisfaction
-    include Arango::Helper::Return
+
     include Arango::Helper::CollectionAssignment
 
     def initialize(collection:, fields:, body: {}, cache_name: nil, deduplicate: nil, geo_json: nil, id: nil, min_length: nil, sparse: nil,
