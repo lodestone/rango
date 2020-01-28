@@ -1,6 +1,7 @@
 <h1 align="center">
+  Arango Driver
   <br/>
-  Arango-Driver  <br/>
+  <br/>
   <img src="https://raw.githubusercontent.com/isomorfeus/arango-driver/master/docs/arango-driver.png" align="center"/>
 </h1>
 
