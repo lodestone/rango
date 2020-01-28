@@ -1,5 +1,8 @@
-arango-driver
-===============================
+<h1 align="center">
+  <br/>
+  Arango-Driver  <br/>
+  <img src="https://raw.githubusercontent.com/isomorfeus/arango-driver/master/docs/arango-driver.png" align="center"/>
+</h1>
 
 [ArangoDatabase](https://www.arangodb.com/) is a native multi-model database with flexible data models for document, graphs, and key-values.
 arango-driver is a Gem to use ArangoDB with Ruby. arango-driver is based on the [HTTP API of ArangoDB](https://docs.arangodb.com/3.5/HTTP/index.html)
