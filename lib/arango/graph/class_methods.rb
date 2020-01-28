@@ -34,7 +34,7 @@ module Arango
       # @return [Array<Arango::Graph::Base>]
       Arango.request_class_method(Arango::Graph::Base, :all) do |exclude_system: true, database: Arango.current_database|
         query = { excludeSystem: exclude_system }
-        { get: '_api/collection', query: query, block: ->(result) { result.result.map { |c| from_h(c.to_h, database: database) }}}
+        { get: '_api/collection', query: query, block: ->(result) { result.map { |c| from_h(c.to_h, database: database) }}}
       end
 
       # Get graph from the database.
@@ -59,7 +59,7 @@ module Arango
       # @return [Array<String>] List of graph names.
       Arango.request_class_method(Arango::Graph::Base, :list) do |exclude_system: true, database: Arango.current_database|
         query = { excludeSystem: exclude_system }
-        { get: '_api/collection', query: query, block: ->(result) { result.result.map { |c| c[:name] }}}
+        { get: '_api/collection', query: query, block: ->(result) { result.map { |c| c[:name] }}}
       end
 
       # Removes a graph.
@@ -80,7 +80,7 @@ module Arango
       # @return [Boolean]
       Arango.request_class_method(Arango::Graph::Base, :exist?) do |name, exclude_system: true, database: Arango.current_database|
         query = { excludeSystem: exclude_system }
-        { get: '_api/collection', query: query, block: ->(result) { result.result.map { |c| c[:name] }.include?(name) }}
+        { get: '_api/collection', query: query, block: ->(result) { result.map { |c| c[:name] }.include?(name) }}
       end
 
       def create(is_smart: @is_smart, smart_graph_attribute: @smart_graph_attribute,

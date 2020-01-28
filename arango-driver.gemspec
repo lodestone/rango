@@ -12,14 +12,14 @@ Gem::Specification.new do |s|
   s.require_paths = ['lib']
   s.files         = `git ls-files -- {lib,LICENSE,README.md}`.split("\n") + %w[arango_opal.js]
   s.add_dependency 'activesupport', ['>= 5.2', '< 6.1']
-  s.add_dependency 'isomorfeus-redux', '~> 4.0.14'
-  s.add_dependency 'oj', '>= 3.9.0'
+  s.add_dependency 'isomorfeus-redux', '~> 4.0.17'
+  s.add_dependency 'oj', '>= 3.10.0'
   s.add_dependency 'opal', '>= 1.0.0'
   s.add_dependency 'typhoeus', '~> 1.3.1'
   s.add_dependency 'method_source'
   s.add_dependency 'parser'
   s.add_dependency 'unparser'
-  s.add_development_dependency 'opal-webpack-loader', '~> 0.9.6'
+  s.add_development_dependency 'opal-webpack-loader', '~> 0.9.10'
   s.add_development_dependency 'rake'
   s.add_development_dependency 'rspec', '~> 3.8.0'
   s.add_development_dependency 'simplecov', '~> 0.17.0'

@@ -107,7 +107,7 @@ module Arango
             query << "\n LIMIT 1"
             query << "\n RETURN doc"
             aql = AQL.new(query: query, database: collection.database, bind_vars: bind_vars, block: ->(_, result) do
-              Arango::Document::Base.new(result.result.first, collection: collection) if result.result.first
+              Arango::Document::Base.new(result.first, collection: collection) if result.first
             end
             )
             aql.request
@@ -142,7 +142,7 @@ module Arango
               query << "\n LIMIT 1"
               query << "\n RETURN doc"
               aql = AQL.new(query: query, database: collection.database, bind_vars: bind_vars, block: ->(_, result) do
-                result_documents << Arango::Document::Base.new(result.result.first, collection: collection) if result.result.first
+                result_documents << Arango::Document::Base.new(result.first, collection: collection) if result.first
                 result_documents
               end
               )

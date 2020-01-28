@@ -6,7 +6,7 @@ module Arango
         query = nil
         query = { namespace: namespace } unless namespace.nil?
         result = execute_request(get: "_api/aqlfunction", query: query)
-        result.result.map { |r| Arango::Result.new(r) }
+        result.map { |r| Arango::Result.new(r) }
       end
 
       def create_aql_function(name, code: nil, is_deterministic: nil, &block)

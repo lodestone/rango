@@ -121,7 +121,7 @@ module Arango
     # @return [Arango::Database] self
     def reload
       result = request(get: '_api/database/current')
-      _update_attributes(result.result)
+      _update_attributes(result)
       self
     end
     alias refresh reload

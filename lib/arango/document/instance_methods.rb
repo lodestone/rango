@@ -1,6 +1,8 @@
 module Arango
   module Document
     module InstanceMethods
+      extend Arango::Helper::RequestMethod
+
       def initialize(document, collection:, ignore_revs: false, wait_for_sync: nil)
         @body = _body_from_arg(document)
         @changed_body = {}
@@ -183,7 +185,7 @@ module Arango
         # TODO conditional
         if @graph
           headers[:"If-Match"] = @body[:_rev] if if_match
-          result = @graph.request("DELETE", "vertex/#{@collection.name}/#{@body[:_key]}",
+          result = @graph.request("DELETE", "vertex/#{@collection.name}/#{@body[:_key]}")
         end
         query = { waitForSync: @wait_for_sync }
         headers = nil

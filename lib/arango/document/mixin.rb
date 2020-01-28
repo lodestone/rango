@@ -3,7 +3,6 @@ module Arango
     module Mixin
       def included(base)
         base.include Arango::Helper::Satisfaction
-        base.extend(Arango::Helper::RequestMethod)
         base.extend(Arango::Document::ClassMethods)
         base.include(Arango::Document::InstanceMethods)
       end

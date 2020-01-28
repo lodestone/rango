@@ -1,6 +1,7 @@
 module Arango
   module Edge
     module InstanceMethods
+      extend Arango::Helper::RequestMethod
 
       def initialize(edge, from: nil, to: nil, edge_collection:, ignore_revs: false, wait_for_sync: nil)
         @body = _body_from_arg(edge)
