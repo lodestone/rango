@@ -5,7 +5,7 @@ module Arango
       protected
 
       def assign_database(database)
-        satisfy_class?(database, [Arango::Database])
+        satisfy_class?(database, Arango::Database)
         @database = database
         @server = @database.arango_server
       end

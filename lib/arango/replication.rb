@@ -35,14 +35,14 @@ module Arango
     attr_reader :master, :restrict_collections, :restrict_type, :slave
 
     def master=(master)
-      satisfy_class?(master, [Arango::Database])
+      satisfy_class?(master, Arango::Database)
       @master = master
       @master_server = @master.server
     end
     alias assign_master master=
 
     def slave=(slave)
-      satisfy_class?(slave, [Arango::Database])
+      satisfy_class?(slave, Arango::Database)
       @slave = slave
       @slave_server = @slave.server
     end
@@ -58,13 +58,11 @@ module Arango
       if restrict_collections.nil?
         @restrict_collections = nil
       else
-        satisfy_class?(restrict_collections, [Arango::Collection, String], true)
         @restrict_collections = restrict_collections.map do |v|
           case v
-          when String
-            v
-          when Arango::Collection
-            v.name
+          when String then v
+          when Arango::DocumentCollection::Mixin then v.name
+          else raise "wrong type"
           end
         end
       end

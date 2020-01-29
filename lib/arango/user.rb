@@ -109,7 +109,7 @@ module Arango
 
     def add_database_access(grant:, database:)
       satisfy_category?(grant, %w[rw ro none])
-      satisfy_class?(database, [Arango::Database, String])
+      satisfy_class_or_string?(database, Arango::Database)
       database = database.name if database.is_a?(Arango::Database)
       body = { grant: grant }
       result = @server.request("PUT", "_api/user/#{@name}/database/#{database}", body: body)
@@ -122,17 +122,17 @@ module Arango
 
     def add_collection_access(grant:, database:, collection:)
       satisfy_category?(grant, %w[rw ro none])
-      satisfy_class?(database, [Arango::Database, String])
-      satisfy_class?(collection, [Arango::Collection, String])
+      satisfy_class_or_string?(database, Arango::Database)
+      satisfy_module_or_string?(collection, Arango::DocumentCollection::Mixin)
       database = database.name     if database.is_a?(Arango::Database)
-      collection = collection.name if collection.is_a?(Arango::Collection)
+      collection = collection.name if collection.is_a?(Arango::DocumentCollection)
       body = { grant: grant }
       result = @server.request("PUT", "_api/user/#{@name}/database/#{database}/#{collection}", body: body)
       return return_directly?(result) ? result : result[:"#{database}/#{collection}"]
     end
 
     def revoke_database_access(database:)
-      satisfy_class?(database, [Arango::Database, String])
+      satisfy_class_or_string?(database, Arango::Database)
       database = database.name if database.is_a?(Arango::Database)
       result = @server.request("DELETE", "_api/user/#{@name}/database/#{database}")
       return return_directly?(result) ? result : true
@@ -140,10 +140,10 @@ module Arango
     alias revoke revoke_database_access
 
     def revoke_collection_access(database:, collection:)
-      satisfy_class?(database, [Arango::Database, String])
-      satisfy_class?(collection, [Arango::Collection, String])
+      satisfy_class_or_string?(database, Arango::Database)
+      satisfy_module_or_string?(collection, Arango::DocumentCollection)
       database = database.name     if database.is_a?(Arango::Database)
-      collection = collection.name if collection.is_a?(Arango::Collection)
+      collection = collection.name if collection.is_a?(Arango::DocumentCollection)
       result = @server.request("DELETE", "_api/user/#{@name}/database/#{database}/#{collection}")
       return return_directly?(result) ? result : true
     end
@@ -156,17 +156,17 @@ module Arango
     alias databases list_access
 
     def database_access(database:)
-      satisfy_class?(database, [Arango::Database, String])
+      satisfy_class_or_string?(database, Arango::Database)
       database = database.name if database.is_a?(Arango::Database)
       result = @server.request("GET", "_api/user/#{@name}/database/#{database}")
       return return_directly?(result) ? result : result[:result]
     end
 
     def collection_access(database:, collection:)
-      satisfy_class?(database, [Arango::Database, String])
-      satisfy_class?(collection, [Arango::Collection, String])
+      satisfy_class_or_string?(database, Arango::Database)
+      satisfy_module_or_string?(collection, Arango::DocumentCollection::Mixin)
       database = database.name     if database.is_a?(Arango::Database)
-      collection = collection.name if collection.is_a?(Arango::Collection)
+      collection = collection.name if collection.is_a?(Arango::DocumentCollection)
       result = @server.request("GET", "_api/user/#{@name}/database/#{database}/#{collection}", body: body)
       return return_directly?(result) ? result : result[:result]
     end

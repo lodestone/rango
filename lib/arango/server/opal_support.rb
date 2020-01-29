@@ -62,9 +62,9 @@ module Arango
         dirname = File.dirname(__FILE__)
         filename = File.expand_path(File.join(dirname, '..', '..', '..', 'arango_opal.js'))
         content = File.read(filename)
-        system_db = get_database(database)
-        system_db.create_collection('_modules', is_system: true) unless system_db.collection_exist?('_modules', exclude_system: false)
-        modules_collection = system_db.get_collection('_modules')
+        system_db = get_database(name: database)
+        system_db.create_collection(name: '_modules', is_system: true) unless system_db.collection_exist?(name: '_modules', exclude_system: false)
+        modules_collection = system_db.get_collection(name: '_modules')
         opal_module_doc = modules_collection.get_document(path: '/opal')
         if opal_module_doc
           opal_module_doc.content = content

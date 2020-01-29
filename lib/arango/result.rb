@@ -3,33 +3,18 @@ module Arango
     def initialize(result)
       @result = result ? result : {}
       @is_array = @result.class == Array
-      @result.transform_keys!(&:to_sym) unless @is_array
+      unless @is_array
+        @result.transform_keys!{ |k| k.to_s.underscore.to_sym }
+        @error = @result.key?(:error) ? @result.delete(:error) : false
+        @response_code = @result.key?(:code) ? @result.delete(:code) : false
+      end
     end
 
-    attr_accessor :response_code
-
-    # standard fields
-    def code
-      return @result[:code] if @result.key?(:code)
-      nil
-    end
+    attr_accessor :response_code, :error
 
     def error?
-      return @result[:error] if @result.key?(:error)
-      false
+      !!@error
     end
-
-    def error_message
-      return @result[:errorMessage] if @result.key?(:errorMessage)
-      nil
-    end
-    alias errorMessage error_message
-
-    def error_num
-      return @result[:errorNum] if @result.key?(:errorNum)
-      nil
-    end
-    alias errorNum error_num
 
     # access to all other fields
     def [](field_name_or_index)
@@ -64,7 +49,6 @@ module Arango
       @result.send(field_name_or_index, *args, &block)
     end
 
-    # convenience
     def delete_if(*args, &block)
       @result.delete_if(*args, &block)
     end
@@ -98,13 +82,12 @@ module Arango
       @result.map(*args, &block)
     end
 
-    def raw_result
-      @result
+    def result
+      @result[:result]
     end
 
-    def to_underscored_h
-      hash = to_h
-      hash.transform_keys { |k| k.to_s.underscore }
+    def raw_result
+      @result
     end
 
     def to_h

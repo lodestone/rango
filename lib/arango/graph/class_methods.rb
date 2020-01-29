@@ -22,7 +22,7 @@ module Arango
       # @return [Arango::Graph::Base]
       def from_results(graph_result, properties_result, database: nil)
         hash = {}.merge(graph_result.to_h)
-        %i[cache_enabled globally_unique_id id key_options object_id wait_for_sync].each do |key|
+        %i[id key_options object_id wait_for_sync].each do |key|
           hash[key] = properties_result[key]
         end
         from_h(hash, database: database)

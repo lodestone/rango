@@ -7,89 +7,89 @@ describe Arango::Database do
 
   before :each do
     begin
-      @server.drop_database("MyDatabase")
+      @server.drop_database(name: "MyDatabase")
     rescue
     end
   end
 
   after :each do
     begin
-      @server.drop_database("MyDatabase")
+      @server.drop_database(name: "MyDatabase")
     rescue
     end
   end
 
   context "Server" do
     it "new_database" do
-      database = @server.new_database "MyDatabase"
+      database = @server.new_database name: "MyDatabase"
       expect(database.name).to eq "MyDatabase"
     end
 
     it "create_database" do
-      database = @server.create_database "MyDatabase"
+      database = @server.create_database name: "MyDatabase"
       expect(database.name).to eq "MyDatabase"
     end
 
     it "fails to create a duplicate Database" do
-      @server.create_database "MyDatabase"
+      @server.create_database name: "MyDatabase"
       error = nil
       begin
-        @server.create_database "MyDatabase"
+        @server.create_database name: "MyDatabase"
       rescue Arango::Error => e
         error = e.message
       end
-      expect(error).to eq "duplicate name"
+      expect(error).to include "duplicate database"
     end
 
     it "list_databases" do
-      @server.create_database "MyDatabase"
+      @server.create_database name: "MyDatabase"
       list = @server.list_databases
       expect(list).to include("MyDatabase")
     end
 
     it "list_user_databases" do
-      @server.create_database "MyDatabase"
+      @server.create_database name: "MyDatabase"
       list = @server.list_user_databases
       expect(list).to include("MyDatabase")
     end
 
     it "drop_database" do
-      @server.create_database "MyDatabase"
+      @server.create_database name: "MyDatabase"
       list = @server.list_databases
       expect(list).to include("MyDatabase")
-      @server.drop_database("MyDatabase")
+      @server.drop_database(name: "MyDatabase")
       list = @server.list_databases
       expect(list).not_to include("MyDatabase")
     end
 
     it "exist_database?" do
-      expect(@server.exist_database?("MyDatabase")).to be false
-      @server.create_database "MyDatabase"
-      expect(@server.exist_database?("MyDatabase")).to be true
+      expect(@server.exist_database?(name: "MyDatabase")).to be false
+      @server.create_database name: "MyDatabase"
+      expect(@server.exist_database?(name: "MyDatabase")).to be true
     end
 
     it "all_databases" do
-      @server.create_database "MyDatabase"
+      @server.create_database name: "MyDatabase"
       alldb = @server.all_databases
       expect(alldb.map(&:name)).to include("MyDatabase")
     end
 
     it "all_user_databases" do
-      @server.create_database "MyDatabase"
+      @server.create_database name: "MyDatabase"
       alldb = @server.all_user_databases
       expect(alldb.map(&:name)).to include("MyDatabase")
     end
 
     it "get_database" do
-      @server.create_database "MyDatabase"
-      database = @server.get_database("MyDatabase")
+      @server.create_database name: "MyDatabase"
+      database = @server.get_database(name: "MyDatabase")
       expect(database.name).to eq "MyDatabase"
     end
   end
 
   context "Arango::Database itself" do
     it "target_version" do
-      database = @server.create_database "MyDatabase"
+      database = @server.create_database name: "MyDatabase"
       expect(database.target_version).to be_a String
     end
   end

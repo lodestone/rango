@@ -1,5 +1,5 @@
 module Arango
-  class EdgeCollection
+  module EdgeCollection
     module Edges
       def new_edge(edge, wait_for_sync: nil)
         Arango::Edge::Base.new(edge, collection: self, wait_for_sync: wait_for_sync)

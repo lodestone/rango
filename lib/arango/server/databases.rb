@@ -28,22 +28,22 @@ module Arango
       # Creates a new database.
       # @param name [String] The name of the database
       # @return [Arango::Database] The instance of the database created.
-      def create_database(name)
-        Arango::Database.new(name, server: self).create
+      def create_database(name:)
+        Arango::Database.new(name: name, server: self).create
       end
 
       # Instantiates a new database, but does not store it on th server.
       # @param name [String] The name of the database
       # @return [Arango::Database] The instance of the database.
-      def new_database(name)
-        Arango::Database.new(name, server: self)
+      def new_database(name:)
+        Arango::Database.new(name: name, server: self)
       end
 
       # Removes a database.
       # @param name [String] The name of the database
       # @return nil
-      def drop_database(name)
-        Arango::Database.drop(name, server: self)
+      def drop_database(name:)
+        Arango::Database.drop(name: name, server: self)
       end
       alias delete_database drop_database
       alias destroy_database drop_database
@@ -51,8 +51,8 @@ module Arango
       # Get database from server.
       # @param name [String] The name of the database
       # @return [Arango::Database] The instance of the database.
-      def get_database(name)
-        db = Arango::Database.get(name, server: self)
+      def get_database(name:)
+        db = Arango::Database.get(name: name, server: self)
         Arango.current_database = db if Arango.current_server == self
         db
       end
@@ -62,8 +62,8 @@ module Arango
       # Check if database exists.
       # @param name [String] Name of the database.
       # @return [Boolean]
-      def exist_database?(name)
-        Arango::Database.exist?(name, server: self)
+      def exist_database?(name:)
+        Arango::Database.exist?(name: name, server: self)
       end
       alias database_exist? exist_database?
     end

@@ -55,12 +55,12 @@ module Arango
     end
 
     def return_collection(collection, type=nil)
-      satisfy_class?(collection, [Arango::Collection, String])
+      satisfy_class_or_string?(collection, Arango::DocumentCollection)
       case collection
-      when Arango::Collection
+      when Arango::DocumentCollection
         return collection
       when String
-        return Arango::Collection.new(name:     collection,
+        return Arango::DocumentCollection.new(name:     collection,
                                       database: @database, type: type, graph: self)
       end
     end

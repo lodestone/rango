@@ -54,7 +54,7 @@ module Arango
       end
 
       def collection=(collection)
-        satisfy_class?(collection, [Arango::EdgeCollection::Mixin])
+        satisfy_module?(collection, Arango::EdgeCollection::Mixin)
         @collection = collection
         @graph = @collection.graph
         @database = @collection.database

@@ -4,9 +4,10 @@ module Arango
   class Database
     include Arango::Helper::Satisfaction
 
-
     include Arango::Database::AQLFunctions
     include Arango::Database::Collections
+    include Arango::Database::DocumentCollections
+    include Arango::Database::EdgeCollections
     include Arango::Database::FoxxServices
     include Arango::Database::GraphAccess
     include Arango::Database::HTTPRoute
@@ -24,7 +25,7 @@ module Arango
       # @return [Array<Arango::Database>]
       def all(server:)
         result = server.request(get: '_api/database').result
-        result.map{ |db| Arango::Database.new(db, server: server).reload }
+        result.map{ |db| Arango::Database.new(name: db, server: server).reload }
       end
 
       # Retrieves all databases the current user can access.
@@ -32,15 +33,15 @@ module Arango
       # @return [Array<Arango::Database>]
       def all_user_databases(server:)
         result = server.request(get: '_api/database/user').result
-        result.map{ |db| Arango::Database.new(db, server: server).reload }
+        result.map{ |db| Arango::Database.new(name: db, server: server).reload }
       end
 
       # Get database from server.
       # @param name [String] The name of the database
       # @param server [Arango::Server]
       # @return [Arango::Database] The instance of the database.
-      def get(name, server:)
-        Arango::Database.new(name, server: server).reload
+      def get(name:, server:)
+        Arango::Database.new(name: name, server: server).reload
       end
       alias fetch get
       alias retrieve get
@@ -63,7 +64,7 @@ module Arango
       # @param name [String] The name of the database
       # @param server [Arango::Server]
       # @return nil
-      def drop(name, server:)
+      def drop(name:, server:)
         server.request(delete: "_api/database/#{name}")
         nil
       end
@@ -74,7 +75,7 @@ module Arango
       # @param name [String] Name of the database.
       # @param server [Arango::Server]
       # @return [Boolean]
-      def exist?(name, server:)
+      def exist?(name:, server:)
         list(server: server).include?(name)
       end
     end
@@ -86,7 +87,7 @@ module Arango
     # @param is_system
     # @param path
     # @return [Arango::Database]
-    def initialize(name, id: nil, is_system: false, path: '', server: Arango.current_server)
+    def initialize(name:, id: nil, is_system: false, path: '', server: Arango.current_server)
       send(:arango_server=, server)
       @name = name
       @is_system = is_system
@@ -130,7 +131,7 @@ module Arango
     # Remove database from the server.
     # @return nil
     def drop
-      self.class.drop(@name, server: @arango_server)
+      self.class.drop(name: @name, server: @arango_server)
       nil
     end
     alias delete drop

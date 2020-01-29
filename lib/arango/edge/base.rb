@@ -1,7 +1,7 @@
 module Arango
   module Edge
     class Base
-      def inherited(base)
+      def self.inherited(base)
         base.include Arango::Edge::Mixin
       end
     end

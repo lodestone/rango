@@ -1,7 +1,7 @@
 module Arango
   module Edge
     module Mixin
-      def included(base)
+      def self.included(base)
         base.include(Arango::Edge::InstanceMethods)
       end
     end

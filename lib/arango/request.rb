@@ -35,7 +35,7 @@ module Arango
 
       dbcontext = db ? "_db/#{db}/" : nil
 
-      #STDERR.puts "ROPTS #{options} P g #{get} u #{put} s #{post} d #{delete} c #{patch} h #{head}"
+      # STDERR.puts "ROPTS #{options} P g #{get} u #{put} s #{post} d #{delete} c #{patch} h #{head}"
 
       begin
         response = if get then Typhoeus.get("#{@base_uri}/#{dbcontext}#{get}", options)
@@ -60,14 +60,17 @@ module Arango
                         {}
                       end
         result = Arango::Result.new(json_result)
+        # STDERR.puts "result #{result}"
         result.response_code = response.response_code
       rescue Exception => e
+        # STDERR.puts "error #{e}"
         raise Arango::Error.new err: :impossible_to_parse_arangodb_response,
           data: { response: response.response_body, request: JSON.pretty_generate(options) }
       end
 
       if !result.is_array? && result.error?
-        raise Arango::ErrorDB.new(message: result.error_message, code: result.code, data: result.to_h, error_num: result.error_num, request: options)
+        # STDERR.puts "raising #{result.error_message}"
+        raise Arango::ErrorDB.new(message: result.error_message, code: result.response_code, data: result.to_h, error_num: result.error_num, request: options)
       end
 
       block ? block.call(result) : result

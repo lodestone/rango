@@ -1,5 +1,5 @@
 module Arango
-  module DocumentCollection
+  module EdgeCollection
     module InstanceMethods
       extend Arango::Helper::RequestMethod
 
@@ -11,7 +11,7 @@ module Arango
       # @param status
       # @return [Arango::DocumentCollection]
       def initialize(database: Arango.current_database, graph: nil,
-                     name:, id: nil, is_system: false, status: nil, type: :document,
+                     name:, id: nil, is_system: false, status: nil, type: :edge,
                      properties: {})
         send(:database=, database)
         #  assign_graph(graph)
@@ -19,7 +19,7 @@ module Arango
         @batch_proc = nil
         @id = id
         @is_system = is_system
-        @name = name
+        _set_name(name)
         @name_changed = false
         @original_name = name
 
@@ -100,14 +100,9 @@ module Arango
         @properties[:journal_size] = n
       end
 
-      def wait_for_sync=(n)
-        @wait_for_sync_changed = true
-        @properties[:wait_fro_sync] = n
-      end
-
       def name=(n)
         @name_changed = true
-        @name = n
+        _set_name(n)
       end
 
       def arango_server
@@ -141,6 +136,7 @@ module Arango
           query[:enforceReplicationFactor] = enforce_replication_factor unless enforce_replication_factor.nil?
           query[:waitForSyncReplication] = wait_for_sync_replication unless wait_for_sync_replication.nil?
         end
+
         { post: '_api/collection', body: body, query: query, block: ->(result) { _update_attributes(result); self }}
       end
 
@@ -313,6 +309,11 @@ module Arango
 
       private
 
+      def _set_name(name)
+        raise 'illegal_name' if name.include?('/') || name.include?('.')
+        @name = name
+      end
+
       def _set_status(s)
         if s.class == Symbol && STATES.include?(s)
           @status = STATES.index(s)
@@ -338,7 +339,7 @@ module Arango
         hash = result.raw_result
         @id = hash.delete(:id)
         @is_system = hash.delete(:is_system)
-        @name = hash.delete(:name)
+        _set_name(hash.delete(:name))
         s = hash.delete(:status)
         _set_status(s) if s
         t = hash.delete(:type)
@@ -347,16 +348,14 @@ module Arango
       end
 
       def _set_properties(properties)
-        properties = if properties
+        @properties = if properties
                         properties.transform_keys! { |k| k.to_s.underscore.to_sym }
                         properties[:key_options].transform_keys! { |k| k.to_s.underscore.to_sym } if properties.key?(:key_options)
                         properties[:sharding_strategy].to_s.underscore.to_sym if properties.key?(:sharding_strategy)
                         properties
                       else
                         {}
-                     end
-        return @properties = properties unless @properties
-        @properties.merge!(properties)
+                      end
       end
     end
   end

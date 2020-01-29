@@ -17,15 +17,15 @@ module Arango
       # @param params [Hash] Hash of params to pass to the command, optional.
       # @param period [Integer] Number of seconds between executions, optional.
       # @return [Arango::Task]
-      def create_task(id, command:, name: nil, offset: nil, params: nil, period: nil)
-        Arango::Task.new(id, command: command, name: name, offset: offset, params: params, period: period, server: self).create
+      def create_task(id: nil, command:, name: nil, offset: nil, params: nil, period: nil)
+        Arango::Task.new(id: id, command: command, name: name, offset: offset, params: params, period: period, server: self).create
       end
 
       # Get a task from the server.
       # @param id [String]
       # @return [Arango::Task]
-      def get_task(id)
-        Arango::Task.get(id, server: self)
+      def get_task(id:)
+        Arango::Task.get(id: id, server: self)
       end
       alias fetch_task get_task
       alias retrieve_task get_task
@@ -38,8 +38,8 @@ module Arango
       # @param params [Hash] Hash of params to pass to the command, optional.
       # @param period [Integer] Number of seconds between executions, optional.
       # @return [Arango::Task]
-      def new_task(id, command: nil, name: nil, offset: nil, params: nil, period: nil)
-        Arango::Task.new(id, command: command, name: name, offset: offset, params: params, period: period, server: self)
+      def new_task(id: nil, command: nil, name: nil, offset: nil, params: nil, period: nil)
+        Arango::Task.new(id: id, command: command, name: name, offset: offset, params: params, period: period, server: self)
       end
 
       # Get a list of all task ids.
@@ -51,8 +51,8 @@ module Arango
       # Delete task with given id.
       # @param id [String]
       # @return [Boolean] Returns true if task has been deleted.
-      def drop_task(id)
-        Arango::Task.delete(id, server: self)
+      def drop_task(id:)
+        Arango::Task.delete(id: id, server: self)
       end
       alias delete_task drop_task
       alias destroy_task drop_task
@@ -60,8 +60,8 @@ module Arango
       # Checks existence of a task.
       # @param id [String]
       # @return [Boolean] Returns true if the task exists, otherwise false.
-      def exist_task?(id)
-        Arango::Task.exist?(id, server: self)
+      def exist_task?(id:)
+        Arango::Task.exist?(id: id, server: self)
       end
       alias task_exist? exist_task?
     end

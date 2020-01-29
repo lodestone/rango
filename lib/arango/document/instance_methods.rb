@@ -57,14 +57,14 @@ module Arango
       end
 
       def collection=(collection)
-        satisfy_class?(collection, [Arango::DocumentCollection::Mixin])
+        satisfy_module?(collection, Arango::DocumentCollection::Mixin)
         @collection = collection
         @database = @collection.database
         @arango_server = @database.arango_server
       end
 
       def graph=(graph)
-        satisfy_class?(collection, [Arango::Graph::Mixin])
+        satisfy_module?(graph, Arango::Graph::Mixin)
         @graph = graph
       end
 
@@ -212,7 +212,7 @@ module Arango
         when Arango::Document::Mixin then arg.to_h
         when Arango::Result then arg.to_h
         else
-          raise "Unknown arg type, must be String, Hash, Arango::Result or Arango::Document"
+          raise "Unknown arg type, must be String, Hash, Arango::Result or Arango::Document but was #{arg.class}"
         end
       end
     end

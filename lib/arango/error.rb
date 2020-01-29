@@ -37,7 +37,7 @@ module Arango
         code: 10011, message: "ArangoDB didn't return a valid result"
       },
       read_or_write_should_be_string_or_collections: {
-        code: 10012, message: "read or write should be an array of name classes or Arango::Collections"
+        code: 10012, message: "read or write should be an array of name classes or Arango::DocumentCollections"
       },
       wrong_class: {
         code: 10013, message: "Wrong class"

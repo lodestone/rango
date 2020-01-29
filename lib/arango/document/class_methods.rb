@@ -1,7 +1,7 @@
 module Arango
   module Document
     module ClassMethods
-      def extended(base)
+      def self.extended(base)
         Arango.aql_request_class_method(base, :all) do |offset: 0, limit: nil, batch_size: nil, collection:|
           bind_vars = {}
           query = "FOR doc IN #{collection.name}"
@@ -107,16 +107,16 @@ module Arango
             query << "\n LIMIT 1"
             query << "\n RETURN doc"
             aql = AQL.new(query: query, database: collection.database, bind_vars: bind_vars, block: ->(_, result) do
-              Arango::Document::Base.new(result.first, collection: collection) if result.first
+              Arango::Document::Base.new(result.result.first, collection: collection) if result.result.first
             end
             )
             aql.request
           end
         end
-        alias fetch get
-        alias retrieve get
-        alias batch_fetch batch_get
-        alias batch_retrieve batch_get
+        base.singleton_class.alias_method :fetch, :get
+        base.singleton_class.alias_method :retrieve, :get
+        base.singleton_class.alias_method :batch_fetch, :batch_get
+        base.singleton_class.alias_method :batch_retrieve, :batch_get
 
         Arango.multi_request_class_method(base, :get_documents) do |documents, collection:|
           documents = [documents] unless documents.is_a? Array
@@ -142,7 +142,7 @@ module Arango
               query << "\n LIMIT 1"
               query << "\n RETURN doc"
               aql = AQL.new(query: query, database: collection.database, bind_vars: bind_vars, block: ->(_, result) do
-                result_documents << Arango::Document::Base.new(result.first, collection: collection) if result.first
+                result_documents << Arango::Document::Base.new(result.result.first, collection: collection) if result.result.first
                 result_documents
               end
               )
@@ -151,10 +151,10 @@ module Arango
           end
           requests
         end
-        alias fetch_documents get_documents
-        alias retrieve_documents get_documents
-        alias batch_fetch_documents batch_get_documents
-        alias batch_retrieve_documents batch_get_documents
+        base.singleton_class.alias_method :fetch_documents, :get_documents
+        base.singleton_class.alias_method :retrieve_documents, :get_documents
+        base.singleton_class.alias_method :batch_fetch_documents, :batch_get_documents
+        base.singleton_class.alias_method :batch_retrieve_documents, :batch_get_documents
 
         Arango.request_class_method(base, :replace_documents) do |documents, ignore_revs: false, wait_for_sync: nil, collection:|
           documents = [documents] unless documents.is_a? Array
@@ -191,10 +191,10 @@ module Arango
           headers = { "If-Match": document[:_rev] } if !ignore_revs && document.key?(:_rev)
           { delete: "_api/document/#{collection.name}/#{document[:_key]}", query: query, headers: headers, block: ->(_) { nil }}
         end
-        alias delete drop
-        alias destroy drop
-        alias batch_delete batch_drop
-        alias batch_destroy batch_drop
+        base.singleton_class.alias_method :delete, :drop
+        base.singleton_class.alias_method :destroy, :drop
+        base.singleton_class.alias_method :batch_delete, :batch_drop
+        base.singleton_class.alias_method :batch_destroy, :batch_drop
 
         Arango.request_class_method(base, :drop_documents) do |documents, ignore_revs: false, wait_for_sync: nil, collection:|
           documents = [documents] unless documents.is_a? Array
@@ -203,10 +203,10 @@ module Arango
           query[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
           { delete: "_api/document/#{collection.name}", body: documents, query: query, block: ->(_) { nil }}
         end
-        alias delete_documents drop_documents
-        alias destroy_documents drop_documents
-        alias batch_delete_documents batch_drop_documents
-        alias batch_destroy_documents batch_drop_documents
+        base.singleton_class.alias_method :delete_documents, :drop_documents
+        base.singleton_class.alias_method :destroy_documents, :drop_documents
+        base.singleton_class.alias_method :batch_delete_documents, :batch_drop_documents
+        base.singleton_class.alias_method :batch_destroy_documents, :batch_drop_documents
 
         private
 
@@ -220,10 +220,10 @@ module Arango
             arg[:_rev] = arg.delete(:rev) if arg.key?(:rev) && !arg.key?(:_rev)
             arg.delete_if{|_,v| v.nil?}
             arg
-          when Arango::Document then arg.to_h
+          when Arango::Document::Mixin then arg.to_h
           when Arango::Result then arg.to_h
           else
-            raise "Unknown arg type, must be String, Hash, Arango::Result or Arango::Document"
+            raise "Unknown arg type, must be String, Hash, Arango::Result or Arango::Document but was #{arg.class}"
           end
         end
       end

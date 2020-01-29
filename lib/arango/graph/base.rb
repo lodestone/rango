@@ -1,7 +1,7 @@
 module Arango
   module Graph
     class Base
-      def inherited(base)
+      def self.inherited(base)
         base.include Arango::Graph::Mixin
       end
     end

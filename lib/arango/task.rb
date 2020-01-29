@@ -16,12 +16,12 @@ module Arango
         task_hash = task_hash.transform_keys { |k| k.to_s.underscore.to_sym }
         task_hash.merge!(server: server) if server
         if task_hash[:database].class == String
-          task_hash[:database] = Arango::Database.new(task_hash[:database], server: server)
+          task_hash[:database] = Arango::Database.new(name: task_hash[:database], server: server)
         end
         created = task_hash.delete(:created)
         offset = task_hash.delete(:offset)
         type = task_hash.delete(:type)
-        task = Arango::Task.new(task_hash.delete(:id), **task_hash)
+        task = Arango::Task.new(**task_hash)
         task.instance_variable_set(:@created, created)
         task.instance_variable_set(:@offset, offset)
         task.instance_variable_set(:@type, type)
@@ -42,7 +42,7 @@ module Arango
       # @param database [Arango::Database] A database, optional if server is given.
       # @param server [Arango::Server] Server, optional if database is given.
       # @return [Arango::Task]
-      def drop(id, database: nil, server: Arango.current_server)
+      def drop(id:, database: nil, server: Arango.current_server)
         if database
           database.request(delete: "_api/tasks/#{id}")
         elsif server
@@ -59,7 +59,7 @@ module Arango
       # @param database [Arango::Database] A database, optional if server is given.
       # @param server [Arango::Server] Server, optional if database is given.
       # @return [Arango::Task]
-      def get(id, database: nil, server: Arango.current_server)
+      def get(id:, database: nil, server: Arango.current_server)
         if database
           result = database.request(get: "_api/tasks/#{id}")
           server = database.arango_server
@@ -100,7 +100,7 @@ module Arango
         result.map { |task| task[:id] }
       end
 
-      def exist?(id, database: nil, server: Arango.current_server)
+      def exist?(id:, database: nil, server: Arango.current_server)
         result = list(database: database, server: server)
         result.include?(id)
       end
@@ -156,7 +156,7 @@ module Arango
     # @param params [Hash] Hash of params to pass to the command, optional.
     # @param period [Integer] Number of seconds between executions, optional.
     # @return [Arango::Task]
-    def initialize(id = nil, command: nil, name: nil, offset: nil, params: nil, period: nil, database: nil, server: Arango.current_server)
+    def initialize(id: nil, command: nil, name: nil, offset: nil, params: nil, period: nil, database: nil, server: Arango.current_server)
       if database
         assign_database(database)
         @requester = @database

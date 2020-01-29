@@ -1,7 +1,7 @@
 module Arango
   module Edge
     module ClassMethods
-      def extended(base)
+      def self.extended(base)
         Arango.aql_request_class_method(base, :all) do |offset: 0, limit: nil, batch_size: nil, collection:|
           bind_vars = {}
           query = "FOR doc IN #{collection.name}"

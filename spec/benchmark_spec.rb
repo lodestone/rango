@@ -8,19 +8,19 @@ describe Arango::Server do
     before :all do
       @server = connect
       begin
-        @server.drop_database("BenchmarkDatabase")
+        @server.drop_database(name: "BenchmarkDatabase")
       rescue
       end
-      @database = @server.create_database("BenchmarkDatabase")
-      @collection = @database.create_collection "MyCollection"
+      @database = @server.create_database(name: "BenchmarkDatabase")
+      @collection = @database.create_collection name: "MyCollection"
     end
 
     after :all do
       begin
-        @database.drop_collection('MyCollection')
+        @database.drop_collection(name: 'MyCollection')
       rescue
       end
-      @server.drop_database("BenchmarkDatabase")
+      @server.drop_database(name: "BenchmarkDatabase")
     end
 
     it "version works" do

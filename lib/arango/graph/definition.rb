@@ -9,7 +9,7 @@ module Arango
         result = request("GET", "edge", key: :collections)
         return result if @database.server.async != false
         return result if return_directly?(result)
-        result.map{|r| Arango::Collection.new(database: @database, name: r, type: :edge)}
+        result.map{|r| Arango::DocumentCollection.new(database: @database, name: r, type: :edge)}
       end
 
       def edge_definitions
@@ -17,9 +17,9 @@ module Arango
       end
 
       def add_edge_definition(collection:, from:, to:)
-        satisfy_class?(collection, [String, Arango::Collection])
-        satisfy_class?(from, [String, Arango::Collection], true)
-        satisfy_class?(to, [String, Arango::Collection], true)
+        satisfy_module_or_string?(collection, Arango::DocumentCollection::Mixin)
+        satisfy_module_or_string?(from, Arango::Document::Mixin)
+        satisfy_module_or_string?(to, Arango::Document::Mixin)
         from = [from] unless from.is_a?(Array)
         to = [to] unless to.is_a?(Array)
         body = {}
@@ -31,9 +31,9 @@ module Arango
       end
 
       def replace_edge_definition(collection:, from:, to:)
-        satisfy_class?(collection, [String, Arango::Collection])
-        satisfy_class?(from, [String, Arango::Collection], true)
-        satisfy_class?(to, [String, Arango::Collection], true)
+        satisfy_class?(collection, [String, Arango::DocumentCollection])
+        satisfy_class?(from, [String, Arango::DocumentCollection], true)
+        satisfy_class?(to, [String, Arango::DocumentCollection], true)
         from = [from] unless from.is_a?(Array)
         to = [to] unless to.is_a?(Array)
         body = {}
@@ -45,7 +45,7 @@ module Arango
       end
 
       def remove_edge_definition(collection:, dropCollection: nil)
-        satisfy_class?(collection, [String, Arango::Collection])
+        satisfy_class?(collection, [String, Arango::DocumentCollection])
         query = {dropCollection: dropCollection}
         collection = collection.is_a?(String) ? collection : collection.name
         result = request("DELETE", "edge/#{collection}", query: query, key: :graph)

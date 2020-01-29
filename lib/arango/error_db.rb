@@ -8,7 +8,6 @@ module Arango
       @action    = action
       @url       = url
       @request   = request
-      super(err: nil, skip_assignment: true)
     end
     attr_reader :action, :code, :data, :error_num, :message, :request, :url
 
@@ -21,7 +20,7 @@ module Arango
         code: @code,
         data: @data,
         errorNum: @error_num
-      }.delete_if{|k,v| v.nil?}
+      }.delete_if{|_,v| v.nil?}
     end
   end
 end

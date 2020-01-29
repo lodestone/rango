@@ -3,7 +3,7 @@ module Arango
     module EdgeAccess
       # === GRAPH ===
       def graph=(graph)
-        satisfy_class?(graph, [Arango::Graph, NilClass])
+        satisfy_module_or_nil?(graph, Arango::Graph::Mixin)
         if !graph.nil? && graph.database.name != @database.name
           raise Arango::Error.new err: :database_graph_no_same_as_collection_database,
                                   data: { graph_database_name: graph.database.name, collection_database_name:  @database.name}

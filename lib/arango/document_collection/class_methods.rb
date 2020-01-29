@@ -1,106 +1,108 @@
 module Arango
   module DocumentCollection
     module ClassMethods
-      def new(name, database: Arango.current_database, graph: nil, type: :document,
-              status: nil,
-              distribute_shards_like: nil, do_compact: nil, enforce_replication_factor: nil, index_buckets: nil, is_system: false,
-              is_volatile: false, journal_size: nil, key_options: nil, number_of_shards: nil, replication_factor: nil, shard_keys: nil,
-              sharding_strategy: nil, smart_join_attribute: nil, wait_for_sync: nil, wait_for_sync_replication: nil)
-        if type == :document
-          super(name, database: database, graph: graph, type: :document,
-                status: status,
-                distribute_shards_like: distribute_shards_like, do_compact: do_compact, enforce_replication_factor: enforce_replication_factor,
-                index_buckets: index_buckets, is_system: is_system, is_volatile: is_volatile, journal_size: journal_size, key_options: key_options,
-                number_of_shards: number_of_shards, replication_factor: replication_factor, shard_keys: shard_keys,
-                sharding_strategy: sharding_strategy, smart_join_attribute: smart_join_attribute, wait_for_sync: wait_for_sync,
-                wait_for_sync_replication: wait_for_sync_replication)
-        elsif type == :edge
-          Arango::EdgeCollection::Base.new(name, database: database, graph: graph, type: :document,
-                                           status: status,
-                                           distribute_shards_like: distribute_shards_like, do_compact: do_compact,
-                                           enforce_replication_factor: enforce_replication_factor, index_buckets: index_buckets,
-                                           is_system: is_system, is_volatile: is_volatile, journal_size: journal_size, key_options: key_options,
-                                           number_of_shards: number_of_shards, replication_factor: replication_factor, shard_keys: shard_keys,
-                                           sharding_strategy: sharding_strategy, smart_join_attribute: smart_join_attribute,
-                                           wait_for_sync: wait_for_sync, wait_for_sync_replication: wait_for_sync_replication)
+      def new(database: Arango.current_database, graph: nil,
+              name:, id: nil, is_system: false, status: nil, type: :document,
+              properties: {})
+        case type
+        when :document
+          super(database: database, graph: graph,
+                name: name, id: id, status: status, type: :document, is_system: is_system,
+                properties: properties)
+        when :edge
+          Arango::EdgeCollection::Base.new(database: database, graph: graph,
+                                           name: name, id: nil, is_system: false, status: status, type: :edge,
+                                           properties: properties)
+        else raise "unknown type"
         end
       end
 
       # Takes a hash and instantiates a Arango::DocumentCollection object from it.
       # @param collection_hash [Hash]
       # @return [Arango::DocumentCollection]
-      def from_h(collection_hash, database: nil)
-        collection_hash = collection_hash.transform_keys { |k| k.to_s.underscore.to_sym }
-        collection_hash.merge!(database: database) if database
+      def from_h(collection_hash, database: Arango.current_database)
+        collection_hash = collection_hash.transform_keys! { |k| k.to_s.underscore.to_sym }
+        collection_hash.merge!(database: database) unless collection_hash.key?(:database)
+        if collection_hash.key?(:properties)
+          collection_hash[:id] = collection_hash[:properties].delete(:id) if collection_hash[:properties].key?(:id)
+          collection_hash[:name] = collection_hash[:properties].delete(:name) if collection_hash[:properties].key?(:name)
+          collection_hash[:status] = collection_hash[:properties].delete(:status) if collection_hash[:properties].key?(:status)
+          collection_hash[:type] = collection_hash[:properties].delete(:type) if collection_hash[:properties].key?(:type)
+          collection_hash[:error] = collection_hash[:properties].delete(:error) if collection_hash[:properties].key?(:error)
+          collection_hash[:code] = collection_hash[:properties].delete(:code) if collection_hash[:properties].key?(:code)
+        end
+        raise "error" if collection_hash[:error]
         %i[code error].each { |key| collection_hash.delete(key) }
-        instance_variable_hash = {}
-        %i[cache_enabled globally_unique_id id object_id].each do |key|
-          instance_variable_hash[key] = collection_hash.delete(key)
-        end
-        collection = Arango::DocumentCollection.new(collection_hash.delete(:name), **collection_hash)
-        instance_variable_hash.each do |k,v|
-          collection.instance_variable_set("@#{k}", v)
-        end
-        collection
+        collection_hash[:type] = TYPES[collection_hash[:type]] if collection_hash[:type].is_a?(Integer)
+        Arango::DocumentCollection::Base.new(**collection_hash)
       end
 
       # Takes a Arango::Result and instantiates a Arango::DocumentCollection object from it.
       # @param collection_result [Arango::Result]
       # @param properties_result [Arango::Result]
       # @return [Arango::DocumentCollection]
-      def from_results(collection_result, properties_result, database: nil)
-        hash = {}.merge(collection_result.to_h)
-        %i[cache_enabled globally_unique_id id key_options object_id wait_for_sync].each do |key|
-          hash[key] = properties_result[key]
-        end
+      def from_results(collection_result, properties_result, database: Arango.current_database)
+        hash = collection_result ? {}.merge(collection_result.to_h) : {}
+        hash[:properties] = properties_result
         from_h(hash, database: database)
       end
 
-      # Retrieves all collections from the database.
-      # @param exclude_system [Boolean] Optional, default true, exclude system collections.
-      # @param database [Arango::Database]
-      # @return [Array<Arango::DocumentCollection>]
-      Arango.request_class_method(Arango::DocumentCollection, :all) do |exclude_system: true, database: Arango.current_database|
-        query = { excludeSystem: exclude_system }
-        { get: '_api/collection', query: query, block: ->(result) { result.map { |c| from_h(c.to_h, database: database) }}}
-      end
+      def self.extended(base)
+        # Retrieves all collections from the database.
+        # @param exclude_system [Boolean] Optional, default true, exclude system collections.
+        # @param database [Arango::Database]
+        # @return [Array<Arango::DocumentCollection>]
+        Arango.request_class_method(base, :all) do |exclude_system: true, database: Arango.current_database|
+          query = { excludeSystem: exclude_system }
+          { get: '_api/collection', query: query, block: ->(result) { result.result.map { |c| from_results({}, c.to_h, database: database) }}}
+        end
 
-      # Get collection from the database.
-      # @param name [String] The name of the collection.
-      # @param database [Arango::Database]
-      # @return [Arango::Database]
-      Arango.multi_request_class_method(Arango::DocumentCollection, :get) do |name, database: Arango.current_database|
-        requests = []
-        first_get_result = nil
-        requests << { get: "/_api/collection/#{name}", block: ->(result) { first_get_result = result }}
-        requests << { get: "/_api/collection/#{name}/properties", block: ->(result) { from_results(first_get_result, result, database: database) }}
-        requests
-      end
+        # Get collection from the database.
+        # @param name [String] The name of the collection.
+        # @param database [Arango::Database]
+        # @return [Arango::Database]
+        Arango.multi_request_class_method(base, :get) do |name:, database: Arango.current_database|
+          requests = []
+          first_get_result = nil
+          requests << { get: "/_api/collection/#{name}", block: ->(result) { first_get_result = result.result }}
+          requests << { get: "/_api/collection/#{name}/properties", block: ->(result) { from_results(first_get_result, result.raw_result, database: database) }}
+          requests
+        end
+        base.singleton_class.alias_method :fetch, :get
+        base.singleton_class.alias_method :retrieve, :get
+        base.singleton_class.alias_method :batch_fetch, :batch_get
+        base.singleton_class.alias_method :batch_retrieve, :batch_get
 
-      # Retrieves a list of all collections.
-      # @param exclude_system [Boolean] Optional, default true, exclude system collections.
-      # @param database [Arango::Database]
-      # @return [Array<String>] List of collection names.
-      Arango.request_class_method(Arango::DocumentCollection, :list) do |exclude_system: true, database: Arango.current_database|
-        query = { excludeSystem: exclude_system }
-        { get: '_api/collection', query: query, block: ->(result) { result.map { |c| c[:name] }}}
-      end
+        # Retrieves a list of all collections.
+        # @param exclude_system [Boolean] Optional, default true, exclude system collections.
+        # @param database [Arango::Database]
+        # @return [Array<String>] List of collection names.
+        Arango.request_class_method(base, :list) do |exclude_system: true, database: Arango.current_database|
+          query = { excludeSystem: exclude_system }
+          { get: '_api/collection', query: query, block: ->(result) { result.result.map { |c| c[:name] }}}
+        end
 
-      # Removes a collection.
-      # @param name [String] The name of the collection.
-      # @param database [Arango::Database]
-      # @return nil
-      Arango.request_class_method(Arango::DocumentCollection, :drop) do |name, database: Arango.current_database|
-        { delete: "_api/collection/#{name}" , block: ->(_) { nil }}
-      end
+        # Removes a collection.
+        # @param name [String] The name of the collection.
+        # @param database [Arango::Database]
+        # @return nil
+        Arango.request_class_method(base, :drop) do |name:, database: Arango.current_database|
+          { delete: "_api/collection/#{name}" , block: ->(_) { nil }}
+        end
+        base.singleton_class.alias_method :delete, :drop
+        base.singleton_class.alias_method :destroy, :drop
+        base.singleton_class.alias_method :batch_delete, :batch_drop
+        base.singleton_class.alias_method :batch_destroy, :batch_drop
 
-      # Check if collection exists.
-      # @param name [String] Name of the collection
-      # @param database [Arango::Database]
-      # @return [Boolean]
-      Arango.request_class_method(Arango::DocumentCollection, :exist?) do |name, exclude_system: true, database: Arango.current_database|
-        query = { excludeSystem: exclude_system }
-        { get: '_api/collection', query: query, block: ->(result) { result.map { |c| c[:name] }.include?(name) }}
+        # Check if collection exists.
+        # @param name [String] Name of the collection
+        # @param database [Arango::Database]
+        # @return [Boolean]
+        Arango.request_class_method(base, :exist?) do |name:, exclude_system: true, database: Arango.current_database|
+          query = { excludeSystem: exclude_system }
+          { get: '_api/collection', query: query, block: ->(result) { result.result.map { |c| c[:name] }.include?(name) }}
+        end
+        base.singleton_class.alias_method :exists?, :exist?
       end
     end
   end

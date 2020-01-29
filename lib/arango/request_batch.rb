@@ -101,6 +101,7 @@ module Arango
         end
       end
       body << "--#{@boundary}--\r\n\r\n" if @requests.length > 0
+      raise 'empty batch request' if body.empty?
       result = if @database
                  @database.request(post: '_api/batch', body: body, headers: @headers)
                else
@@ -129,7 +130,7 @@ module Arango
     def _check_for_errors(result_hash)
       result_hash.each do |k, result|
         if !result.is_array? && result.error?
-          raise Arango::ErrorDB.new(message: result.error_message, code: result.code, data: result.to_h, error_num: result.error_num,
+          raise Arango::ErrorDB.new(message: result.error_message, code: result.response_code, data: result.to_h, error_num: result.error_num,
                                     action: '', url: '', request: { request_part: k })
         end
       end

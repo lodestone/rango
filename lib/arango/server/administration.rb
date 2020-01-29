@@ -4,7 +4,7 @@ module Arango
       # Check availability of the server.
       # @return [Boolean]
       def available?
-        200 == request(get: '_admin/server/availability').code
+        200 == request(get: '_admin/server/availability').response_code
       end
 
       # Returns information about all coordinator endpoints (cluster only).
@@ -28,7 +28,7 @@ module Arango
       # @return [Hash]
       def echo(request_hash)
         result = request(post: "_admin/echo", body: request_hash)
-        Oj.load(result.requestBody, symbol_keys: true)
+        Oj.load(result.request_body, symbol_keys: true)
       end
 
       # Return server database engine information

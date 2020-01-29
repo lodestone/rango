@@ -1,5 +1,5 @@
 module Arango
-  class Collection
+  module DocumentCollection
     module Indexes
       # === INDEXES ===
 

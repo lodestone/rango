@@ -4,38 +4,38 @@ describe Arango::Document do
   before :all do
     @server = connect
     begin
-      @server.drop_database("DocumentDatabase")
+      @server.drop_database(name: "DocumentDatabase")
     rescue
     end
-    @database = @server.create_database("DocumentDatabase")
+    @database = @server.create_database(name: "DocumentDatabase")
   end
 
   before :each do
     begin
-      @database.drop_collection("DocumentCollection")
+      @database.drop_collection(name: "DocumentCollection")
     rescue
     end
     begin
-      @database.drop_collection("EdgeCollection")
+      @database.drop_collection(name: "EdgeCollection")
     rescue
     end
-    @collection = @database.create_collection("DocumentCollection")
-    @edge_collection = @database.create_collection("EdgeCollection")
+    @collection = @database.create_collection(name: "DocumentCollection")
+    @edge_collection = @database.create_collection(name: "EdgeCollection")
   end
 
   after :each do
     begin
-      @database.drop_collection("DocumentCollection")
+      @database.drop_collection(name: "DocumentCollection")
     rescue
     end
     begin
-      @database.drop_collection("EdgeCollection")
+      @database.drop_collection(name: "EdgeCollection")
     rescue
     end
   end
 
   after :all do
-    @server.drop_database("DocumentDatabase")
+    @server.drop_database(name: "DocumentDatabase")
   end
 
   context "Collection" do

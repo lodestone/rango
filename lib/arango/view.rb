@@ -31,7 +31,7 @@ module Arango
     alias assign_type type=
 
     def add_link(collection:, analyzers: nil, fields: {}, include_all_fields: nil, track_list_positions: nil, store_values: nil)
-      satisfy_class?(collection, [Arango::Collection, String])
+      satisfy_class?(collection, [Arango::DocumentCollection, String])
       collection_name = collection.is_a?(String) ? collection : collection.name
       satisfy_category?(store_values, ["none", "id", nil])
       @links[collection_name] = {

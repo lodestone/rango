@@ -28,7 +28,7 @@ module Arango
                    query_id: nil, run_time: nil, started: nil, state: nil, stream: nil,
                    block: nil, &ruby_block)
       block = ruby_block if block_given?
-      satisfy_class?(query, [String])
+      satisfy_class?(query, String)
       @query = query
       @database = database
       @arango_server = database.arango_server
@@ -134,7 +134,7 @@ module Arango
       if @has_more
         { put: "_api/cursor/#{@id}", block: ->(result) { set_instance_vars(result); self }}
       else
-        raise Arango::Error.new err: :no_other_aql_next, data: { hasMore: false }
+        raise Arango::Error.new err: :no_other_aql_next, data: { has_more: false }
       end
     end
 
@@ -179,7 +179,7 @@ module Arango
     def set_instance_vars(result)
       @cached   = result[:cached]
       @extra    = result[:extra]
-      @has_more = result[:hasMore]
+      @has_more = result[:has_more]
       @id       = result[:id]
       @count    = result[:count]
       @result   = result[:result]

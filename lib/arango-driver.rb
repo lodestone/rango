@@ -28,6 +28,8 @@ require "arango/server/opal_support"
 require "arango/server"
 
 require "arango/database/aql_functions"
+require "arango/database/edge_collections"
+require "arango/database/document_collections"
 require "arango/database/collections"
 require "arango/database/foxx_services"
 require "arango/database/http_route"
@@ -56,7 +58,14 @@ require "arango/document_collection/instance_methods"
 require "arango/document_collection/class_methods"
 require "arango/document_collection/mixin"
 require "arango/document_collection/base"
+
 require "arango/replication"
+
+require "arango/edge_collection/edges"
+require "arango/edge_collection/instance_methods"
+require "arango/edge_collection/class_methods"
+require "arango/edge_collection/mixin"
+require "arango/edge_collection/base"
 
 require "arango/edge/instance_methods"
 require "arango/edge/class_methods"

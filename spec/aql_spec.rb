@@ -4,18 +4,18 @@ describe Arango::AQL do
   before :all do
     @server = connect
     begin
-      @server.drop_database("AQLDatabase")
+      @server.drop_database(name: "AQLDatabase")
     rescue
     end
-    @database = @server.create_database("AQLDatabase")
+    @database = @server.create_database(name: "AQLDatabase")
   end
 
   before :each do
     begin
-      @database.drop_collection('MyCollection')
+      @database.drop_collection(name: 'MyCollection')
     rescue
     end
-    collection = @database.create_collection('MyCollection')
+    collection = @database.create_collection(name: 'MyCollection')
     collection.create_documents([
                                     {num: 1, _key: "FirstKey"}, {num: 1},
                                     {num: 1}, {num: 1}, {num: 1},
@@ -27,13 +27,13 @@ describe Arango::AQL do
 
   after :each do
     begin
-      @database.drop_collection('MyCollection')
+      @database.drop_collection(name: 'MyCollection')
     rescue
     end
   end
 
   after :all do
-    @server.drop_database("AQLDatabase")
+    @server.drop_database(name: "AQLDatabase")
   end
 
   context "#new" do
@@ -59,10 +59,10 @@ describe Arango::AQL do
 
     it "execute next" do
       myAQL = @database.new_aql query: "FOR u IN MyCollection RETURN u.num"
-      myAQL.batch_size = 5
+      myAQL.batch_size = 2
       myAQL.execute
       myAQL.next
-      expect(myAQL.result.length).to eq 5
+      expect(myAQL.result.length).to eq 2
     end
 
     it "execute 2" do
@@ -115,14 +115,14 @@ describe Arango::AQL do
 
     it "changeProperties" do
       result = @database.set_query_tracking_properties max_slow_queries: 65
-      expect(result[:maxSlowQueries]).to eq 65
+      expect(result[:max_slow_queries]).to eq 65
     end
   end
 
   context "opal support for functions" do
     it "can install opal" do
       @server.install_opal_module(@database)
-      collection = @database.get_collection('_modules')
+      collection = @database.get_collection(name: '_modules')
       expect(collection.name).to eq '_modules'
       document = collection.get_document({path: '/opal'})
       expect(document.content).to be_a String
