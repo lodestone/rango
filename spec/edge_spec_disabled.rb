@@ -41,8 +41,8 @@ describe Arango::Edge do
   it "create a new Edge instance" do
     a = @collection.vertex(name: "myA", body: {Hello: "World"}).create
     b = @collection.vertex(name: "myB", body: {Hello: "World"}).create
-    myEdgeDocument = @edge_collection.edge(from: a, to: b)
-    expect(myEdgeDocument.body[:_from]).to eq a.id
+    my_edgeDocument = @edge_collection.edge(from: a, to: b)
+    expect(my_edgeDocument.body[:_from]).to eq a.id
   end
 
   it "create a new Edge instance" do
@@ -53,33 +53,33 @@ describe Arango::Edge do
   end
 
   it "create a new Edge" do
-    myDoc = @collection.create_documents document: [{A: "B", num: 1},
+    my_doc = @collection.create_documents document: [{A: "B", num: 1},
       {C: "D", num: 3}]
-    myEdge = @edge_collection.edge(from: myDoc[0].id, to: myDoc[1].id)
-    myEdge = myEdge.create
-    expect(myEdge.body[:_from]).to eq myDoc[0].id
+    my_edge = @edge_collection.edge(from: my_doc[0].id, to: my_doc[1].id)
+    my_edge = my_edge.create
+    expect(my_edge.body[:_from]).to eq my_doc[0].id
   end
 
   it "retrieve Document" do
-    myDocument = @myEdge.retrieve
-    expect(myDocument.collection.name).to eq "MyEdgeCollection"
+    my_document = @my_edge.retrieve
+    expect(my_document.collection.name).to eq "MyEdgeCollection"
   end
 
   it "replace" do
     a = @collection.vertex(body: {Hello: "World"}).create
     b = @collection.vertex(body: {Hello: "World!!"}).create
-    myDocument = @myEdge.replace body: {_from: a.id, _to: b.id}
-    expect(myDocument.body[:_from]).to eq a.id
+    my_document = @my_edge.replace body: {_from: a.id, _to: b.id}
+    expect(my_document.body[:_from]).to eq a.id
   end
 
   it "update" do
     cc = @collection.vertex(body: {Hello: "World!!!"}).create
-    myDocument = @myEdge.update body: {_to: cc.id}
-    expect(myDocument.body[:_to]).to eq cc.id
+    my_document = @my_edge.update body: {_to: cc.id}
+    expect(my_document.body[:_to]).to eq cc.id
   end
 
   it "delete a Document" do
-    result = @myEdge.destroy
+    result = @my_edge.destroy
     expect(result).to eq true
   end
 end

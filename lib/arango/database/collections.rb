@@ -83,13 +83,12 @@ module Arango
       # Check if collection exists.
       # @param name [String] Name of the collection
       # @return [Boolean]
-      def exist_collection?(name:, exclude_system: true)
-        Arango::DocumentCollection::Base.exist?(name: name, database: self, exclude_system: exclude_system)
+      def collection_exists?(name:, exclude_system: true)
+        Arango::DocumentCollection::Base.exists?(name: name, database: self, exclude_system: exclude_system)
       end
-      def batch_exist_collection?(name:, exclude_system: true)
-        Arango::DocumentCollection::Base.batch_exist?(name: name, database: self, exclude_system: exclude_system)
+      def batch_collection_exists?(name:, exclude_system: true)
+        Arango::DocumentCollection::Base.batch_exists?(name: name, database: self, exclude_system: exclude_system)
       end
-      alias collection_exist? exist_collection?
     end
   end
 end

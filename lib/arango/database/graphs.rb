@@ -49,13 +49,12 @@ module Arango
       alias batch_delete_graph batch_drop_graph
       alias batch_destroy_graph batch_drop_graph
 
-      def exist_graph?(name)
-        Arango::Graph.exist?(name, database: self)
+      def graph_exists?(name)
+        Arango::Graph.exists?(name, database: self)
       end
-      def batch_exist_graph?(name)
-        Arango::Graph.batch_exist?(name, database: self)
+      def batch_graph_exists?(name)
+        Arango::Graph.batch_exists?(name, database: self)
       end
-      alias graph_exist? exist_graph?
     end
   end
 end

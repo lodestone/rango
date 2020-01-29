@@ -98,11 +98,10 @@ module Arango
         # @param name [String] Name of the collection
         # @param database [Arango::Database]
         # @return [Boolean]
-        Arango.request_class_method(base, :exist?) do |name:, exclude_system: true, database: Arango.current_database|
+        Arango.request_class_method(base, :exists?) do |name:, exclude_system: true, database: Arango.current_database|
           query = { excludeSystem: exclude_system }
           { get: '_api/collection', query: query, block: ->(result) { result.result.map { |c| c[:name] }.include?(name) }}
         end
-        base.singleton_class.alias_method :exists?, :exist?
       end
     end
   end

@@ -78,7 +78,7 @@ module Arango
       # @param name [String] Name of the graph
       # @param database [Arango::Database]
       # @return [Boolean]
-      Arango.request_class_method(Arango::Graph::Base, :exist?) do |name, exclude_system: true, database: Arango.current_database|
+      Arango.request_class_method(Arango::Graph::Base, :exists?) do |name, exclude_system: true, database: Arango.current_database|
         query = { excludeSystem: exclude_system }
         { get: '_api/collection', query: query, block: ->(result) { result.map { |c| c[:name] }.include?(name) }}
       end

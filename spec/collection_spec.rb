@@ -95,11 +95,11 @@ describe Arango::DocumentCollection do
       expect(list).not_to include("MyCollection")
     end
 
-    it "exist_collection?" do
+    it "collection_exists?" do
       @database.create_collection name: "MyCollection"
-      result = @database.collection_exist?(name: "MyCollection")
+      result = @database.collection_exists?(name: "MyCollection")
       expect(result).to be true
-      result = @database.collection_exist?(name: "StampCollection")
+      result = @database.collection_exists?(name: "StampCollection")
       expect(result).to be false
     end
 

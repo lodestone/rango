@@ -35,10 +35,9 @@ module Arango
         end
       end
 
-      def edge_exist?
+      def edge_exists?
 
       end
-      alias edge_exists? edge_exist?
 
       def edge(name: nil, body: {}, rev: nil, from: nil, to: nil)
         Arango::Document::Base.new(name: name, collection: self, body: body, rev: rev,

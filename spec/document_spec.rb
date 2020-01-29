@@ -57,24 +57,24 @@ describe Arango::Document do
     it "create_documents" do
       documents = @collection.create_documents([{ test1: 'value', test2: 100 }, { test3: 'value', test4: 100 }])
       expect(documents.size).to eq(2)
-      expect(@collection.document_exist?(documents.first)).to be true
-      expect(@collection.document_exist?(documents.last)).to be true
+      expect(@collection.document_exists?(documents.first)).to be true
+      expect(@collection.document_exists?(documents.last)).to be true
       expect(documents.first.collection.name).to eq "DocumentCollection"
     end
 
     it "create_documents with key" do
       documents = @collection.create_documents([{ key: 'key1', test1: 'value', test2: 100 }, { key: 'key2', test3: 'value', test4: 100 }])
       expect(documents.size).to eq(2)
-      expect(@collection.document_exist?(documents.first)).to be true
-      expect(@collection.document_exist?(documents.last)).to be true
+      expect(@collection.document_exists?(documents.first)).to be true
+      expect(@collection.document_exists?(documents.last)).to be true
       expect(documents.first.collection.name).to eq "DocumentCollection"
     end
 
     it "create_documents by key" do
       documents = @collection.create_documents(['key1', 'key2'])
       expect(documents.size).to eq(2)
-      expect(@collection.document_exist?(documents.first)).to be true
-      expect(@collection.document_exist?(documents.last)).to be true
+      expect(@collection.document_exists?(documents.first)).to be true
+      expect(@collection.document_exists?(documents.last)).to be true
       expect(documents.first.collection.name).to eq "DocumentCollection"
     end
 
@@ -148,10 +148,10 @@ describe Arango::Document do
       expect(@collection.size).to eq 0
     end
 
-    it "exist_document?" do
-      expect(@collection.exist_document?('whuahaha')).to be false
+    it "document_exists?" do
+      expect(@collection.document_exists?('whuahaha')).to be false
       @collection.create_document('whuahaha')
-      expect(@collection.exist_document?('whuahaha')).to be true
+      expect(@collection.document_exists?('whuahaha')).to be true
     end
   end
 
@@ -181,7 +181,7 @@ describe Arango::Document do
       document = Arango::Document::Base.new('mykey', collection: @collection).create
       result = document.destroy
       expect(result).to eq nil
-      expect(Arango::Document::Base.exist?('mykey', collection: @collection)).to be false
+      expect(Arango::Document::Base.exists?('mykey', collection: @collection)).to be false
     end
 
     it "update" do

@@ -1,10 +1,9 @@
 module Arango
   module View
     module Basics
-      def exist?
+      def exists?
 
       end
-      alias exists? exist?
 
       def info
 

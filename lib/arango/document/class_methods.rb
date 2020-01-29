@@ -56,7 +56,7 @@ module Arango
           }
         end
 
-        Arango.request_class_method(base, :exist?) do |document, match_rev: nil, collection:|
+        Arango.request_class_method(base, :exists?) do |document, match_rev: nil, collection:|
           body = _body_from_arg(document)
           raise Arango::Error err: "Document with key required!" unless body.key?(:_key)
           request = { head: "_api/document/#{collection.name}/#{body[:_key]}" }

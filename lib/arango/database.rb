@@ -75,7 +75,7 @@ module Arango
       # @param name [String] Name of the database.
       # @param server [Arango::Server]
       # @return [Boolean]
-      def exist?(name:, server:)
+      def exists?(name:, server:)
         list(server: server).include?(name)
       end
     end

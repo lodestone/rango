@@ -62,10 +62,10 @@ describe Arango::Database do
       expect(list).not_to include("MyDatabase")
     end
 
-    it "exist_database?" do
-      expect(@server.exist_database?(name: "MyDatabase")).to be false
+    it "database_exists?" do
+      expect(@server.database_exists?(name: "MyDatabase")).to be false
       @server.create_database name: "MyDatabase"
-      expect(@server.exist_database?(name: "MyDatabase")).to be true
+      expect(@server.database_exists?(name: "MyDatabase")).to be true
     end
 
     it "all_databases" do

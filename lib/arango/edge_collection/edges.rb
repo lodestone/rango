@@ -19,14 +19,12 @@ module Arango
         Arango::Edge::Base.batch_create_edges(array_of_property_hashes, collection: self, wait_for_sync: wait_for_sync)
       end
 
-      def exist_edge?(*args)
-        Arango::Edge::Base.exist?(*args, collection: self)
+      def edge_exists?(*args)
+        Arango::Edge::Base.exists?(*args, collection: self)
       end
-      def batch_exist_edge?(*args)
-        Arango::Edge::Base.batch_exist?(*args, collection: self)
+      def batch_edge_exists?(*args)
+        Arango::Edge::Base.batch_exists?(*args, collection: self)
       end
-      alias edge_exist? exist_edge?
-      alias batch_edge_exist? batch_exist_edge?
 
       def get_edge(key)
         Arango::Edge::Base.get(key, collection: self)

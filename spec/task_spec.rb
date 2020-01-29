@@ -80,12 +80,12 @@ describe "Arango::Task" do
       expect(list.sort).to eq %w[1 3]
     end
 
-    it "exist_task?" do
+    it "task_exists?" do
       %w[1 2 3].each do |id|
         @server.new_task(id: id, command: '1+1', period: 2).create
       end
-      expect(@server.exist_task?(id: '2')).to be true
-      expect(@server.exist_task?(id: '5')).to be false
+      expect(@server.task_exists?(id: '2')).to be true
+      expect(@server.task_exists?(id: '5')).to be false
     end
   end
 
@@ -176,12 +176,12 @@ describe "Arango::Task" do
       expect(list.sort).to eq %w[1 3]
     end
 
-    it "exist_task?" do
+    it "task_exists?" do
       %w[1 2 3].each do |id|
         @database.new_task(id: id, command: '1+1', period: 2).create
       end
-      expect(@database.exist_task?(id: '2')).to be true
-      expect(@database.exist_task?(id: '5')).to be false
+      expect(@database.task_exists?(id: '2')).to be true
+      expect(@database.task_exists?(id: '5')).to be false
     end
   end
 

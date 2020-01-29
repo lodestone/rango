@@ -100,7 +100,7 @@ module Arango
         result.map { |task| task[:id] }
       end
 
-      def exist?(id:, database: nil, server: Arango.current_server)
+      def exists?(id:, database: nil, server: Arango.current_server)
         result = list(database: database, server: server)
         result.include?(id)
       end

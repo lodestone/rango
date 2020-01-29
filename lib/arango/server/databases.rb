@@ -62,10 +62,9 @@ module Arango
       # Check if database exists.
       # @param name [String] Name of the database.
       # @return [Boolean]
-      def exist_database?(name:)
-        Arango::Database.exist?(name: name, server: self)
+      def database_exists?(name:)
+        Arango::Database.exists?(name: name, server: self)
       end
-      alias database_exist? exist_database?
     end
   end
 end

@@ -19,14 +19,12 @@ module Arango
         Arango::Document::Base.batch_create_documents(array_of_property_hashes, collection: self, wait_for_sync: wait_for_sync)
       end
 
-      def exist_document?(*args)
-        Arango::Document::Base.exist?(*args, collection: self)
+      def document_exists?(*args)
+        Arango::Document::Base.exists?(*args, collection: self)
       end
-      def batch_exist_document?(*args)
-        Arango::Document::Base.batch_exist?(*args, collection: self)
+      def batch_document_exists?(*args)
+        Arango::Document::Base.batch_exists?(*args, collection: self)
       end
-      alias document_exist? exist_document?
-      alias batch_document_exist? batch_exist_document?
 
       def get_document(key)
         Arango::Document::Base.get(key, collection: self)

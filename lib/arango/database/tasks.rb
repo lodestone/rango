@@ -59,10 +59,9 @@ module Arango
       # Checks existence of a task.
       # @param id [String]
       # @return [Boolean] Returns true if the task exists, otherwise false.
-      def exist_task?(id:)
-        Arango::Task.exist?(id: id, database: self)
+      def task_exists?(id:)
+        Arango::Task.exists?(id: id, database: self)
       end
-      alias task_exist? exist_task?
     end
   end
 end

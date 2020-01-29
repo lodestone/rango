@@ -69,13 +69,12 @@ module Arango
       # Check if collection exists.
       # @param name [String] Name of the collection
       # @return [Boolean]
-      def exist_edge_collection?(name:, exclude_system: true)
-        Arango::EdgeCollection::Base.exist?(name: name, database: self, exclude_system: exclude_system)
+      def edge_collection_exists?(name:, exclude_system: true)
+        Arango::EdgeCollection::Base.exists?(name: name, database: self, exclude_system: exclude_system)
       end
-      def batch_exist_edge_collection?(name:, exclude_system: true)
-        Arango::EdgeCollection::Base.batch_exist?(name: name, database: self, exclude_system: exclude_system)
+      def batch_edge_collection_exists?(name:, exclude_system: true)
+        Arango::EdgeCollection::Base.batch_exists?(name: name, database: self, exclude_system: exclude_system)
       end
-      alias edge_collection_exist? exist_edge_collection?
     end
   end
 end
