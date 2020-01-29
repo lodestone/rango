@@ -7,6 +7,6 @@ before_script:
   - wget https://download.arangodb.com/arangodb36/Community/Linux/arangodb3_3.6.0-1_amd64.deb
   - echo arangodb3 arangodb3/password password root | sudo debconf-set-selections
   - echo arangodb3 arangodb3/password_again password root | sudo debconf-set-selections
-  - sudo dpkg -i arangodb3_3.5.0-1_amd64.deb
+  - sudo dpkg -i arangodb3_3.6.0-1_amd64.deb
 notifications:
   slack: isomorfeus:fkfbTBlQTpTgXaF7e0YOjWCG
