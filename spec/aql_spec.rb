@@ -124,7 +124,7 @@ describe Arango::AQL do
       @server.install_opal_module(@database)
       collection = @database.get_collection(name: '_modules')
       expect(collection.name).to eq '_modules'
-      document = collection.get_document({path: '/opal'})
+      document = collection.get_document(attributes: {path: '/opal'})
       expect(document.content).to be_a String
     end
 

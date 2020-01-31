@@ -36,7 +36,7 @@ module Arango
         property_y = property_s.to_sym
         return @properties[property_y] = args[0] if property_s.end_with?('=')
         return @properties[property_y] if @properties.key?(property_y)
-        return nil
+        super(property, *args, &block)
       end
 
       # @return [String]

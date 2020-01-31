@@ -29,6 +29,8 @@ module Arango
       request_hash = instance_exec(*args, &block)
       db = if args.last.key?(:collection)
              args.last[:collection].database
+           elsif args.last.key?(:edge_collection)
+               args.last[:edge_collection].database
            elsif args.last.key?(:database)
              args.last[:database]
            end
@@ -38,6 +40,8 @@ module Arango
       request_hash = instance_exec(*args, &block)
       db = if args.last.key?(:collection)
              args.last[:collection].database
+           elsif args.last.key?(:edge_collection)
+             args.last[:edge_collection].database
            elsif args.last.key?(:database)
              args.last[:database]
            end
@@ -51,6 +55,8 @@ module Arango
       requests = instance_exec(*args, &block)
       db = if args.last.key?(:collection)
              args.last[:collection].database
+           elsif args.last.key?(:edge_collection)
+             args.last[:edge_collection].database
            elsif args.last.key?(:database)
              args.last[:database]
            end
@@ -61,6 +67,8 @@ module Arango
       promises = []
       db = if args.last.key?(:collection)
              args.last[:collection].database
+           elsif args.last.key?(:edge_collection)
+             args.last[:edge_collection].database
            elsif args.last.key?(:database)
              args.last[:database]
            end
@@ -77,6 +85,8 @@ module Arango
       request_hash = instance_exec(*args, &block)
       db = if args.last.key?(:collection)
              args.last[:collection].database
+           elsif args.last.key?(:edge_collection)
+             args.last[:edge_collection].database
            elsif args.last.key?(:database)
              args.last[:database]
            end
@@ -87,6 +97,8 @@ module Arango
       request_hash = instance_exec(*args, &block)
       db = if args.last.key?(:collection)
              args.last[:collection].database
+           elsif args.last.key?(:edge_collection)
+             args.last[:edge_collection].database
            elsif args.last.key?(:database)
              args.last[:database]
            end

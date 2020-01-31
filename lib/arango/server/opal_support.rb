@@ -65,12 +65,12 @@ module Arango
         system_db = get_database(name: database)
         system_db.create_collection(name: '_modules', is_system: true) unless system_db.collection_exists?(name: '_modules', exclude_system: false)
         modules_collection = system_db.get_collection(name: '_modules')
-        opal_module_doc = modules_collection.get_document(path: '/opal')
+        opal_module_doc = modules_collection.get_document(attributes: { path: '/opal' })
         if opal_module_doc
           opal_module_doc.content = content
           opal_module_doc.update
         else
-          modules_collection.create_document({ path: '/opal', content: content })
+          modules_collection.create_document(attributes: { path: '/opal', content: content })
         end
       end
 

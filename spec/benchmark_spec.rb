@@ -34,13 +34,13 @@ describe Arango::Server do
         # n sets, n get
         NUMBER_OF_RUNS.times do |i|
           key = "foo#{i}"
-          @collection.create_document({key: key, value: key * 10})
-          result = @collection.get_document(key).value
+          @collection.create_document(attributes: {key: key, value: key * 10})
+          result = @collection.get_document(key: key).value
         end
       end
       NUMBER_OF_RUNS.times do |i|
         key = "foo#{i}"
-        @collection.drop_document(key)
+        @collection.drop_document(key: key)
       end
       puts 'Write/Read: %.2f Kops' % (2 * NUMBER_OF_RUNS / 1000 / elapsed)
       expect(result).to be_a String
@@ -52,14 +52,14 @@ describe Arango::Server do
         # n sets, n get
         NUMBER_OF_RUNS.times do |i|
           key = "foo#{i}"
-          @collection.batch_create_document({key: key, value: key * 10}, wait_for_sync: false)
-          @collection.batch_get_document(key).then { |doc| result = doc.value }
+          @collection.batch_create_document(attributes: {key: key, value: key * 10}, wait_for_sync: false)
+          @collection.batch_get_document(key: key).then { |doc| result = doc.value }
           @collection.database.execute_batched_requests
         end
       end
       NUMBER_OF_RUNS.times do |i|
         key = "foo#{i}"
-        @collection.drop_document(key)
+        @collection.drop_document(key: key)
       end
       puts 'Write/Read batched: %.2f Kops' % (2 * NUMBER_OF_RUNS / 1000 / elapsed)
       expect(result).to be_a String
@@ -70,12 +70,12 @@ describe Arango::Server do
         # n sets, n get
         NUMBER_OF_RUNS.times do |i|
           key = "foo#{i}"
-          @collection.create_document({key: key, value: key * 10})
+          @collection.create_document(attributes: {key: key, value: key * 10})
         end
       end
       NUMBER_OF_RUNS.times do |i|
         key = "foo#{i}"
-        @collection.drop_document(key)
+        @collection.drop_document(key: key)
       end
       puts 'Write: %.2f Kops' % (NUMBER_OF_RUNS / 1000 / elapsed)
     end
@@ -84,18 +84,18 @@ describe Arango::Server do
       result = nil
       NUMBER_OF_RUNS.times do |i|
         key = "foo#{i}"
-        @collection.create_document({key: key, value: key * 10})
+        @collection.create_document(attributes: {key: key, value: key * 10})
       end
       elapsed = Benchmark.realtime do
         # n sets, n get
         NUMBER_OF_RUNS.times do |i|
           key = "foo#{i}"
-          result = @collection.get_document(key).value
+          result = @collection.get_document(key: key).value
         end
       end
       NUMBER_OF_RUNS.times do |i|
         key = "foo#{i}"
-        @collection.drop_document(key)
+        @collection.drop_document(key: key)
       end
       puts 'Read: %.2f Kops' % (NUMBER_OF_RUNS / 1000 / elapsed)
       expect(result).to be_a String
@@ -116,7 +116,7 @@ describe Arango::Server do
     it "AQL  in kops" do
       NUMBER_OF_RUNS.times do |i|
         key = "foo#{i}"
-        @collection.create_document({key: key, value: key * 10})
+        @collection.create_document(attributes: {key: key, value: key * 10})
       end
       result = nil
       elapsed = Benchmark.realtime do
@@ -127,7 +127,7 @@ describe Arango::Server do
       end
       NUMBER_OF_RUNS.times do |i|
         key = "foo#{i}"
-        @collection.drop_document(key)
+        @collection.drop_document(key: key)
       end
       puts 'AQL queries: %.2f Kops' % (NUMBER_OF_RUNS / 1000 / elapsed)
       expect(result.result.first).to be_a Hash
@@ -145,7 +145,7 @@ describe Arango::Server do
       )
       NUMBER_OF_RUNS.times do |i|
         key = "foo#{i}"
-        @collection.create_document({key: key, value: key * 10})
+        @collection.create_document(attributes: {key: key, value: key * 10})
       end
       result = nil
       elapsed = Benchmark.realtime do
@@ -156,7 +156,7 @@ describe Arango::Server do
       end
       NUMBER_OF_RUNS.times do |i|
         key = "foo#{i}"
-        @collection.drop_document(key)
+        @collection.drop_document(key: key)
       end
       puts 'Javascript AQL function: %.2f Kops' % (NUMBER_OF_RUNS / 1000 / elapsed)
       expect(result.result.first).to be_a Hash
@@ -171,7 +171,7 @@ describe Arango::Server do
       end
       NUMBER_OF_RUNS.times do |i|
         key = "foo#{i}"
-        @collection.create_document({key: key, value: key * 10})
+        @collection.create_document(attributes: {key: key, value: key * 10})
       end
       result = nil
       elapsed = Benchmark.realtime do
@@ -182,7 +182,7 @@ describe Arango::Server do
       end
       NUMBER_OF_RUNS.times do |i|
         key = "foo#{i}"
-        @collection.drop_document(key)
+        @collection.drop_document(key: key)
       end
       puts 'Ruby AQL function: %.2f Kops' % (NUMBER_OF_RUNS / 1000 / elapsed)
       expect(result.result.first).to be_a Hash

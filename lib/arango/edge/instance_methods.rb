@@ -3,62 +3,68 @@ module Arango
     module InstanceMethods
       extend Arango::Helper::RequestMethod
 
-      def initialize(edge, from: nil, to: nil, edge_collection:, ignore_revs: false, wait_for_sync: nil)
-        @body = _body_from_arg(edge)
-        @changed_body = {}
+      def initialize(key: nil, attributes: {}, from: nil, to: nil, edge_collection:, ignore_revs: false, wait_for_sync: nil)
+        @attributes = _attributes_from_arg(attributes)
+        @attributes[:_key] = key if key
+        @changed_attributes = {}
         @ignore_revs = ignore_revs
         @wait_for_sync = wait_for_sync
-        @from_instance = nil
-        @to_instance = nil
-        send(:collection=, edge_collection)
+        _set_from(from || from_id)
+        _set_to(to || to_id)
+        send(:edge_collection=, edge_collection)
+        send(:graph=, edge_collection.graph) if edge_collection.graph
       end
 
       def id
-        return @changed_body[:_id] if @changed_body.key?(:_id)
-        @body[:_id]
+        i = @changed_attributes[:_id] || @attributes[:_id]
+        return i if i
+        "#{edge_collection.name}/#{key}"
       end
 
       def id=(i)
-        @changed_body[:_id] = i
+        @changed_attributes[:_id] = i
       end
 
       def key
-        return @changed_body[:_key] if @changed_body.key?(:_key)
-        @body[:_key]
+        @changed_attributes[:_key] || @attributes[:_key]
       end
 
       def key=(k)
-        @changed_body[:_key] = k
+        @changed_attributes[:_key] = k
       end
 
       def revision
-        return @changed_body[:_rev] if @changed_body.key?(:_rev)
-        @body[:_rev]
+        @changed_attributes[:_rev] || @attributes[:_rev]
       end
 
       def revision=(r)
-        @changed_body[:_rev] = r
+        @changed_attributes[:_rev] = r
       end
 
       def to_h
-        @body.delete_if{|_,v| v.nil?}
+        @attributes.delete_if{ |_,v| v.nil? }
       end
 
       attr_accessor :ignore_revs, :wait_for_sync
-      attr_reader :collection, :graph, :database, :server, :body
+      attr_reader :edge_collection, :graph, :database, :server, :attributes
 
-      def body=(doc)
-        @changed_body = _body_from_arg(doc)
-        #set_up_from_or_to("from", result[:_from])
-        #set_up_from_or_to("to", result[:_to])
+      def attributes=(doc)
+        @changed_attributes = _attributes_from_arg(doc)
       end
 
-      def collection=(collection)
-        satisfy_module?(collection, Arango::EdgeCollection::Mixin)
-        @collection = collection
-        @graph = @collection.graph
-        @database = @collection.database
+      def edge_collection=(edge_collection)
+        satisfy_module?(edge_collection, Arango::EdgeCollection::Mixin)
+        @edge_collection = edge_collection
+        @graph = @edge_collection.graph
+        @database = @edge_collection.database
         @arango_server = @database.arango_server
+      end
+
+      def graph=(graph)
+        satisfy_module?(graph, Arango::Graph::Mixin)
+        @graph = graph
+        @database = @graph.database
+        @arango_server = @graph.arango_server
       end
 
       def method_missing(name, *args, &block)
@@ -68,11 +74,11 @@ module Arango
         attribute_name_s = name_s.end_with?('=') ? (set_attr = true; name_s.chop) : name_s
         attribute_name_y = attribute_name_s.start_with?('attribute_') ? (have_attr = true; attribute_name_s[9..-1].to_sym) : attribute_name_s.to_sym
         if set_attr
-          return @changed_body[attribute_name_y] = args[0]
-        elsif @changed_body.key?(attribute_name_y)
-          return @changed_body[attribute_name_y]
-        elsif @body.key?(attribute_name_y)
-          return @body[attribute_name_y]
+          return @changed_attributes[attribute_name_y] = args[0]
+        elsif @changed_attributes.key?(attribute_name_y)
+          return @changed_attributes[attribute_name_y]
+        elsif @attributes.key?(attribute_name_y)
+          return @attributes[attribute_name_y]
         elsif have_attr
           return nil
         end
@@ -81,11 +87,11 @@ module Arango
 
       request_method :reload do
         headers = nil
-        headers = { "If-Match": @body[:_rev] } if !@ignore_revs && @body.key?(:_rev)
-        { get: "_api/document/#{@collection.name}/#{@body[:_key]}", headers: headers,
+        headers = { "If-Match": @attributes[:_rev] } if !@ignore_revs && @attributes.key?(:_rev)
+        { get: "_api/document/#{@edge_collection.name}/#{@attributes[:_key]}", headers: headers,
           block: ->(result) do
-            @body = _body_from_arg(result)
-            @changed_body = {}
+            @attributes = _attributes_from_arg(result)
+            @changed_attributes = {}
             self
           end
         }
@@ -98,18 +104,18 @@ module Arango
       alias batch_revert batch_reload
 
       request_method :same_revision? do
-        headers = { "If-Match": @body[:_rev] }
-        { head: "_api/document/#{@collection.name}/#{@body[:_key]}", headers: headers, block: ->(result) { result.response_code == 200 }}
+        headers = { "If-Match": @attributes[:_rev] }
+        { head: "_api/document/#{@edge_collection.name}/#{@attributes[:_key]}", headers: headers, block: ->(result) { result.response_code == 200 }}
       end
 
       request_method :create do
         query = { returnNew: true }
         query[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
-        @body = @body.merge(@changed_body)
-        @changed_body = {}
-        { post: "_api/document/#{@collection.name}", body: @body, query: query,
+        @attributes = @attributes.merge(@changed_attributes)
+        @changed_attributes = {}
+        { post: "_api/document/#{@edge_collection.name}", body: @attributes, query: query,
           block: ->(result) do
-            @body.merge!(result[:new])
+            @attributes.merge!(result[:new])
             self
           end
         }
@@ -119,16 +125,18 @@ module Arango
         query = { returnNew: true, ignoreRevs: @ignore_revs }
         query[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
         headers = nil
-        body = @changed_body
-        body[:_id] = @body[:_id]
-        body[:_key] = @body[:_key]
-        body[:_rev] = @body[:_rev]
-        @body = body
-        @changed_body = {}
-        headers = { "If-Match": @body[:_rev] } if !@ignore_revs && @body.key?(:_rev)
-        { put: "_api/document/#{@collection.name}/#{@body[:_key]}", body: @body, query: query, headers: headers,
+        attributes = @changed_attributes
+        attributes[:_id] = @attributes[:_id]
+        attributes[:_key] = @attributes[:_key]
+        attributes[:_rev] = @attributes[:_rev]
+        attributes[:_from] = from_id
+        attributes[:_to] = to_id
+        @attributes = attributes
+        @changed_attributes = {}
+        headers = { "If-Match": @attributes[:_rev] } if !@ignore_revs && @attributes.key?(:_rev)
+        { put: "_api/document/#{@edge_collection.name}/#{@attributes[:_key]}", body: @attributes, query: query, headers: headers,
           block: ->(result) do
-            @body.merge!(result[:new])
+            @attributes.merge!(result[:new])
             self
           end
         }
@@ -138,12 +146,12 @@ module Arango
         query = { returnNew: true, ignoreRevs: @ignore_revs }
         query[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
         headers = nil
-        headers = { "If-Match": @body[:_rev] } if !@ignore_revs && @body.key?(:_rev)
-        changed_body = @changed_body
-        @changed_body = {}
-        { patch: "_api/document/#{@collection.name}/#{@body[:_key]}", body: changed_body, query: query, headers: headers,
+        headers = { "If-Match": @attributes[:_rev] } if !@ignore_revs && @attributes.key?(:_rev)
+        changed_attributes = @changed_attributes
+        @changed_attributes = {}
+        { patch: "_api/document/#{@edge_collection.name}/#{@attributes[:_key]}", body: changed_attributes, query: query, headers: headers,
           block: ->(result) do
-            @body.merge!(result[:new])
+            @attributes.merge!(result[:new])
             self
           end
         }
@@ -154,8 +162,8 @@ module Arango
       request_method :drop do
         query = { waitForSync: @wait_for_sync }
         headers = nil
-        headers = { "If-Match": @body[:_rev] } if !@ignore_revs && @body.key?(:_rev)
-        { delete: "_api/document/#{@collection.name}/#{@body[:_key]}", query: query, headers: headers, block: ->(_) { nil }}
+        headers = { "If-Match": @attributes[:_rev] } if !@ignore_revs && @attributes.key?(:_rev)
+        { delete: "_api/document/#{@edge_collection.name}/#{@attributes[:_key]}", query: query, headers: headers, block: ->(_) { nil }}
       end
       alias delete drop
       alias destroy drop
@@ -163,59 +171,93 @@ module Arango
       alias batch_destroy batch_drop
 
       def from
-        # TODO return instance
-        @to_instance ||= getinstancefromgraph
+        @from_instance ||= _get_instance(from_id)
       end
 
       def from_id
-        return @changed_body[:_from] if @changed_body.key?(:_from)
-        @body[:_from]
+        @changed_attributes[:_from] || @attributes[:_from]
       end
 
-      def from=(vertex)
-        vertex = vertex.id if vertex.is_a?(Arango::Vertex::Mixin)
-        @from_instance = nil
-        @changed_body[:_from] = vertex
+      def from=(f)
+        _set_from(f)
+        from_id
       end
 
       def to
-        # TODO return instance
-        return @changed_body[:_to] if @changed_body.key?(:_to)
-        @body[:_to]
+        @to_instance ||= _get_instance(to_id)
       end
 
       def to_id
-        return @changed_body[:_to] if @changed_body.key?(:_to)
-        @body[:_to]
+        @changed_attributes[:_to] || @attributes[:_to]
       end
 
-      def to=(vertex)
-        vertex = vertex.id if vertex.is_a?(Arango::Vertex::Mixin)
-        @to_instance = nil
-        @changed_body[:_to] = vertex
+      def to=(t)
+        _set_to(t)
+        to_id
       end
 
       private
 
-      def _body_from_arg(arg)
-        body = case arg
-                when String then { _key: arg }
-                when Hash
-                  arg.transform_keys!(&:to_sym)
-                  arg[:_id] = arg.delete(:id) if arg.key?(:id) && !arg.key?(:_id)
-                  arg[:_key] = arg.delete(:key) if arg.key?(:key) && !arg.key?(:_key)
-                  arg[:_rev] = arg.delete(:rev) if arg.key?(:rev) && !arg.key?(:_rev)
-                  arg[:_from] = arg.delete(:from) if arg.key?(:from) && !arg.key?(:_from)
-                  arg[:_to] = arg.delete(:to) if arg.key?(:to) && !arg.key?(:_to)
-                  arg.delete_if{|_,v| v.nil?}
-                  arg
-                when Arango::Edge::Mixin then arg.to_h
-                when Arango::Result then arg.to_h
-                else
-                  raise "Unknown arg type, must be String, Hash, Arango::Result or Arango::Edge::Mixin."
-               end
-        raise "Edge is missing a from:" unless body.key?(:_from)
-        raise "Edge is missing a to:" unless body.key?(:_to)
+      def _attributes_from_arg(arg)
+        return {} unless arg
+        case arg
+        when String then { _key: arg }
+        when Hash
+          arg.transform_keys!(&:to_sym)
+          arg[:_id] = arg.delete(:id) if arg.key?(:id) && !arg.key?(:_id)
+          arg[:_key] = arg.delete(:key) if arg.key?(:key) && !arg.key?(:_key)
+          arg[:_rev] = arg.delete(:rev) if arg.key?(:rev) && !arg.key?(:_rev)
+          arg[:_from] = arg.delete(:from) if arg.key?(:from) && !arg.key?(:_from)
+          arg[:_to] = arg.delete(:to) if arg.key?(:to) && !arg.key?(:_to)
+          arg.delete_if{|_,v| v.nil?}
+          arg
+        when Arango::Edge::Mixin then arg.to_h
+        when Arango::Result then arg.to_h
+        else
+          raise "Unknown arg type, must be String, Hash, Arango::Result or Arango::Edge::Mixin."
+        end
+      end
+
+      def _get_instance(id)
+
+      end
+      # request_method :_get_instance do |id|
+      #   query = { returnNew: true }
+      #   query[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
+      #   @attributes = @attributes.merge(@changed_attributes)
+      #   @changed_attributes = {}
+      #   { post: "_api/document/#{@edge_collection.name}", body: @attributes, query: query,
+      #     block: ->(result) do
+      #       @attributes.merge!(result[:new])
+      #       self
+      #     end
+      #   }
+      # end
+
+      def _set_from(f)
+        raise "from must be given" unless f
+        if f.class == String
+          @attributes[:_from] = f
+          @from_instance = nil
+        elsif f.is_a?(Arango::Document::Mixin)
+          @attributes[:_from] = f.id
+          @from_instance = f
+        else
+          raise "from is not valid"
+        end
+      end
+
+      def _set_to(t)
+        raise "to must be given" unless t
+        if t.class == String
+          @attributes[:_to] = t
+          @to_instance = nil
+        elsif t.is_a?(Arango::Document::Mixin)
+          @attributes[:_to] = t.id
+          @to_instance = t
+        else
+          raise "to is not valid"
+        end
       end
     end
   end

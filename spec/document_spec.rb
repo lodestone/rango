@@ -20,7 +20,7 @@ describe Arango::Document do
     rescue
     end
     @collection = @database.create_collection(name: "DocumentCollection")
-    @edge_collection = @database.create_collection(name: "EdgeCollection")
+    @edge_collection = @database.create_edge_collection(name: "EdgeCollection")
   end
 
   after :each do
@@ -40,137 +40,137 @@ describe Arango::Document do
 
   context "Collection" do
     it "new_document" do
-      document = @collection.new_document(test1: 'value', test2: 100)
+      document = @collection.new_document(attributes: { test1: 'value', test2: 100})
       expect(document.collection.name).to eq "DocumentCollection"
     end
 
     it "create_document" do
-      document = @collection.create_document(test1: 'value', test2: 100)
+      document = @collection.create_document(attributes: { test1: 'value', test2: 100})
       expect(document.collection.name).to eq "DocumentCollection"
     end
 
     it "create_document with key" do
-      document = @collection.create_document(key: "myKEy", test1: 'value', test2: 100)
+      document = @collection.create_document(attributes: { key: "myKey1", test1: 'value', test2: 100})
+      expect(document.collection.name).to eq "DocumentCollection"
+      document = @collection.create_document(key: "myKey2", attributes: { test1: 'value', test2: 100})
       expect(document.collection.name).to eq "DocumentCollection"
     end
 
     it "create_documents" do
       documents = @collection.create_documents([{ test1: 'value', test2: 100 }, { test3: 'value', test4: 100 }])
       expect(documents.size).to eq(2)
-      expect(@collection.document_exists?(documents.first)).to be true
-      expect(@collection.document_exists?(documents.last)).to be true
+      expect(@collection.document_exists?(attributes: documents.first)).to be true
+      expect(@collection.document_exists?(attributes: documents.last)).to be true
       expect(documents.first.collection.name).to eq "DocumentCollection"
     end
 
     it "create_documents with key" do
       documents = @collection.create_documents([{ key: 'key1', test1: 'value', test2: 100 }, { key: 'key2', test3: 'value', test4: 100 }])
       expect(documents.size).to eq(2)
-      expect(@collection.document_exists?(documents.first)).to be true
-      expect(@collection.document_exists?(documents.last)).to be true
+      expect(@collection.document_exists?(attributes: documents.first)).to be true
+      expect(@collection.document_exists?(attributes: documents.last)).to be true
       expect(documents.first.collection.name).to eq "DocumentCollection"
     end
 
     it "create_documents by key" do
       documents = @collection.create_documents(['key1', 'key2'])
       expect(documents.size).to eq(2)
-      expect(@collection.document_exists?(documents.first)).to be true
-      expect(@collection.document_exists?(documents.last)).to be true
+      expect(@collection.document_exists?(attributes: documents.first)).to be true
+      expect(@collection.document_exists?(attributes: documents.last)).to be true
       expect(documents.first.collection.name).to eq "DocumentCollection"
     end
 
     it "all_documents" do
-      @collection.create_document(name: 'test1', a: 'a')
-      @collection.create_document(name: 'test2', b: 'b')
+      @collection.create_document(attributes: { name: 'test1', a: 'a'})
+      @collection.create_document(attributes: { name: 'test2', b: 'b'})
       documents = @collection.all_documents
       expect(documents.size).to eq 2
     end
 
     it "all_documents with limits" do
-      @collection.create_document(name: 'test1', a: 'a')
-      @collection.create_document(name: 'test2', b: 'b')
+      @collection.create_document(attributes: { name: 'test1', a: 'a'})
+      @collection.create_document(attributes: { name: 'test2', b: 'b'})
       documents = @collection.all_documents(limit: 1, offset: 1)
       expect(documents.size).to eq 1
     end
 
     it "list_documents" do
-      @collection.create_document(name: 'test1', a: 'a')
-      @collection.create_document(name: 'test2', b: 'b')
+      @collection.create_document(attributes: { name: 'test1', a: 'a'})
+      @collection.create_document(attributes: { name: 'test2', b: 'b'})
       documents = @collection.list_documents
       expect(documents.size).to eq 2
     end
 
     it "list_documents with limits" do
-      @collection.create_document(name: 'test1', a: 'a')
-      @collection.create_document(name: 'test2', b: 'b')
+      @collection.create_document(attributes: { name: 'test1', a: 'a'})
+      @collection.create_document(attributes: { name: 'test2', b: 'b'})
       documents = @collection.list_documents(limit: 1, offset: 1)
       expect(documents.size).to eq 1
     end
 
     it "get_document" do
-      @collection.create_document(key: 'superb', test1: 'value', test2: 100)
-      document = @collection.get_document('superb')
-      expect(document.test1).to eq 'value'
+      @collection.create_document(attributes: { key: 'superb', test1: 'value', test2: 100})
       document = @collection.get_document(key: 'superb')
       expect(document.test1).to eq 'value'
     end
 
     it "get_document by example" do
-      @collection.create_document(test1: 'value', test2: 100)
-      document = @collection.get_document(test2: 100)
+      @collection.create_document(attributes: { test1: 'value', test2: 100})
+      document = @collection.get_document(attributes: { test2: 100})
       expect(document.test1).to eq 'value'
     end
 
     it "get_documents" do
-      @collection.create_document(key: '1234567890', test1: 'value', test2: 100)
-      @collection.create_document(key: '1234567891', test1: 'value', test2: 200)
+      @collection.create_document(attributes: { key: '1234567890', test1: 'value', test2: 100})
+      @collection.create_document(attributes: { key: '1234567891', test1: 'value', test2: 200})
       documents = @collection.get_documents(['1234567890', '1234567891'])
       expect(documents.size).to eq 2
     end
 
     it "get_documents by example" do
-      @collection.create_document(key: '1234567890', test1: 'value', test2: 100)
-      @collection.create_document(key: '1234567891', test1: 'value', test2: 200)
+      @collection.create_document(attributes: { key: '1234567890', test1: 'value', test2: 100})
+      @collection.create_document(attributes: { key: '1234567891', test1: 'value', test2: 200})
       documents = @collection.get_documents([{test2: 100}, {test2: 200}])
       expect(documents.size).to eq 2
     end
 
     it "drop_document" do
-      document = @collection.create_document({})
+      document = @collection.create_document(attributes: {})
       expect(@collection.list_documents).to include(document.key)
-      @collection.drop_document(document.key)
+      @collection.drop_document(key: document.key)
       expect(@collection.list_documents).not_to include(document.key)
     end
 
     it "drop_documents" do
-      @collection.create_document(key: '1234567890', test1: 'value', test2: 100)
-      @collection.create_document(key: '1234567891', test1: 'value', test2: 100)
+      @collection.create_document(key: '1234567890', attributes: { test1: 'value', test2: 100 })
+      @collection.create_document(attributes: { key: '1234567891', test1: 'value', test2: 100 })
       @collection.drop_documents(['1234567890', '1234567891'])
       expect(@collection.size).to eq 0
     end
 
     it "document_exists?" do
-      expect(@collection.document_exists?('whuahaha')).to be false
-      @collection.create_document('whuahaha')
-      expect(@collection.document_exists?('whuahaha')).to be true
+      expect(@collection.document_exists?(key: 'whuahaha')).to be false
+      @collection.create_document(key: 'whuahaha')
+      expect(@collection.document_exists?(key: 'whuahaha')).to be true
     end
   end
 
   context "Arango::Document itself" do
     it "create a new Document instance " do
-      document = Arango::Document::Base.new "myKey", collection: @collection
+      document = Arango::Document::Base.new key: "myKey", collection: @collection
       expect(document.collection.name).to eq "DocumentCollection"
     end
 
     it "create a new Document in the Collection" do
-      document = Arango::Document::Base.new({Hello: "World", num: 1}, collection: @collection).create
+      document = Arango::Document::Base.new(attributes: {Hello: "World", num: 1}, collection: @collection).create
       expect(document.Hello).to eq "World"
     end
 
     it "create a duplicate Document" do
       error = ""
       begin
-        Arango::Document::Base.new('mykey', collection: @collection).create
-        Arango::Document::Base.new('mykey', collection: @collection).create
+        Arango::Document::Base.new(key: 'mykey', collection: @collection).create
+        Arango::Document::Base.new(key: 'mykey', collection: @collection).create
       rescue Arango::ErrorDB => e
         error = e.error_num
       end
@@ -178,39 +178,39 @@ describe Arango::Document do
     end
 
     it "delete a Document" do
-      document = Arango::Document::Base.new('mykey', collection: @collection).create
+      document = Arango::Document::Base.new(key: 'mykey', collection: @collection).create
       result = document.destroy
       expect(result).to eq nil
-      expect(Arango::Document::Base.exists?('mykey', collection: @collection)).to be false
+      expect(Arango::Document::Base.exists?(key: 'mykey', collection: @collection)).to be false
     end
 
     it "update" do
-      document = Arango::Document::Base.new('mykey', collection: @collection).create
+      document = Arango::Document::Base.new(key: 'mykey', collection: @collection).create
       document.time = 13
       document.update
       expect(document.time).to eq 13
-      document = Arango::Document::Base.get('mykey', collection: @collection)
+      document = Arango::Document::Base.get(key: 'mykey', collection: @collection)
       expect(document.time).to eq 13
     end
 
     it "replace" do
-      document = Arango::Document::Base.new({key: 'mykey', test: 1}, collection: @collection).create
-      document.body = {value: 3}
+      document = Arango::Document::Base.new(attributes: {key: 'mykey', test: 1}, collection: @collection).create
+      document.attributes = {value: 3}
       document.replace
       expect(document.value).to eq 3
       expect(document.attribute_test).to be_nil
     end
 
     it "retrieve Document" do
-      document = Arango::Document::Base.new({key: 'mykey', test: 1}, collection: @collection).create
+      document = Arango::Document::Base.new(attributes: {key: 'mykey', test: 1}, collection: @collection).create
       document.test = 2
       document.retrieve
       expect(document.test).to eq 1
     end
 
     it "same_revision?" do
-      document = Arango::Document::Base.new('mykey', collection: @collection).create
-      document_two = Arango::Document::Base.get('mykey', collection: @collection)
+      document = Arango::Document::Base.new(key: 'mykey', collection: @collection).create
+      document_two = Arango::Document::Base.get(key: 'mykey', collection: @collection)
       expect(document.same_revision?).to be true
       expect(document_two.same_revision?).to be true
       document.time = 13
@@ -218,12 +218,6 @@ describe Arango::Document do
       expect(document.same_revision?).to be true
       expect(document_two.same_revision?).to be false
     end
-
-    # it "create a new Edge in the Collection" do
-    #   myDoc = @collection.create_documents document: [{A: "B", num: 1}, {C: "D", num: 3}]
-    #   myEdge = @edge_collection.create_edges from: myDoc[0].id, to: myDoc[1].id
-    #   expect(myEdge[0].body[:_from]).to eq myDoc[0].id
-    # end
 
     # it "search Documents by match" do
     #   info = collection.documents_match match: {num: 1}
@@ -268,15 +262,6 @@ describe Arango::Document do
     # it "search random Document" do
     #   info = collection.random
     #   expect(info.collection.name).to eq "DocumentCollection"
-    # end
-  end
-
-  context "#create" do
-    # it "create a new Edge" do
-    #   myDoc = @collection.create_documents document: [{A: "B", num: 1}, {C: "D", num: 3}]
-    #   myEdge = @edge_collection.document from: myDoc[0].id, to: myDoc[1].id
-    #   myEdge = myEdge.create
-    #   expect(myEdge.body[:_from]).to eq myDoc[0].id
     # end
   end
 

@@ -60,16 +60,13 @@ module Arango
                         {}
                       end
         result = Arango::Result.new(json_result)
-        # STDERR.puts "result #{result}"
         result.response_code = response.response_code
       rescue Exception => e
-        # STDERR.puts "error #{e}"
         raise Arango::Error.new err: :impossible_to_parse_arangodb_response,
           data: { response: response.response_body, request: JSON.pretty_generate(options) }
       end
 
       if !result.is_array? && result.error?
-        # STDERR.puts "raising #{result.error_message}"
         raise Arango::ErrorDB.new(message: result.error_message, code: result.response_code, data: result.to_h, error_num: result.error_num, request: options)
       end
 

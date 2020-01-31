@@ -1,36 +1,36 @@
 module Arango
   module EdgeCollection
     module Edges
-      def new_edge(edge, wait_for_sync: nil)
-        Arango::Edge::Base.new(edge, collection: self, wait_for_sync: wait_for_sync)
+      def new_edge(key: nil, attributes: {}, from: nil, to: nil, wait_for_sync: nil)
+        Arango::Edge::Base.new(key: key, attributes: attributes, from: from, to: to, edge_collection: self, wait_for_sync: wait_for_sync)
       end
 
-      def create_edge(edge, wait_for_sync: nil)
-        Arango::Edge::Base.new(edge, collection: self, wait_for_sync: wait_for_sync).create
+      def create_edge(key: nil, attributes: {}, from: nil, to: nil, wait_for_sync: nil)
+        Arango::Edge::Base.new(key: key, attributes: attributes, from: from, to: to, edge_collection: self, wait_for_sync: wait_for_sync).create
       end
-      def batch_create_edge(edge, wait_for_sync: nil)
-        Arango::Edge::Base.new(edge, collection: self, wait_for_sync: wait_for_sync).batch_create
+      def batch_create_edge(key: nil, attributes: {}, from: nil, to: nil, wait_for_sync: nil)
+        Arango::Edge::Base.new(key: key, attributes: attributes, from: from, to: to, edge_collection: self, wait_for_sync: wait_for_sync).batch_create
       end
 
       def create_edges(array_of_property_hashes, wait_for_sync: nil)
-        Arango::Edge::Base.create_edges(array_of_property_hashes, collection: self, wait_for_sync: wait_for_sync)
+        Arango::Edge::Base.create_edges(array_of_property_hashes, edge_collection: self, wait_for_sync: wait_for_sync)
       end
       def batch_create_edges(array_of_property_hashes, wait_for_sync: nil)
-        Arango::Edge::Base.batch_create_edges(array_of_property_hashes, collection: self, wait_for_sync: wait_for_sync)
+        Arango::Edge::Base.batch_create_edges(array_of_property_hashes, edge_collection: self, wait_for_sync: wait_for_sync)
       end
 
-      def edge_exists?(*args)
-        Arango::Edge::Base.exists?(*args, collection: self)
+      def edge_exists?(key: nil, attributes: {}, match_rev: nil)
+        Arango::Edge::Base.exists?(key: key, attributes: attributes, match_rev: match_rev, edge_collection: self)
       end
-      def batch_edge_exists?(*args)
-        Arango::Edge::Base.batch_exists?(*args, collection: self)
+      def batch_edge_exists?(key: nil, attributes: {}, match_rev: nil)
+        Arango::Edge::Base.batch_exists?(key: key, attributes: attributes, match_rev: match_rev, edge_collection: self)
       end
 
-      def get_edge(key)
-        Arango::Edge::Base.get(key, collection: self)
+      def get_edge(key: nil, attributes: {})
+        Arango::Edge::Base.get(key: key, attributes: attributes, edge_collection: self)
       end
-      def batch_get_edge(key)
-        Arango::Edge::Base.batch_get(key, collection: self)
+      def batch_get_edge(key: nil, attributes: {})
+        Arango::Edge::Base.batch_get(key: key, attributes: attributes, edge_collection: self)
       end
       alias fetch_edge get_edge
       alias retrieve_edge get_edge
@@ -38,10 +38,10 @@ module Arango
       alias batch_retrieve_edge batch_get_edge
 
       def get_edges(keys)
-        Arango::Edge::Base.get_edges(keys, collection: self)
+        Arango::Edge::Base.get_edges(keys, edge_collection: self)
       end
-      def batch_get_edges(name)
-        Arango::Edge::Base.batch_get_edges(name: name, collection: self)
+      def batch_get_edges(keys)
+        Arango::Edge::Base.batch_get_edges(keys, edge_collection: self)
       end
       alias fetch_edges get_edges
       alias retrieve_edges get_edges
@@ -49,19 +49,17 @@ module Arango
       alias batch_retrieve_edges batch_get_edges
 
       def all_edges(offset: 0, limit: nil, batch_size: nil)
-        return nil if type == :edge
-        Arango::Edge::Base.all(offset: offset, limit: limit, batch_size: batch_size, collection: self)
+        Arango::Edge::Base.all(offset: offset, limit: limit, batch_size: batch_size, edge_collection: self)
       end
       def batch_all_edges(offset: 0, limit: nil, batch_size: nil)
-        return nil if type == :edge
-        Arango::Edge::Base.batch_all(offset: offset, limit: limit, batch_size: batch_size, collection: self)
+        Arango::Edge::Base.batch_all(offset: offset, limit: limit, batch_size: batch_size, edge_collection: self)
       end
 
       def list_edges(offset: 0, limit: nil, batch_size: nil)
-        Arango::Edge::Base.list(offset: offset, limit: limit, batch_size: batch_size, collection: self)
+        Arango::Edge::Base.list(offset: offset, limit: limit, batch_size: batch_size, edge_collection: self)
       end
       def batch_list_edges(offset: 0, limit: nil, batch_size: nil)
-        Arango::Edge::Base.batch_list(offset: offset, limit: limit, batch_size: batch_size, collection: self)
+        Arango::Edge::Base.batch_list(offset: offset, limit: limit, batch_size: batch_size, edge_collection: self)
       end
 
       def replace_edge(edge)
@@ -72,10 +70,12 @@ module Arango
       end
 
       def replace_edges(edges_array, wait_for_sync: nil, ignore_revs: nil, return_old: nil, return_new: nil)
-        Arango::Edge::Base.replace_edges(edges_array)
+        Arango::Edge::Base.replace_edges(edges_array, wait_for_sync: wait_for_sync, ignore_revs: ignore_revs,
+                                         return_old: return_old, return_new: return_new)
       end
       def batch_replace_edges(edges_array, wait_for_sync: nil, ignore_revs: nil, return_old: nil, return_new: nil)
-        Arango::Edge::Base.batch_replace_edges(edges_array)
+        Arango::Edge::Base.batch_replace_edges(edges_array, wait_for_sync: wait_for_sync, ignore_revs: ignore_revs,
+                                               return_old: return_old, return_new: return_new)
       end
 
       def save_edge(edge)
@@ -87,18 +87,18 @@ module Arango
       alias update_edge save_edge
 
       def save_edges(edges_array, wait_for_sync: nil, ignore_revs: nil)
-        Arango::Edge::Base.save_edges(edges_array)
+        Arango::Edge::Base.save_edges(edges_array, wait_for_sync: wait_for_sync, ignore_revs: ignore_revs)
       end
       def batch_save_edges(edges_array, wait_for_sync: nil, ignore_revs: nil)
-        Arango::Edge::Base.batch_save_edges(edges_array)
+        Arango::Edge::Base.batch_save_edges(edges_array, wait_for_sync: wait_for_sync, ignore_revs: ignore_revs)
       end
       alias update_edges save_edges
 
-      def drop_edge(edge)
-        Arango::Edge::Base.drop(edge, collection: self)
+      def drop_edge(key: nil, attributes: {})
+        Arango::Edge::Base.drop(key: key, attributes: attributes, edge_collection: self)
       end
-      def batch_drop_edge(edge)
-        Arango::Edge::Base.batch_drop(edge, collection: self)
+      def batch_drop_edge(key: nil, attributes: {})
+        Arango::Edge::Base.batch_drop(key: key, attributes: attributes, edge_collection: self)
       end
       alias delete_edge drop_edge
       alias destroy_edge drop_edge
@@ -106,10 +106,10 @@ module Arango
       alias batch_destroy_edge batch_drop_edge
 
       def drop_edges(edges_array)
-        Arango::Edge::Base.drop_edges(edges_array, collection: self)
+        Arango::Edge::Base.drop_edges(edges_array, edge_collection: self)
       end
       def batch_drop_edges(edges_array)
-        Arango::Edge::Base.batch_drop_edges(edges_array, collection: self)
+        Arango::Edge::Base.batch_drop_edges(edges_array, edge_collection: self)
       end
       alias delete_edges drop_edges
       alias destroy_edges drop_edges

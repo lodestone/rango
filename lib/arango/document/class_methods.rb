@@ -13,7 +13,7 @@ module Arango
           raise Arango::Error.new err: "offset must be used with limit" if offset > 0 && !limit
           query << "\n RETURN doc"
           { query: query, bind_vars: bind_vars, batch_size: batch_size, block: -> (aql, result) do
-            result_proc = ->(b) { b.result.map { |d| Arango::Document::Base.new(d, collection: collection) }}
+            result_proc = ->(result) { result.result.map { |doc_attr| Arango::Document::Base.new(attributes: doc_attr, collection: collection) }}
             final_result = result_proc.call(result)
             if aql.has_more?
               collection.instance_variable_set(:@aql, aql)
@@ -56,14 +56,15 @@ module Arango
           }
         end
 
-        Arango.request_class_method(base, :exists?) do |document, match_rev: nil, collection:|
-          body = _body_from_arg(document)
-          raise Arango::Error err: "Document with key required!" unless body.key?(:_key)
-          request = { head: "_api/document/#{collection.name}/#{body[:_key]}" }
-          if body.key?(:_key) && body.key?(:_rev) && match_rev == true
-            request[:headers] = {'If-Match' => body[:_rev] }
-          elsif body.key?(:_key) && body.key?(:_rev) && match_rev == false
-            request[:headers] = {'If-None-Match' => body[:_rev] }
+        Arango.request_class_method(base, :exists?) do |key: nil, attributes: {}, match_rev: nil, collection:|
+          document = _attributes_from_arg(attributes)
+          document[:_key] = key if key
+          raise Arango::Error.new(err: "Document with key required!") unless document.key?(:_key)
+          request = { head: "_api/document/#{collection.name}/#{document[:_key]}" }
+          if document.key?(:_key) && document.key?(:_rev) && match_rev == true
+            request[:headers] = {'If-Match' => document[:_rev] }
+          elsif document.key?(:_key) && document.key?(:_rev) && match_rev == false
+            request[:headers] = {'If-None-Match' => document[:_rev] }
           end
           request[:block] = ->(result) do
             case result.response_code
@@ -79,21 +80,22 @@ module Arango
 
         Arango.request_class_method(base, :create_documents) do |documents, wait_for_sync: nil, collection:|
           documents = [documents] unless documents.is_a? Array
-          documents = documents.map{ |d| _body_from_arg(d) }
+          documents = documents.map{ |d| _attributes_from_arg(d) }
           query = { returnNew: true }
           query[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
           { post: "_api/document/#{collection.name}", body: documents, query: query, block: ->(result) do
             result.map do |doc|
-              Arango::Document::Base.new(doc[:new], collection: collection)
+              Arango::Document::Base.new(attributes: doc[:new], collection: collection)
             end
           end
           }
         end
 
-        Arango.request_class_method(base, :get) do |document, collection:|
-          document = _body_from_arg(document)
+        Arango.request_class_method(base, :get) do |key: nil, attributes: {}, collection: nil, database: nil|
+          document = _attributes_from_arg(attributes)
+          document[:_key] = key if key
           if document.key?(:_key)
-            { get: "_api/document/#{collection.name}/#{document[:_key]}", block: ->(result) { Arango::Document::Base.new(result, collection: collection) }}
+            { get: "_api/document/#{collection.name}/#{document[:_key]}", block: ->(result) { Arango::Document::Base.new(attributes: result, collection: collection) }}
           else
             bind_vars = {}
             query = "FOR doc IN #{collection.name}"
@@ -106,8 +108,9 @@ module Arango
             end
             query << "\n LIMIT 1"
             query << "\n RETURN doc"
-            aql = AQL.new(query: query, database: collection.database, bind_vars: bind_vars, block: ->(_, result) do
-              Arango::Document::Base.new(result.result.first, collection: collection) if result.result.first
+            database = collection.database unless database
+            aql = AQL.new(query: query, database: database, bind_vars: bind_vars, block: ->(_, result) do
+              Arango::Document::Base.new(attributes: result.result.first, collection: collection) if result.result.first
             end
             )
             aql.request
@@ -120,13 +123,13 @@ module Arango
 
         Arango.multi_request_class_method(base, :get_documents) do |documents, collection:|
           documents = [documents] unless documents.is_a? Array
-          documents = documents.map{ |d| _body_from_arg(d) }
+          documents = documents.map{ |d| _attributes_from_arg(d) }
           requests = []
           result_documents = []
           documents.each do |document|
             if document.key?(:_key)
               requests << { get: "_api/document/#{collection.name}/#{document[:_key]}", block: ->(result) do
-                result_documents << Arango::Document::Base.new(result, collection: collection)
+                result_documents << Arango::Document::Base.new(attributes: result, collection: collection)
               end
               }
             else
@@ -142,7 +145,7 @@ module Arango
               query << "\n LIMIT 1"
               query << "\n RETURN doc"
               aql = AQL.new(query: query, database: collection.database, bind_vars: bind_vars, block: ->(_, result) do
-                result_documents << Arango::Document::Base.new(result.result.first, collection: collection) if result.result.first
+                result_documents << Arango::Document::Base.new(attributes: result.result.first, collection: collection) if result.result.first
                 result_documents
               end
               )
@@ -158,12 +161,12 @@ module Arango
 
         Arango.request_class_method(base, :replace_documents) do |documents, ignore_revs: false, wait_for_sync: nil, collection:|
           documents = [documents] unless documents.is_a? Array
-          documents = documents.map{ |d| _body_from_arg(d) }
+          documents = documents.map{ |d| _attributes_from_arg(d) }
           query = { returnNew: true, ignoreRevs: ignore_revs }
           query[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
           { put: "_api/document/#{collection.name}", body: documents, query: query, block: ->(result) do
             result.map do |doc|
-              Arango::Document::Base.new(doc[:new], collection: collection)
+              Arango::Document::Base.new(attributes: doc[:new], collection: collection)
             end
           end
           }
@@ -171,20 +174,21 @@ module Arango
 
         Arango.request_class_method(base, :update_documents) do |documents, ignore_revs: false, wait_for_sync: nil, merge_objects: nil, collection:|
           documents = [documents] unless documents.is_a? Array
-          documents = documents.map{ |d| _body_from_arg(d) }
+          documents = documents.map{ |d| _attributes_from_arg(d) }
           query = { returnNew: true, ignoreRevs: ignore_revs }
           query[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
           query[:mergeObjects] = merge_objects unless merge_objects.nil?
           { patch: "_api/document/#{collection.name}", body: documents, query: query, block: ->(result) do
             result.map do |doc|
-              Arango::Document::Base.new(doc[:new], collection: collection)
+              Arango::Document::Base.new(attributes: doc[:new], collection: collection)
             end
           end
           }
         end
 
-        Arango.request_class_method(base, :drop) do |document, ignore_revs: false, wait_for_sync: nil, collection:|
-          document = _body_from_arg(document)
+        Arango.request_class_method(base, :drop) do |key: nil, attributes: {}, ignore_revs: false, wait_for_sync: nil, collection:|
+          document = _attributes_from_arg(attributes)
+          document[:_key] = key if key
           query = { ignoreRevs: ignore_revs }
           query[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
           headers = nil
@@ -198,7 +202,7 @@ module Arango
 
         Arango.request_class_method(base, :drop_documents) do |documents, ignore_revs: false, wait_for_sync: nil, collection:|
           documents = [documents] unless documents.is_a? Array
-          documents = documents.map{ |d| _body_from_arg(d) }
+          documents = documents.map{ |d| _attributes_from_arg(d) }
           query = { ignoreRevs: ignore_revs }
           query[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
           { delete: "_api/document/#{collection.name}", body: documents, query: query, block: ->(_) { nil }}
@@ -210,7 +214,7 @@ module Arango
 
         private
 
-        def _body_from_arg(arg)
+        def _attributes_from_arg(arg)
           case arg
           when String then { _key: arg }
           when Hash
