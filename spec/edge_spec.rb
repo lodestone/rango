@@ -4,10 +4,10 @@ describe Arango::Edge do
   before :all do
     @server = connect
     begin
-      @server.drop_database(name: "DocumentDatabase")
+      @server.drop_database(name: "EdgeDatabase")
     rescue
     end
-    @database = @server.create_database(name: "DocumentDatabase")
+    @database = @server.create_database(name: "EdgeDatabase")
   end
 
   before :each do
@@ -37,7 +37,7 @@ describe Arango::Edge do
   end
 
   after :all do
-    @server.drop_database(name: "DocumentDatabase")
+    @server.drop_database(name: "EdgeDatabase")
   end
 
   context "EdgeCollection" do

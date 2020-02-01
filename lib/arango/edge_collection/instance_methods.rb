@@ -100,6 +100,11 @@ module Arango
         @properties[:journal_size] = n
       end
 
+      def wait_for_sync=(n)
+        @wait_for_sync_changed = true
+        @properties[:wait_for_sync] = n
+      end
+
       def name=(n)
         @name_changed = true
         _set_name(n)
@@ -272,7 +277,7 @@ module Arango
           @journal_size_changed = false
           @wait_for_sync_changed = false
           # result = @database.request(get: "_api/collection/#{@name}/properties", body: body)
-          requests << { get: "_api/collection/#{@name}/properties", body: body, block: -> (result) {
+          requests << { put: "_api/collection/#{@name}/properties", body: body, block: -> (result) {
             @journal_size = result.journal_size if result.key?(:journal_size)
             @wait_for_sync = result.wait_for_sync if result.key?(:wait_for_sync)
             self
@@ -348,7 +353,7 @@ module Arango
       end
 
       def _set_properties(properties)
-        @properties = if properties
+        properties = if properties
                         properties.transform_keys! { |k| k.to_s.underscore.to_sym }
                         properties[:key_options].transform_keys! { |k| k.to_s.underscore.to_sym } if properties.key?(:key_options)
                         properties[:sharding_strategy].to_s.underscore.to_sym if properties.key?(:sharding_strategy)
@@ -356,6 +361,8 @@ module Arango
                       else
                         {}
                       end
+        return @properties = properties unless @properties
+        @properties.merge!(properties)
       end
     end
   end

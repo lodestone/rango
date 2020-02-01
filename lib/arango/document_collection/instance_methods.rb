@@ -19,7 +19,7 @@ module Arango
         @batch_proc = nil
         @id = id
         @is_system = is_system
-        @name = name
+        _set_name(name)
         @name_changed = false
         @original_name = name
 
@@ -102,7 +102,7 @@ module Arango
 
       def wait_for_sync=(n)
         @wait_for_sync_changed = true
-        @properties[:wait_fro_sync] = n
+        @properties[:wait_for_sync] = n
       end
 
       def name=(n)
@@ -276,7 +276,7 @@ module Arango
           @journal_size_changed = false
           @wait_for_sync_changed = false
           # result = @database.request(get: "_api/collection/#{@name}/properties", body: body)
-          requests << { get: "_api/collection/#{@name}/properties", body: body, block: -> (result) {
+          requests << { put: "_api/collection/#{@name}/properties", body: body, block: -> (result) {
             @journal_size = result.journal_size if result.key?(:journal_size)
             @wait_for_sync = result.wait_for_sync if result.key?(:wait_for_sync)
             self
@@ -313,6 +313,11 @@ module Arango
 
       private
 
+      def _set_name(name)
+        raise 'illegal_name' if name.include?('/') || name.include?('.')
+        @name = name
+      end
+
       def _set_status(s)
         if s.class == Symbol && STATES.include?(s)
           @status = STATES.index(s)
@@ -338,7 +343,7 @@ module Arango
         hash = result.raw_result
         @id = hash.delete(:id)
         @is_system = hash.delete(:is_system)
-        @name = hash.delete(:name)
+        _set_name(hash.delete(:name))
         s = hash.delete(:status)
         _set_status(s) if s
         t = hash.delete(:type)

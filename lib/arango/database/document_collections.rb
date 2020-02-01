@@ -1,6 +1,9 @@
 module Arango
   class Database
     module DocumentCollections
+      # Retrieves all document collections from the database.
+      # @param exclude_system [Boolean] Optional, default true, exclude system collections.
+      # @return [Array<Arango::DocumentCollection>]
       def all_document_collections(exclude_system: true)
         Arango::DocumentCollection::Base.all(exclude_system: exclude_system, database: self)
       end
@@ -8,7 +11,7 @@ module Arango
         Arango::DocumentCollection::Base.batch_all(exclude_system: exclude_system, database: self)
       end
 
-      # Creates a new collection.
+      # Creates a new document collection.
       # @param name [String] The name of the collection.
       # @param type [Symbol] One of :document or :edge, the collection type, optional, default: :document.
       # @return [Arango::DocumentCollection::Base] The instance of the collection created.
@@ -19,7 +22,7 @@ module Arango
         Arango::DocumentCollection::Base.new(name: name, database: self, is_system: is_system).batch_create
       end
 
-      # Get collection from the database.
+      # Get document collection from the database.
       # @param name [String] The name of the collection.
       # @return [Arango::Database]
       def get_document_collection(name:)
@@ -33,7 +36,7 @@ module Arango
       alias batch_fetch_document_collection batch_get_document_collection
       alias batch_retrieve_document_collection batch_get_document_collection
 
-      # Instantiates a new collection.
+      # Instantiates a new document collection.
       # @param name [String] The name of the collection.
       # @param type [Symbol] One of :document or :edge, the collection type, optional, default: :document.
       # @return [Arango::DocumentCollection::Base]
@@ -41,7 +44,7 @@ module Arango
         Arango::DocumentCollection::Base.new(name: name, type: type, database: self)
       end
 
-      # Retrieves a list of all collections.
+      # Retrieves a list of document collections.
       # @param exclude_system [Boolean] Optional, default true, exclude system collections.
       # @return [Array<String>] List of collection names.
       def list_document_collections(exclude_system: true)
@@ -51,7 +54,7 @@ module Arango
         Arango::DocumentCollection::Base.batch_list(exclude_system: exclude_system, database: self)
       end
 
-      # Removes a collection.
+      # Removes a document collection.
       # @param name [String] The name of the collection.
       # @return nil
       def drop_document_collection(name:)
@@ -65,7 +68,7 @@ module Arango
       alias batch_delete_document_collection batch_drop_document_collection
       alias batch_destroy_document_collection batch_drop_document_collection
 
-      # Check if collection exists.
+      # Check if document collection exists.
       # @param name [String] Name of the collection
       # @return [Boolean]
       def document_collection_exists?(name:, exclude_system: true)

@@ -1,7 +1,7 @@
 module Arango
   class Database
     module EdgeCollections
-      # Retrieves all collections from the database.
+      # Retrieves all edge collections from the database.
       # @param exclude_system [Boolean] Optional, default true, exclude system collections.
       # @return [Array<Arango::EdgeCollection>]
       def all_edge_collections(exclude_system: true)
@@ -21,7 +21,7 @@ module Arango
         Arango::EdgeCollection::Base.new(name: name, database: self).batch_create
       end
 
-      # Get collection from the database.
+      # Get edge collection from the database.
       # @param name [String] The name of the collection.
       # @return [Arango::Database]
       def get_edge_collection(name:)
@@ -42,17 +42,17 @@ module Arango
         Arango::EdgeCollection::Base.new(name: name, type: :edge, database: self)
       end
 
-      # Retrieves a list of all collections.
+      # Retrieves a list of edge collections.
       # @param exclude_system [Boolean] Optional, default true, exclude system collections.
       # @return [Array<String>] List of collection names.
-      def list_edge_collections
+      def list_edge_collections(exclude_system: true)
         Arango::EdgeCollection::Base.list(exclude_system: exclude_system, database: self)
       end
-      def batch_list_edge_collections
+      def batch_list_edge_collections(exclude_system: true)
         Arango::EdgeCollection::Base.batch_list(exclude_system: exclude_system, database: self)
       end
 
-      # Removes a collection.
+      # Removes a edge collection.
       # @param name [String] The name of the collection.
       # @return nil
       def drop_edge_collection(name:)
@@ -66,7 +66,7 @@ module Arango
       alias batch_delete_edge_collection batch_drop_edge_collection
       alias batch_destroy_edge_collection batch_drop_edge_collection
 
-      # Check if collection exists.
+      # Check if edge collection exists.
       # @param name [String] Name of the collection
       # @return [Boolean]
       def edge_collection_exists?(name:, exclude_system: true)

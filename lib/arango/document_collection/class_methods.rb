@@ -77,9 +77,18 @@ module Arango
         # @param exclude_system [Boolean] Optional, default true, exclude system collections.
         # @param database [Arango::Database]
         # @return [Array<String>] List of collection names.
-        Arango.request_class_method(base, :list) do |exclude_system: true, database: Arango.current_database|
+        Arango.request_class_method(base, :list_all) do |exclude_system: true, database: Arango.current_database|
           query = { excludeSystem: exclude_system }
           { get: '_api/collection', query: query, block: ->(result) { result.result.map { |c| c[:name] }}}
+        end
+
+        # Retrieves a list of document collections.
+        # @param exclude_system [Boolean] Optional, default true, exclude system collections.
+        # @param database [Arango::Database]
+        # @return [Array<String>] List of collection names.
+        Arango.request_class_method(base, :list) do |exclude_system: true, database: Arango.current_database|
+          query = { excludeSystem: exclude_system }
+          { get: '_api/collection', query: query, block: ->(result) { result.result.select { |c| TYPES[c[:type]] == :document }.map { |c| c[:name] }}}
         end
 
         # Removes a collection.
@@ -94,13 +103,22 @@ module Arango
         base.singleton_class.alias_method :batch_delete, :batch_drop
         base.singleton_class.alias_method :batch_destroy, :batch_drop
 
-        # Check if collection exists.
+        # Check if s document collection exists.
+        # @param name [String] Name of the collection
+        # @param database [Arango::Database]
+        # @return [Boolean]
+        Arango.request_class_method(base, :any_exists?) do |name:, exclude_system: true, database: Arango.current_database|
+          query = { excludeSystem: exclude_system }
+          { get: '_api/collection', query: query, block: ->(result) { result.result.map { |c| c[:name] }.include?(name) }}
+        end
+
+        # Check if s document collection exists.
         # @param name [String] Name of the collection
         # @param database [Arango::Database]
         # @return [Boolean]
         Arango.request_class_method(base, :exists?) do |name:, exclude_system: true, database: Arango.current_database|
           query = { excludeSystem: exclude_system }
-          { get: '_api/collection', query: query, block: ->(result) { result.result.map { |c| c[:name] }.include?(name) }}
+          { get: '_api/collection', query: query, block: ->(result) { result.result.select { |c| TYPES[c[:type]] == :document }.map { |c| c[:name] }.include?(name) }}
         end
       end
     end
