@@ -13,7 +13,7 @@
   "author": "Adam Beynon and the Opal contributors",
   "license": "MIT",
   "devDependencies": {
-    "opal-webpack-loader": "^0.9.10",
+    "opal-webpack-loader": "^0.9.11",
     "webpack": "^4.41.5",
     "webpack-cli": "^3.3.10"
   }

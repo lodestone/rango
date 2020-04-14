@@ -45,19 +45,15 @@ module Arango
       def drop_database(name:)
         Arango::Database.drop(name: name, server: self)
       end
-      alias delete_database drop_database
-      alias destroy_database drop_database
 
       # Get database from server.
       # @param name [String] The name of the database
       # @return [Arango::Database] The instance of the database.
       def get_database(name:)
         db = Arango::Database.get(name: name, server: self)
-        Arango.current_database = db if Arango.current_server == self
+        self.current_database = db unless self.current_database
         db
       end
-      alias fetch_database get_database
-      alias retrieve_database get_database
 
       # Check if database exists.
       # @param name [String] Name of the database.

@@ -3,6 +3,9 @@ module Arango
     module InstanceMethods
       extend Arango::Helper::RequestMethod
 
+      attr_accessor :ignore_revs, :wait_for_sync
+      attr_reader :graph, :collection, :database, :server, :attributes
+
       def initialize(key: nil, attributes: {}, collection:, ignore_revs: false, wait_for_sync: nil)
         @attributes = _attributes_from_arg(attributes)
         @attributes[:_key] = key if key
@@ -11,6 +14,27 @@ module Arango
         @wait_for_sync = wait_for_sync
         send(:collection=, collection)
         send(:graph=, collection.graph) if collection.graph
+      end
+      
+      def attributes=(doc)
+        @changed_attributes = _attributes_from_arg(doc)
+        #set_up_from_or_to("from", result[:_from])
+        #set_up_from_or_to("to", result[:_to])
+      end
+
+      def collection=(collection)
+        satisfy_module?(collection, Arango::DocumentCollection::Mixin)
+        @collection = collection
+        @graph = @collection.graph
+        @database = @collection.database
+        @arango_server = @database.arango_server
+      end
+
+      def graph=(graph)
+        satisfy_module?(graph, Arango::Graph::Mixin)
+        @graph = graph
+        @database = @graph.database
+        @arango_server = @graph.arango_server
       end
 
       def id
@@ -47,30 +71,6 @@ module Arango
         !!@graph
       end
 
-      attr_accessor :ignore_revs, :wait_for_sync
-      attr_reader :graph, :collection, :database, :server, :attributes
-
-      def attributes=(doc)
-        @changed_attributes = _attributes_from_arg(doc)
-        #set_up_from_or_to("from", result[:_from])
-        #set_up_from_or_to("to", result[:_to])
-      end
-
-      def collection=(collection)
-        satisfy_module?(collection, Arango::DocumentCollection::Mixin)
-        @collection = collection
-        @graph = @collection.graph
-        @database = @collection.database
-        @arango_server = @database.arango_server
-      end
-
-      def graph=(graph)
-        satisfy_module?(graph, Arango::Graph::Mixin)
-        @graph = graph
-        @database = @graph.database
-        @arango_server = @graph.arango_server
-      end
-
       def method_missing(name, *args, &block)
         name_s = name.to_s
         set_attr = false
@@ -89,12 +89,28 @@ module Arango
         super(name, *args, &block)
       end
 
+      request_method :create do
+        query = { returnNew: true }
+        query[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
+        @attributes = @attributes.merge(@changed_attributes)
+        @changed_attributes = {}
+        if @graph
+          { post: "_api/gharial/#{@graph.name}/vertex/#{@collection.name}",
+            formatted_request: Arango::RequestFormats::VertexCreate.new(body: @attributes, query: query),
+            block: ->(result) { @attributes.merge!(result[:new]); self } }
+        else
+          { post: "_api/document/#{@collection.name}",
+            formatted_request: Arango::RequestFormats::DocumentCreate.new(body: @attributes, query: query),
+            block: ->(result) { @attributes.merge!(result[:new]); self } }
+        end
+      end
+
       request_method :reload do
         # TODO conditional
         if @graph
-        headers = {}
-        headers[:"If-Match"] = @attributes[:_rev] if if_match
-        result = @graph.request("GET", "vertex/#{@collection.name}/#{@attributes[:_key]}", headers: headers, key: :vertex)
+          headers = {}
+          headers[:"If-Match"] = @attributes[:_rev] if if_match
+          @graph.request("GET", "vertex/#{@collection.name}/#{@attributes[:_key]}", headers: headers, key: :vertex)
         end
         headers = nil
         headers = { "If-Match": @attributes[:_rev] } if !@ignore_revs && @attributes.key?(:_rev)
@@ -106,33 +122,10 @@ module Arango
           end
         }
       end
-      alias refresh reload
-      alias retrieve reload
-      alias revert reload
-      alias batch_refresh batch_reload
-      alias batch_retrieve batch_reload
-      alias batch_revert batch_reload
 
       request_method :same_revision? do
         headers = { "If-Match": @attributes[:_rev] }
         { head: "_api/document/#{@collection.name}/#{@attributes[:_key]}", headers: headers, block: ->(result) { result.response_code == 200 }}
-      end
-
-      request_method :create do
-        # TODO conditional
-        # if @graph
-        #  @graph.request("POST", "vertex/#{@collection.name}", body: attributes, query: query, key: :vertex)
-        # end
-        query = { returnNew: true }
-        query[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
-        @attributes = @attributes.merge(@changed_attributes)
-        @changed_attributes = {}
-        { post: "_api/document/#{@collection.name}", body: @attributes, query: query,
-          block: ->(result) do
-            @attributes.merge!(result[:new])
-            self
-          end
-        }
       end
 
       request_method :replace do

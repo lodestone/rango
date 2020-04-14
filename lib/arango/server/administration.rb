@@ -4,37 +4,36 @@ module Arango
       # Check availability of the server.
       # @return [Boolean]
       def available?
-        200 == request(get: '_admin/server/availability').response_code
+        200 == Arango::Requests::Administration::Availability.execute(server: self).response_code
       end
 
       # Returns information about all coordinator endpoints (cluster only).
       # @return [Array<String>]
       def cluster_endpoints
         if in_cluster?
-          endpoints = request(get: "_api/cluster/endpoints").endpoints
-          endpoints.map { |e| e[:endpoint] }
+          result = Arango::Requests::Administration::ClusterEndpoints.execute(server: self)
+          result.endpoints.map { |e| e[:endpoint] }
         end
       end
 
       # Returns information about all server endpoints.
       # @return [Array<String>]
       def endpoints
-        endpoints = request(get: "_api/endpoint")
-        endpoints.map { |e| e[:endpoint] }
+        result = Arango::Requests::Administration::Endpoints.execute(server: self)
+        result.map { |e| e[:endpoint] }
       end
 
       # Send back what was sent in, headers, post body etc.
       # @param request_hash [Hash] The request body.
       # @return [Hash]
       def echo(request_hash)
-        result = request(post: "_admin/echo", body: request_hash)
-        Oj.load(result.request_body, symbol_keys: true)
+        Arango::Requests::Administration::Echo.execute(server: self, body: request_hash)
       end
 
       # Return server database engine information
       # @return [Arango::Result]
       def engine
-        @engine ||= request(get: '_api/engine')
+        @engine ||= Arango::Requests::Administration::Engine.execute(server: self)
       end
 
       # Return true if the server uses the mmfiles engine.
@@ -139,7 +138,7 @@ module Arango
       # determined.
       # @return [String]
       def role
-        @role ||= request(get: '_admin/server/role').role
+        @role ||= Arango::Requests::Administration::Role.execute(server: self).role
       end
 
       # Check if server role is AGENT.

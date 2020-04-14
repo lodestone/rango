@@ -24,7 +24,14 @@ describe "Arango::Server" do
 
     it "echo" do
       result = @server.echo(test: 'result')
-      expect(result).to eq(test: 'result')
+      expect(Oj.load(result.request_body, mode: :strict)).to eq('test' => 'result')
+    end
+
+    it 'benchmarking' do
+      puts
+      Benchmark.ips do |x|
+        x.report("echo requests") { @server.echo(test: 'result') }
+      end
     end
 
     it "engine" do

@@ -36,6 +36,10 @@ module Arango
         result.map{ |db| Arango::Database.new(name: db, server: server).reload }
       end
 
+      def create()
+        self.new.create
+      end
+      
       # Get database from server.
       # @param name [String] The name of the database
       # @param server [Arango::Server]
@@ -43,8 +47,6 @@ module Arango
       def get(name:, server:)
         Arango::Database.new(name: name, server: server).reload
       end
-      alias fetch get
-      alias retrieve get
 
       # Retrieves a list of all databases.
       # @param server [Arango::Server]
@@ -88,7 +90,7 @@ module Arango
     # @param path
     # @return [Arango::Database]
     def initialize(name:, id: nil, is_system: false, path: '', server: Arango.current_server)
-      send(:arango_server=, server)
+      send(:server=, server)
       @name = name
       @is_system = is_system
       @path = path
@@ -107,26 +109,23 @@ module Arango
     # @return [String]
     attr_reader :path
 
-    attr_accessor :arango_server
+    attr_accessor :server
 
     # Creates the database on the server.
     # @return [Arango::Database] self
     def create
       # TODO users: users
-      body = { name: @name }
-      @arango_server.request(post: '_api/database', body: body)
+      Aranog::Request::Database::Create.new(server: self.server, args: { db: @name }).execute
       self
     end
 
     # Reload database properties.
     # @return [Arango::Database] self
     def reload
-      result = request(get: '_api/database/current')
+      result = Arango::Requests::Database::GetInformation.new(server: self.server, args: { db: @name }).execute
       _update_attributes(result)
       self
     end
-    alias refresh reload
-    alias retrieve reload
 
     # Remove database from the server.
     # @return nil

@@ -1,79 +1,65 @@
-# === USER ===
-
 module Arango
   class User
     include Arango::Helper::Satisfaction
 
-    include Arango::Helper::ServerAssignment
-
-    def initialize(server:, password: "", name:, extra: {}, active: nil, cache_name: nil)
-      assign_server(server)
-      unless cache_name.nil?
-        @cache_name = cache_name
-        @server.cache.save(:user, cache_name, self)
+    class << self
+      # Retrieves all users.
+      # @param server [Arango::Server]
+      # @return [Array<Arango::User>]
+      def all(server: Arango.current_server)
+        result = Arango::Requests::User::List.execute(server: server)
+        result.map { |u| self.new(server: server, **u) }
       end
+
+      def create(name:, password: "", extra: {}, active: nil, server: Arango.current_server)
+        self.new.create(server: server, password: password, extra: extra, active: active)
+      end
+
+      def get(name:, server: Arango.current_server)
+        result = Arango::Requests::User::Get.execute(server: server, args: { user: name })
+        self.new(server: server, **result)
+      end
+
+      def list(server: Arango.current_server)
+        result = Arango::Requests::User::List.execcute(server: server)
+        result.map { |u| u.name }
+      end
+
+      def drop(name:, server: Arango.current_server)
+        Arango::Requests::User::Delete.exceute(server: server, args: { user: name })
+      end
+
+      def exists?(name:, server: Arango.current_server)
+        !!Arango::Requests::User::Get.execute(server: server, args: { user: name })
+      rescue
+        false
+      end
+    end
+
+    def initialize(server:, password: "", name:, extra: {}, active: nil)
+      @server = server
       @password = password
       @name     = name
       @extra    = extra
       @active   = active
     end
 
-# === DEFINE ===
-
     attr_accessor :name, :extra, :active
-    attr_reader :server, :body, :cache_name
     attr_writer :password
-    alias user name
-    alias user= name=
+    attr_reader :server
 
-    def body=(result)
-      @body     = result
-      @password = result[:password] || @password
-      @name     = result[:user]   || @name
-      @extra    = result[:extra]  || @extra
-      @active   = result[:active].nil? ? @active : result[:active]
-      if @server.active_cache && @cache_name.nil?
-        @cache_name = @name
-        @server.cache.save(:user, @cache_name, self)
-      end
-    end
-    alias assign_attributes body=
-
-# === TO HASH ===
-
-    def to_h
-      {
-        active: @active,
-        cache_name: @cache_name,
-        extra: @extra,
-        server: @server.base_uri,
-        user: @name
-      }.delete_if{|k,v| v.nil?}
-    end
-
-    def [](database)
-      if self.databases[database.to_sym] == "rw"
-        Arango::Database.new name: database, server: @server
-      else
-        "This User does not have access to Database #{database}."
-      end
-    end
-    alias database []
-
-  # == USER ACTION ==
-
-    def create(password: @password, active: @active, extra: @extra)
+    def create
       body = {
-        user: @name,
+        user: name,
         passwd: password,
         extra: extra,
         active: active
       }
-      result = @server.request("POST", "_api/user", body: body)
-      return_element(result)
+      Arango::Requests::User::Create.new(server: server, body: body).execute
+      self
     end
 
-    def retrieve
+    def reload
       result = @server.request("GET", "_api/user/#{@name}", body: body)
       return_element(result)
     end

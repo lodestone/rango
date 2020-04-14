@@ -108,7 +108,7 @@ describe Arango::EdgeCollection do
       expect(collection.type).to eq :edge
     end
 
-    it "create edge" do
+    it "create" do
       Arango::EdgeCollection::Base.new(name: "MyCollection", type: :edge, database: @database).create
       collection = Arango::EdgeCollection::Base.get(name: "MyCollection", database: @database)
       expect(collection.name).to eq "MyCollection"

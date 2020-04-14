@@ -1,3 +1,5 @@
+require "ostruct"
+require "benchmark/ips"
 require "rspec"
 require "simplecov"
 SimpleCov.start
@@ -5,7 +7,7 @@ require "arango-driver"
 
 module Helpers
 	def connect
-		Arango::connect_to username: "root", password: "root", host: "localhost", port: "8529"
+		Arango.connect_to_server username: "root", password: "", host: "localhost", port: "8529"
 	end
 end
 

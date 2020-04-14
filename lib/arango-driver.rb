@@ -1,83 +1,40 @@
-require "typhoeus"
-require "oj"
 require "json"
 require "opal"
 require "parser"
 require "unparser"
 require "method_source"
+require "escape_utils"
+require "uri_template"
 require "active_support/core_ext/string"
-require "isomorfeus/promise"
-require "arango"
 
-require "arango/helper/request_method"
-require "arango/helper/satisfaction"
-require "arango/helper/server_assignment"
-require "arango/helper/database_assignment"
+opal_path = Gem::Specification.find_by_name('opal').full_gem_path
+promise_path = File.join(opal_path, 'stdlib', 'promise.rb')
+require promise_path
 
-require "arango/result"
-require "arango/request"
-require "arango/request_batch"
+if RUBY_ENGINE == 'opal'
 
-require "arango/server/administration"
-require "arango/server/async"
-require "arango/server/config"
-require "arango/server/databases"
-require "arango/server/monitoring"
-require "arango/server/tasks"
-require "arango/server/opal_support"
-require "arango/server"
+elsif RUBY_ENGINE == 'ruby'
+  require "oj"
+  require "typhoeus"
+elsif RUBY_ENGINE == 'jruby'
 
-require "arango/database/aql_functions"
-require "arango/database/edge_collections"
-require "arango/database/document_collections"
-require "arango/database/collections"
-require "arango/database/foxx_services"
-require "arango/database/http_route"
-require "arango/database/aql_queries"
-require "arango/database/aql_query_cache"
-require "arango/database/replication"
-require "arango/database/stream_transactions"
-require "arango/database/tasks"
-require "arango/database/graphs"
-require "arango/database/transactions"
-require "arango/database/view_access"
-require "arango/database"
+end
 
-require "arango/aql"
+require 'zeitwerk'
+require 'arango'
 
-require "arango/document/class_methods"
-require "arango/document/instance_methods"
-require "arango/document/mixin"
-require "arango/document/base"
+loader = Zeitwerk::Loader.for_gem
+loader.ignore(__FILE__)
+loader.setup
 
-require "arango/document_collection/documents"
-require "arango/document_collection/importing"
-require "arango/document_collection/indexes"
-require "arango/document_collection/replication"
-require "arango/document_collection/instance_methods"
-require "arango/document_collection/class_methods"
-require "arango/document_collection/mixin"
-require "arango/document_collection/base"
-
-require "arango/replication"
-
-require "arango/edge_collection/edges"
-require "arango/edge_collection/instance_methods"
-require "arango/edge_collection/class_methods"
-require "arango/edge_collection/mixin"
-require "arango/edge_collection/base"
-
-require "arango/edge/instance_methods"
-require "arango/edge/class_methods"
-require "arango/edge/mixin"
-require "arango/edge/base"
-
-require "arango/error"
-require 'arango/error_db'
-require "arango/foxx"
-require "arango/graph"
-require "arango/index"
-require "arango/task"
-require "arango/transaction"
-require "arango/user"
-require "arango/view"
+if RUBY_ENGINE == 'opal'
+  # TODO check if running in FOXX or node
+  # if in node
+  # Arango.driver = Arango::Driver::Node
+  # if in FOXX
+  # no driver needed?
+elsif RUBY_ENGINE == 'ruby'
+  Arango.driver = Arango::Driver::Typhoeus
+elsif RUBY_ENGINE == 'jruby'
+  # Aranog.driver = Arango::Driver::JRuby
+end

@@ -1,26 +1,32 @@
 module Arango
-  def self.current_database
-    @current_database
-  end
+  class << self
+    def driver
+      @driver_class
+    end
 
-  def self.current_database=(d)
-    @current_database = d
-  end
+    def driver=(dc)
+      @driver_class = dc
+    end
 
-  def self.current_server
-    @current_server
-  end
+    def current_server
+      @current_server
+    end
 
-  def self.current_server=(s)
-    @current_server = s
-  end
+    def current_server=(s)
+      @current_server = s
+    end
 
-  def self.connect_to(username: "root", password:, host: "localhost", warning: true, port: "8529", return_output: false,
-      timeout: 5, tls: false, database: nil)
-    @current_server = Arango::Server.new(username: username, password: password, host: host, warning: warning, port: port,
-                                         return_output: return_output, timeout: timeout, tls: tls)
-    @current_database = @current_server.get_database(database) if database
-    @current_server
+    def connect_to_database(username: "root", password:, host: "localhost", port: "8529", tls: false, database:, driver_options: nil)
+      server = connect_to_server(username: username, password: password, host: host, port: port, tls: false, driver_options: driver_options)
+      database = server.get_database(database)
+      server.current_database = database
+    end
+
+    def connect_to_server(username: "root", password:, host: "localhost", port: "8529", tls: false, driver_options: nil)
+      server = Arango::Server.new(username: username, password: password, host: host, port: port, tls: tls, driver_options: driver_options)
+      @current_server = server unless @current_server
+      server
+    end
   end
 
   def self.request_class_method(target_class, method_name, &block)

@@ -74,10 +74,10 @@ module Arango
       }
     }.freeze
 
-    def initialize(err:, data: nil, skip_assignment: false)
+    def initialize(message = nil, err: nil, data: nil, skip_assignment: false)
       unless skip_assignment
-        @message = ARANGODB_ERRORS[err][:message]
-        @code = ARANGODB_ERRORS[err][:code]
+        @message = message ? message : ARANGODB_ERRORS[err][:message]
+        @code = message ? 0 : ARANGODB_ERRORS[err][:code]
         @internal_code = err
         @data = data
       end

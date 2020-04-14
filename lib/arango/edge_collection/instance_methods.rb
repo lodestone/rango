@@ -13,8 +13,8 @@ module Arango
       def initialize(database: Arango.current_database, graph: nil,
                      name:, id: nil, is_system: false, status: nil, type: :edge,
                      properties: {})
-        send(:database=, database)
-        #  assign_graph(graph)
+        send(:database=, database) if database
+        send(:graph=, graph) if graph
         @aql = nil
         @batch_proc = nil
         @id = id

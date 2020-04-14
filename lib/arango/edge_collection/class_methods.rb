@@ -28,11 +28,7 @@ module Arango
           collection_hash[:name] = collection_hash[:properties].delete(:name) if collection_hash[:properties].key?(:name)
           collection_hash[:status] = collection_hash[:properties].delete(:status) if collection_hash[:properties].key?(:status)
           collection_hash[:type] = collection_hash[:properties].delete(:type) if collection_hash[:properties].key?(:type)
-          collection_hash[:error] = collection_hash[:properties].delete(:error) if collection_hash[:properties].key?(:error)
-          collection_hash[:code] = collection_hash[:properties].delete(:code) if collection_hash[:properties].key?(:code)
         end
-        raise "error" if collection_hash[:error]
-        %i[code error].each { |key| collection_hash.delete(key) }
         collection_hash[:type] = TYPES[collection_hash[:type]] if collection_hash[:type].is_a?(Integer)
         Arango::EdgeCollection::Base.new(**collection_hash)
       end

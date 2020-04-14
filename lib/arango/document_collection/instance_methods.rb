@@ -13,8 +13,8 @@ module Arango
       def initialize(database: Arango.current_database, graph: nil,
                      name:, id: nil, is_system: false, status: nil, type: :document,
                      properties: {})
-        send(:database=, database)
-        #  assign_graph(graph)
+        @database = database if database
+        @graph = graph if graph
         @aql = nil
         @batch_proc = nil
         @id = id
@@ -28,8 +28,17 @@ module Arango
         _set_properties(properties)
       end
 
-      attr_accessor :database
-      attr_reader :graph
+      def id
+        i = @changed_attributes[:_id] || @attributes[:_id]
+        return i if i
+        "#{collection.name}/#{key}"
+      end
+
+      def id=(i)
+        @changed_attributes[:_id] = i
+      end
+
+      attr_reader :database, :graph
 
       def method_missing(property, *args, &block)
         property_s = property.to_s.underscore

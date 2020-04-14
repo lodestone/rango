@@ -1,0 +1,16 @@
+module Arango
+  module Requests
+    module Aql
+      class ClearQueryResultCache < Arango::Request
+        request_method :delete
+
+        uri_template "/_api/query-cache"
+
+        param :namespace
+
+        code 200, :success
+        code 400, "Malformed request!"
+      end
+    end
+  end
+end
