@@ -24,6 +24,16 @@ require 'zeitwerk'
 require 'arango'
 
 loader = Zeitwerk::Loader.for_gem
+#loader.log!
+# override Zeitwerk's AQL -> Aql mapping
+loader.inflector.inflect(
+  "aql" => "AQL",
+  "aql_functions" => "AQLFunctions",
+  "aql_queries" => "AQLQueries",
+  "aql_query_cache" => "AQLQueryCache",
+  "graphs" => "GraphAccess",
+  "http_route" => "HTTPRoute"
+)
 loader.ignore(__FILE__)
 loader.setup
 
