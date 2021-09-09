@@ -21,7 +21,7 @@ Gem::Specification.new do |s|
   s.add_dependency 'parser'
   s.add_dependency 'unparser'
   s.add_dependency 'uri_template', '~> 0.7.0'
-  s.add_dependency 'zeitwerk', '~> 2.3.0'
+  s.add_dependency 'zeitwerk', '~> 2.4.0'
   s.add_development_dependency 'benchmark-ips', '>= 0.9.11'
   s.add_development_dependency 'opal-webpack-loader', '>= 0.9.11'
   s.add_development_dependency 'rake'
