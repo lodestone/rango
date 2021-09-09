@@ -38,7 +38,7 @@ module Arango
       # @param name [String] Name of the user.
       # @return [Boolean]
       def user_exists?(name:)
-        Aranog::User.exists?(name: name)
+        Arango::User.exists?(name: name)
       end
     end
   end

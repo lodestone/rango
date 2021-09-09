@@ -115,7 +115,7 @@ module Arango
     # @return [Arango::Database] self
     def create
       # TODO users: users
-      Aranog::Request::Database::Create.new(server: self.server, args: { db: @name }).execute
+      Arango::Request::Database::Create.new(server: self.server, args: { db: @name }).execute
       self
     end
 

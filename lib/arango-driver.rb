@@ -46,5 +46,5 @@ if RUBY_ENGINE == 'opal'
 elsif RUBY_ENGINE == 'ruby'
   Arango.driver = Arango::Driver::Typhoeus
 elsif RUBY_ENGINE == 'jruby'
-  # Aranog.driver = Arango::Driver::JRuby
+  # Arango.driver = Arango::Driver::JRuby
 end
