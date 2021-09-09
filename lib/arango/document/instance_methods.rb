@@ -96,12 +96,12 @@ module Arango
         @changed_attributes = {}
         if @graph
           { post: "_api/gharial/#{@graph.name}/vertex/#{@collection.name}",
-            formatted_request: Arango::RequestFormats::VertexCreate.new(body: @attributes, query: query),
-            block: ->(result) { @attributes.merge!(result[:new]); self } }
+            block: ->(result) { @attributes.merge!(result[:new]); self },
+            formatted_request: Arango::RequestFormats::VertexCreate.new(body: @attributes, query: query) }
         else
           { post: "_api/document/#{@collection.name}",
-            formatted_request: Arango::RequestFormats::DocumentCreate.new(body: @attributes, query: query),
-            block: ->(result) { @attributes.merge!(result[:new]); self } }
+            block: ->(result) { @attributes.merge!(result[:new]); self },
+            formatted_request: Arango::RequestFormats::DocumentCreate.new(body: @attributes, query: query) }
         end
       end
 
