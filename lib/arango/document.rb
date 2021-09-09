@@ -1,5 +1,5 @@
 module Arango
-  class Document
+  module Document
     include Arango::Document::Mixin
   end
 end
