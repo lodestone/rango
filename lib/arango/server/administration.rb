@@ -103,7 +103,7 @@ module Arango
       # Return mode information about a server.
       # @return [Symbol] one of :default or :readonly
       def mode
-        request(get: "_admin/server/mode").mode.to_sym
+        Arango::Requests::Administration::GetMode.execute(server: self).mode.to_sym
       end
 
       # Set server mode.
