@@ -186,7 +186,7 @@ module Arango
       # Returns the statistics information.
       # @return [Arango::Result]
       def statistics
-        request(get: "_admin/statistics")
+        Arango::Requests::Administration::Statistics.execute(server: self)
       end
 
       # Returns a description of the statistics returned by /_admin/statistics.
