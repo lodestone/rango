@@ -9,7 +9,7 @@ module Arango
     include Arango::Server::Tasks
     include Arango::Server::OpalSupport
 
-    attr_reader :async, :host, :port, :tls, :username, :driver_instance
+    attr_reader :async, :host, :port, :tls, :base_uri, :username, :driver_instance
     attr_accessor :current_database
 
     # Connect to a ArangoDB server.
@@ -24,9 +24,9 @@ module Arango
       @port = port
       @tls = tls
       @username = username
-      base_uri = "http"
-      base_uri += "s" if tls
-      base_uri += "://#{host}:#{port}"
+      @base_uri = "http"
+      @base_uri += "s" if tls
+      @base_uri += "://#{host}:#{port}"
       options = { username: username, password: password }
       driver_options = {} unless driver_options
       @driver_instance = Arango.driver.new(base_uri: base_uri, options: driver_options.merge(options))
