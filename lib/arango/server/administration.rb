@@ -84,7 +84,7 @@ module Arango
       # Returns the current log level settings
       # @return [Arango::Result]
       def log_level
-        request(get: "_admin/log/level")
+        Arango::Requests::Administration::GetLogLevel.execute(server: self)
       end
 
       # Modifies the current log level settings
