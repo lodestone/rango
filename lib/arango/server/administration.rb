@@ -58,7 +58,7 @@ module Arango
       # The parameters upto and level are mutually exclusive.
       # All params are optional.
       # @param upto [Symbol, String, Integer] Returns all log entries up to log level upto. The default value is info.
-      # @param level [Symbol, String, Integer]Returns all log entries of log level level.
+      # @param level [Symbol, String, Integer] Returns all log entries of log level level.
       # @param start Returns all log entries such that their log entry identifier (lid value) is greater or equal to start.
       # @param size [Integer] Restricts the result to at most size log entries.
       # @param offset [Integer] Starts to return log entries skipping the first offset log entries. offset and size can be used for pagination.
@@ -68,7 +68,12 @@ module Arango
       def log(upto: nil, level: nil, start: nil, size: nil, offset: nil, search: nil, sort: nil)
         sort = sort.to_s if sort
         satisfy_category?(sort, [nil, "asc", "desc"])
-        query = { start: start, size: size, offset: offset, search: search, sort: sort }
+        query = Hash.new
+        query[:start] = start if start
+        query[:size] = size if size
+        query[:offset] = offset if offset
+        query[:search] = search if search
+        query[:sort] = sort if sort
         if upto
           upto = upto.to_s
           satisfy_category?(upto, [nil, "fatal", 0, "error", 1, "warning", 2, "info", 3, "debug", 4])
@@ -78,7 +83,7 @@ module Arango
           satisfy_category?(level, [nil, "fatal", 0, "error", 1, "warning", 2, "info", 3, "debug", 4])
           query[:level] = level
         end
-        request(get: "_admin/log", query: query)
+        Arango::Requests::Administration::Log.execute(server: self, params: query)
       end
 
       # Returns the current log level settings
