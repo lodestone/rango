@@ -112,7 +112,7 @@ module Arango
       def mode=(mode)
         satisfy_category?(mode, ["default", "readonly", :default, :readonly])
         body = { mode: mode.to_s }
-        request(put: "_admin/server/mode", body: body).mode
+        Arango::Requests::Administration::SetMode.execute(server: self, body: body).mode.to_sym
       end
 
       # Check if server is read only.
