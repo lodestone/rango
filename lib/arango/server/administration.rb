@@ -124,7 +124,7 @@ module Arango
       # Reloads the routing information from the collection routing.
       # @return true
       def reload_routing
-        request(get: "_admin/routing/reload")
+        Arango::Requests::Administration::ReloadRouting.execute(server: self)
         true
       end
 

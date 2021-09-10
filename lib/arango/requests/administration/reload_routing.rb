@@ -6,7 +6,7 @@ module Arango
 
         uri_template "/_admin/routing/reload"
 
-        code 200, :success
+        code 204, :success
       end
     end
   end
