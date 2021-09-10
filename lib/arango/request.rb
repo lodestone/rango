@@ -153,6 +153,7 @@ module Arango
         raise Arango::Error.new("Unknown response code #{response_code}")
       end
 
+      response[:code] = response_code
       result = Arango::Result.new(response)
 
       # block ? block.call(result) : result
