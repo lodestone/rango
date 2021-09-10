@@ -133,7 +133,7 @@ module Arango
       server.driver_instance.base_uri + self.class.uritemp.expand(hash)
     end
 
-    def initialize(body: nil, params: nil, headers: nil, args: nil, server:)
+    def initialize(body: nil, params: {}, headers: nil, args: nil, server:)
       @server = server
       if args
         @database = args.delete(:db)
@@ -187,15 +187,23 @@ module Arango
       result = {}
       raise Arango::Error.new("No params given!") unless params
       self.class.params.each do |param, options|
-        value = params.delete(param.to_sym)
-        camel = options[:camel]
-        if value.nil?
-          value = params.delete(camel.to_sym)
-          param = camel
+        values = nil
+        sym = param.to_sym
+        exists = params.has_key? sym
+        if exists
+          value = params.delete(sym)
+        else
+          camel = options[:camel]
+          sym = camel.to_sym
+          exists = params.has_key? sym
+          if exists
+            value = params.delete(sym)
+            param = camel
+          end
         end
         raise Arango::Error.new("Required param '#{param}' not given or nil!") if options.key?(:required) && value.nil?
-        raise Arango::Error.new("Given param '#{param}' cannot be nil!") if value.nil?
-        result[options[:camel]] = value
+        raise Arango::Error.new("Given param '#{param}' cannot be nil!") if exists && value.nil?
+        result[options[:camel]] = value if exists
       end
       raise Arango::Error.new("Unknown params passed #{params}!") unless params.empty?
       result
