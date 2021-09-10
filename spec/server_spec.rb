@@ -61,7 +61,7 @@ describe "Arango::Server" do
     it "log_level=" do
       ll = @server.log_level
       result = @server.log_level=ll
-      expect(result.general).to eq('INFO')
+      expect(result.response_code).to eq(200)
     end
 
     it "mode" do

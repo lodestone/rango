@@ -97,7 +97,7 @@ module Arango
                else
                  log_level_object
                end
-        request(put: "_admin/log/level", body: body)
+        Arango::Requests::Administration::SetLogLevel.execute(server: self, body: body)
       end
 
       # Return mode information about a server.
