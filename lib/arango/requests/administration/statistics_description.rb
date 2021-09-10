@@ -1,7 +1,7 @@
 module Arango
   module Requests
     module Administration
-      class Statistics < Arango::Request
+      class StatisticsDescription < Arango::Request
         request_method :get
 
         uri_template "/_admin/statistics-description"

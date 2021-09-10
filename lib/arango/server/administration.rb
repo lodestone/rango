@@ -192,7 +192,7 @@ module Arango
       # Returns a description of the statistics returned by /_admin/statistics.
       # @return [Arango::Result]
       def statistics_description
-        request(get: "_admin/statistics-description")
+        Arango::Requests::Administration::StatisticsDescription.execute(server: self)
       end
 
       # Returns status information about the server.
