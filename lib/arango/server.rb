@@ -39,7 +39,7 @@ module Arango
     # Returns information about the currently running transactions.
     # @return [Arango::Result]
     def transactions
-      request(get: '_admin/wal/transactions')
+      Arango::Requests::Wal::Transactions.execute(server: self)
     end
 
     # Check if transactions are running on server.
