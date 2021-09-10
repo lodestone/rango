@@ -1,10 +1,10 @@
 module Arango
   module Requests
     module Administration
-      class Statistics < Arango::Request
+      class Status < Arango::Request
         request_method :get
 
-        uri_template "/_admin/statistics"
+        uri_template "/_admin/status"
 
         code 200, :success
       end

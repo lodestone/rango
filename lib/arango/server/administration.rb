@@ -198,7 +198,7 @@ module Arango
       # Returns status information about the server.
       # @return [Arango::Result]
       def status
-        request(get: "_admin/status")
+        Arango::Requests::Administration::Status.execute(server: self)
       end
 
       # Check if the server has the enterprise license.
