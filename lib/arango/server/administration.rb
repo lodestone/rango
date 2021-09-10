@@ -210,7 +210,7 @@ module Arango
       # The servers current system time as a Unix timestamp with microsecond precision of the server
       # @return [Float]
       def time
-        request(get: "_admin/time").time
+        Arango::Requests::Administration::Time.execute(server: self).time
       end
 
       # Return server version details.
