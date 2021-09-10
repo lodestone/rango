@@ -153,7 +153,12 @@ module Arango
         raise Arango::Error.new("Unknown response code #{response_code}")
       end
 
-      response[:code] = response_code
+      begin
+        response[:code] = response_code
+      rescue TypeError
+        # response might be an Array
+      end
+
       result = Arango::Result.new(response)
 
       # block ? block.call(result) : result
