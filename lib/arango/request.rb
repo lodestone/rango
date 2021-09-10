@@ -186,7 +186,12 @@ module Arango
       result = {}
       raise Arango::Error.new("No params given!") unless params
       self.class.params.each do |param, options|
-        value = params.delete(param)
+        value = params.delete(param.to_sym)
+        camel = options[:camel]
+        if value.nil?
+          value = params.delete(camel.to_sym)
+          param = camel
+        end
         raise Arango::Error.new("Required param '#{param}' not given or nil!") if options.key?(:required) && value.nil?
         raise Arango::Error.new("Given param '#{param}' cannot be nil!") if value.nil?
         result[options[:camel]] = value
