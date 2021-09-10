@@ -218,7 +218,7 @@ module Arango
       # and their versions. The attribute names and internals of the details object may vary depending on platform and ArangoDB version.
       # @return [Arango::Result]
       def detailed_version
-        request(get: "_api/version", query: { details: true })
+        Arango::Requests::Administration::Version.execute(server: self, params: {details: true})
       end
 
       # The server version string. The string has the format “major.minor.sub”. major and minor will be numeric, and sub may contain a number or

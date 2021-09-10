@@ -138,7 +138,9 @@ describe "Arango::Server" do
     end
 
     it 'detailed_version' do
-      expect(@server.detailed_version).to be_a(Arango::Result)
+      result = @server.detailed_version
+      expect(result).to be_a(Arango::Result)
+      expect(result.details).to be_a(Hash)
     end
 
     it 'version' do

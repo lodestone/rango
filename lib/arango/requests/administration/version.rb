@@ -6,6 +6,8 @@ module Arango
 
         uri_template "/_admin/version"
 
+        param :details
+
         code 200, :success
       end
     end
