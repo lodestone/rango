@@ -231,7 +231,7 @@ module Arango
       # Returns the database version that this server requires.
       # @return [String]
       def target_version
-        request(get: "_admin/database/target-version").version
+        Arango::Requests::Administration::TargetVersion.execute(server: self).version
       end
 
       # Flushes the write-ahead log. By flushing the currently active write-ahead
