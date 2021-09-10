@@ -245,12 +245,12 @@ module Arango
       #                                     write-ahead log garbage collector. Note that setting this option to true might block for a long time if
       #                                     there are long-running transactions and the write-ahead log garbage collector cannot
       #                                     finish garbage collection.
-      def flush_wal(wait_for_sync: nil, wait_for_collector: nil)
-        body = {
+      def flush_wal(wait_for_sync: false, wait_for_collector: false)
+        params = {
           waitForSync: wait_for_sync,
           waitForCollector: wait_for_collector
         }
-        !!request(put: "_admin/wal/flush", body: body)
+        200 == Arango::Requests::Wal::Flush.execute(server: self, params: params).response_code
       end
 
       # Retrieves the configuration of the write-ahead log. Properties:
