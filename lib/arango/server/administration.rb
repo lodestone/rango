@@ -225,7 +225,7 @@ module Arango
       # a textual version.
       # @return [String]
       def version
-        request(get: "_api/version").version
+        Arango::Requests::Administration::Version.execute(server: self).version
       end
 
       # Returns the database version that this server requires.
