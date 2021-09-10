@@ -16,7 +16,7 @@ Gem::Specification.new do |s|
   s.add_dependency 'isomorfeus-redux', '~> 4.0.22'
   s.add_dependency 'oj', '>= 3.10.0'
   s.add_dependency 'opal', '>= 1.0.0'
-  s.add_dependency 'typhoeus', '~> 1.3.1'
+  s.add_dependency 'typhoeus', '~> 1.4.0'
   s.add_dependency 'method_source'
   s.add_dependency 'parser'
   s.add_dependency 'unparser'
