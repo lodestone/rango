@@ -165,14 +165,6 @@ module Arango
       result
     end
 
-    # def batch
-    #   respone = Arango.driver.batch_request(self.class.reqm, formatted_uri, formatted_headers, formatted_params, formatted_body)
-    #
-    # end
-
-    # def async
-    # end
-
     private
 
     def validate_and_format_header!(headers)

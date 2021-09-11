@@ -141,42 +141,7 @@ module Arango
       Arango::Requests::Administration::TargetVersion.execute(server: self.server).version
     end
 
-    def request(get: nil, head: nil, patch: nil, post: nil, put: nil, delete: nil, body: nil, headers: nil, query: nil, block: nil)
-      @arango_server.request(get: get, head: head, patch: patch, post: post, put: put, delete: delete,
-                             db: @name, body: body, headers: headers, query: query, block: block)
-    end
-
-    def execute_request(get: nil, head: nil, patch: nil, post: nil, put: nil, delete: nil, body: nil, headers: nil, query: nil, block: nil)
-      @arango_server.request(get: get, head: head, patch: patch, post: post, put: put, delete: delete,
-                             db: @name, body: body, headers: headers, query: query, block: block)
-    end
-
-    def execute_requests(requests)
-      batch = Arango::RequestBatch.new(database: self)
-      requests.each { |request_h| batch.add_request(**request_h) }
-      batch.execute
-    end
-
-    def batch_request(request_hash)
-      promise = Promise.new
-      request_hash[:promise] = promise
-      batch = _promise_batch
-      batch.add_request(**request_hash)
-      promise
-    end
-
-    def execute_batched_requests
-      batch = @_promise_batch
-      @_promise_batch = nil
-      batch.execute
-      nil
-    end
-
     private
-
-    def _promise_batch
-      @_promise_batch ||= Arango::RequestBatch.new(database: self)
-    end
 
     def _update_attributes(result)
       %i[id isSystem name path].each do |key|
