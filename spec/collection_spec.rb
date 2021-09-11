@@ -4,7 +4,7 @@ describe Arango::DocumentCollection do
   before :all do
     @server = connect
     begin
-      @server.drop_database(name: "CollectionDatabase")
+      @server.delete_database(name: "CollectionDatabase")
     rescue
     end
     @database = @server.create_database(name: "CollectionDatabase")
@@ -12,20 +12,20 @@ describe Arango::DocumentCollection do
 
   before :each do
     begin
-      @database.drop_collection(name: 'MyCollection')
+      @database.delete_collection(name: 'MyCollection')
     rescue
     end
   end
 
   after :each do
     begin
-      @database.drop_collection(name: 'MyCollection')
+      @database.delete_collection(name: 'MyCollection')
     rescue
     end
   end
 
   after :all do
-    @server.drop_database(name: "CollectionDatabase")
+    @server.delete_database(name: "CollectionDatabase")
   end
 
   context "Database" do
@@ -62,11 +62,11 @@ describe Arango::DocumentCollection do
       expect(list).not_to include("MyCollection")
     end
 
-    it "drop_collection" do
+    it "delete_collection" do
       @database.create_collection name: "MyCollection"
       list = @database.list_collections
       expect(list).to include("MyCollection")
-      @database.drop_collection(name: "MyCollection")
+      @database.delete_collection(name: "MyCollection")
       list = @database.list_collections
       expect(list).not_to include("MyCollection")
     end
@@ -117,13 +117,13 @@ describe Arango::DocumentCollection do
 
     it "fails to create a duplicate Collection" do
       Arango::DocumentCollection::Base.new(name: "MyCollection", database: @database).create
-      error = nil
+      val = nil
       begin
         Arango::DocumentCollection::Base.new(name: "MyCollection", database: @database).create
-      rescue Arango::ErrorDB => e
-        error = e.error_num
+      rescue Arango::Error => e
+        val = e.message
       end
-      expect(error.class).to eq Integer
+      expect(val).to eq "Collection name is existing!"
     end
 
     it "reload the Collection" do
@@ -142,8 +142,8 @@ describe Arango::DocumentCollection do
 
     it "statistics" do
       collection = Arango::DocumentCollection::Base.new(name: "MyCollection", database: @database).create
-      info = collection.statistics
-      expect(info[:cache_in_use]).to eq false
+      info = collection.statistics.raw_result[:figures]
+      expect(info[:cacheInUse]).to eq false
     end
 
     it "checksum" do
@@ -172,11 +172,12 @@ describe Arango::DocumentCollection do
       expect([true, false]).to include(collection.wait_for_sync) # no guaranty its actually changed
     end
 
-    it "save name" do
+    it "save with rename" do
       collection = Arango::DocumentCollection::Base.new(name: "MyCollection", database: @database).create
       collection.name = 'StampCollection'
       collection.save
       expect(collection.name).to eq 'StampCollection'
+      collection.delete
     end
 
     it "truncate" do
@@ -185,14 +186,14 @@ describe Arango::DocumentCollection do
       expect(collection.size).to eq 0
     end
 
-    it "drop" do
+    it "delete" do
       Arango::DocumentCollection::Base.new(name: "MyCollection", database: @database).create
       collection = Arango::DocumentCollection::Base.get(name: "MyCollection", database: @database)
-      collection.drop
+      collection.delete
       message = nil
       begin
         Arango::DocumentCollection::Base.get(name: "MyCollection", database: @database)
-      rescue Arango::ErrorDB => e
+      rescue Arango::Error => e
         message = e.message
       end
       expect(message).to eq 'collection or view not found'
@@ -293,43 +294,4 @@ describe Arango::DocumentCollection do
   #     end
   end
 
-  context "Arango::DocumentCollection itself batched" do
-
-    it "all" do
-      start = Time.now
-      $cb1 = $cb2 = $cb3 = $cb4 = $cb5 = $cb6 = $cb7 = $cb8 = nil
-      Arango::DocumentCollection::Base.new(name: "MyCollection", database: @database).batch_create.fail { |u| STDERR.puts "failed 1 #{u}" }
-      Arango::DocumentCollection::Base.batch_get(name: "MyCollection", database: @database).then do |collection|
-        $cb1 = collection.name
-        $cb2 = collection.type
-      end.fail { |u| STDERR.puts "failed 2 #{u}" }
-      Arango::DocumentCollection::Base.batch_drop(name: "MyCollection", database: @database).fail { |u| STDERR.puts "failed 3 #{u}" }
-      Arango::DocumentCollection::Base.new(name: "MyCollection", type: :edge, database: @database).batch_create.fail { |u| STDERR.puts "failed 4 #{u}" }
-      Arango::DocumentCollection::Base.batch_get(name: "MyCollection", database: @database).then do |collection|
-        $cb3 = collection.name
-        $cb4 = collection.type
-      end.fail { |u| STDERR.puts "failed 5 #{u}" }
-      Arango::DocumentCollection::Base.batch_drop(name: "MyCollection", database: @database).fail { |u| STDERR.puts "failed 6 #{u}" }
-      Arango::DocumentCollection::Base.new(name: "MyCollection", database: @database).batch_create.fail { |u| STDERR.puts "failed 7 #{u}" }
-      Arango::DocumentCollection::Base.batch_get(name: "MyCollection", database: @database).then do |collection|
-        collection.batch_size.then { |r| $cb5 = r }
-        collection.batch_statistics.then { |r| $cb6 = r }
-        collection.batch_checksum.then { |r| $cb7 = r }
-        collection.batch_revision.then { |r| $cb8 = r }
-        @database.execute_batched_requests
-      end.fail { |u| STDERR.puts "failed 8 #{u}" }
-      p = Time.now
-      @database.execute_batched_requests
-      t = Time.now
-      STDERR.puts "\nBatched Collecion spec: Prepare time: #{p - start}  Execute time: #{t -p}  Total time: #{t - start}"
-      expect($cb1).to eq "MyCollection"
-      expect($cb2).to eq :document
-      expect($cb3).to eq "MyCollection"
-      expect($cb4).to eq :edge
-      expect($cb5).to eq 0
-      expect($cb6.cache_in_use).to eq false
-      expect($cb7).to be_a String
-      expect($cb8).to be_a String
-    end
-  end
 end
