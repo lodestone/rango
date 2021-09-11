@@ -243,7 +243,12 @@ module Arango
       end
       if self.class.body_any_key_allowed
         body.each_key do |key|
-          result[key.to_s.camelize(:lower)] = body.delete(key)
+          case key
+          when :_key, :_id, :_rev
+            result[key] = body.delete(key)
+          else
+            result[key.to_s.camelize(:lower)] = body.delete(key)
+          end
         end
       elsif body.any?
         raise Arango::Error.new("Unknown body keys passed #{body.keys}!")
