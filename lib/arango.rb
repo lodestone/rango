@@ -12,6 +12,10 @@ module Arango
       @current_server
     end
 
+    def current_database
+      @current_server.current_database
+    end
+
     def current_server=(s)
       @current_server = s
     end
