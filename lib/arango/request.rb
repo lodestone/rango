@@ -150,7 +150,7 @@ module Arango
       end
       @formatted_headers = validate_and_format_header!(headers) if self.class.has_header?
       @formatted_params = validate_and_format_params!(params) if self.class.has_param?
-      @formatted_body = if self.class.body_is_array?
+      @formatted_body = if self.class.body_is_array? || self.class.body_any_key_allowed
                           body
                         elsif self.class.has_body?
                           validate_and_format_body!(body)
@@ -186,6 +186,14 @@ module Arango
       self.class.headers.each do |header, options|
         value = nil
         exists = headers.has_key? header
+        unless exists
+          header = options[:real]
+          exists = headers.has_key? header
+          unless exists
+            header = options[:real].to_sym
+            exists = headers.has_key? header
+          end
+        end
         value = headers.delete(header) if exists
         raise Arango::Error.new("Required header '#{header}' not given or nil!") if options.key?(:required) && value.nil?
         next unless exists
