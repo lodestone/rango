@@ -32,7 +32,8 @@ loader.inflector.inflect(
   "aql_queries" => "AQLQueries",
   "aql_query_cache" => "AQLQueryCache",
   "graphs" => "GraphAccess",
-  "http_route" => "HTTPRoute"
+  "http_route" => "HTTPRoute",
+  "error_db" => "ErrorDB"
 )
 loader.ignore(__FILE__)
 loader.setup
