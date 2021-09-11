@@ -42,16 +42,18 @@ module Arango
       # @param database [Arango::Database] A database, optional if server is given.
       # @param server [Arango::Server] Server, optional if database is given.
       # @return [Arango::Task]
-      def drop(id:, database: nil, server: Arango.current_server)
+      def delete(id:, database: nil, server: Arango.current_server)
+        args = {id: id}
+        STDERR.puts "delete server #{server}"
         if database
-          database.request(delete: "_api/tasks/#{id}")
+          args[:db] = database.name
+          Arango::Requests::Task::Delete.execute(server: database.server, args: args)
         elsif server
-          server.request(delete: "_api/tasks/#{id}")
+          STDERR.puts("Task.delete #{args.inspect}")
+          Arango::Requests::Task::Delete.execute(server: server, args: args)
         end
-        nil
+        self
       end
-      alias delete drop
-      alias destroy drop
 
       # Gets a task from the server or from a database.
       #
@@ -60,16 +62,16 @@ module Arango
       # @param server [Arango::Server] Server, optional if database is given.
       # @return [Arango::Task]
       def get(id:, database: nil, server: Arango.current_server)
+        args = { id: id }
         if database
+          args[:db] = database.name
           result = database.request(get: "_api/tasks/#{id}")
           server = database.arango_server
         elsif server
-          result = server.request(get: "_api/tasks/#{id}")
+          result = Arango::Requests::Task::Get.execute(server: server, args: args)
         end
         Arango::Task.from_result(result, server: server)
       end
-      alias fetch get
-      alias retrieve get
 
       # Get all tasks from a server or from a database
       #
@@ -77,12 +79,13 @@ module Arango
       # @param server [Arango::Server] Server, optional if database is given.
       # @return [Array<Arango::Task>]
       def all(database: nil, server: Arango.current_server)
+        args = Hash.new
         if database
-          result = database.request(get: "_api/tasks")
-          server = database.arango_server
-        elsif server
-          result = server.request(get: "_api/tasks")
+          args[:db] = database.name
+          server = database.server
         end
+        result = Arango::Requests::Task::All.execute(server: server, args: args)
+
         result.map { |task| Arango::Task.from_h(task, server: server) }
       end
 
@@ -92,11 +95,12 @@ module Arango
       # @param server [Arango::Server] Server, optional if database is given.
       # @return [Array<String>]
       def list(database: nil, server: Arango.current_server)
+        args = Hash.new
         if database
-          result = database.request(get: '_api/tasks')
-        elsif server
-          result = server.request(get: '_api/tasks')
+          args[:db] = database.name
+          server = database.server
         end
+        result = Arango::Requests::Task::All.execute(server: server, args: args)
         result.map { |task| task[:id] }
       end
 
@@ -157,19 +161,31 @@ module Arango
     # @param period [Integer] Number of seconds between executions, optional.
     # @return [Arango::Task]
     def initialize(id: nil, command: nil, name: nil, offset: nil, params: nil, period: nil, database: nil, server: Arango.current_server)
+      @args = Hash.new
       if database
         assign_database(database)
         @requester = @database
+        @args[:db] = @database.name
       elsif server
         assign_server(server)
         @requester = @server
       end
-      @id = id
+      set_id id
       @command = command
       @name = name
       @offset = offset
       @params = params
       @period = period
+    end
+
+    # set id
+    def set_id id
+      @id = id
+      if @id
+        @args[:id] = @id
+      else
+        @args.delete :id
+      end
     end
 
     # Convert the Task to a Hash
@@ -196,14 +212,13 @@ module Arango
         command: @command,
         period: @period,
         offset: @offset,
-        params: @params,
-        database: @database ? @database.name : nil
+        params: @params
       }
       if @id
-        result = @requester.request(put: "_api/tasks/#{@id}", body: body)
+        result = Arango::Requests::Task::CreateWithId.execute(server: @requester, args: @args, body: body)
       else
-        result = @requester.request(post: "_api/tasks", body: body)
-        @id = result.id
+        result = Arango::Requests::Task::Create.execute(server: @requester, args: @args, body: body)
+        set_id result.id
       end
       @type = result.type.to_sym
       @created = result.created
@@ -211,13 +226,12 @@ module Arango
       self
     end
 
-    # Remove the task from the database.
+    # Delete the task from the database.
     # return nil.
-    def drop
-      @requester.request(delete: "_api/tasks/#{@id}")
+    def delete
+      STDERR.puts "task.delete #{@args.inspect}"
+      Arango::Requests::Task::Delete.execute(server: @requester, args: @args)
       nil
     end
-    alias delete drop
-    alias destroy drop
   end
 end
