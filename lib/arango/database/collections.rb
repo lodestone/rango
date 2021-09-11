@@ -69,16 +69,12 @@ module Arango
       # Removes a collection.
       # @param name [String] The name of the collection.
       # @return nil
-      def drop_collection(name:)
-        Arango::DocumentCollection::Base.drop(name: name, database: self)
+      def delete_collection(name:)
+        Arango::DocumentCollection::Base.delete(name: name, database: self)
       end
-      def batch_drop_collection(name:)
-        Arango::DocumentCollection::Base.batch_drop(name: name, database: self)
+      def batch_delete_collection(name:)
+        Arango::DocumentCollection::Base.batch_delete(name: name, database: self)
       end
-      alias delete_collection drop_collection
-      alias destroy_collection drop_collection
-      alias batch_delete_collection batch_drop_collection
-      alias batch_destroy_collection batch_drop_collection
 
       # Check if collection exists.
       # @param name [String] Name of the collection

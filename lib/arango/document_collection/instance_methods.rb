@@ -11,13 +11,14 @@ module Arango
       # @param status
       # @return [Arango::DocumentCollection]
       def initialize(database: Arango.current_database, graph: nil,
-                     name:, id: nil, is_system: false, status: nil, type: :document,
+                     name:, id: nil, globally_unique_id: nil, is_system: false, status: nil, type: :document,
                      properties: {})
         @database = database if database
         @graph = graph if graph
         @aql = nil
         @batch_proc = nil
         @id = id
+        @globally_unique_id = globally_unique_id
         @is_system = is_system
         _set_name(name)
         @name_changed = false
@@ -119,13 +120,13 @@ module Arango
         @name = n
       end
 
-      def arango_server
-        @database.arango_server
+      def server
+        @database.server
       end
 
       # Stores the collection in the database.
       # @return [Arango::DocumentCollection] self
-      request_method :create do
+      def create
         @name_changed = false
         @journal_size_changed = false
         @wait_for_sync_changed = false
@@ -133,7 +134,7 @@ module Arango
         body = { name: @name, type: @type }
 
         @properties.each do |k, v|
-          body[k.to_s.camelize(:lower)] = v unless v.nil?
+          body[k.to_s.camelize(:lower).to_sym] = v unless v.nil?
         end
 
         if body[:keyOptions]
@@ -144,45 +145,47 @@ module Arango
         enforce_replication_factor = body.delete(:enforceReplicationFactor)
         wait_for_sync_replication = body.delete(:waitForSyncReplication)
 
-        query = nil
+        params = nil
         if enforce_replication_factor || wait_for_sync_replication
-          query = {}
-          query[:enforceReplicationFactor] = enforce_replication_factor unless enforce_replication_factor.nil?
-          query[:waitForSyncReplication] = wait_for_sync_replication unless wait_for_sync_replication.nil?
+          params = {}
+          params[:enforceReplicationFactor] = enforce_replication_factor unless enforce_replication_factor.nil?
+          params[:waitForSyncReplication] = wait_for_sync_replication unless wait_for_sync_replication.nil?
         end
-        { post: '_api/collection', body: body, query: query, block: ->(result) { _update_attributes(result); self }}
+        result = Arango::Requests::Collection::Create.execute(server: server, body: body, params: params)
+        _update_attributes(result)
+        self
       end
 
-      # Drops a collection.
+      # Deletes a collection.
       # @return [NilClass]
-      request_method :drop do
-        { delete: "_api/collection/#{@name}", query: { isSystem: @is_system }, block: ->(_) { nil }}
+      def delete
+        params = { isSystem: @is_system }
+        args = { name: @name, type: @type }
+        Arango::Requests::Collection::Delete.execute(server: server, args: args, params: params)
       end
-      alias delete drop
-      alias destroy drop
-      alias batch_delete batch_drop
-      alias batch_destroy batch_drop
 
       # Truncates a collection.
       # @return [Arango::DocumentCollection] self
-      request_method :truncate do
-        { put: "_api/collection/#{@name}/truncate", block: ->(_) { self }}
+      def truncate
+        args = { name: @name, type: @type }
+        Arango::Requests::Collection::Truncate.execute(server: server, args: args)
+        self
       end
 
       # Counts the documents in a collection
       # @return [Integer]
-      request_method :size do
-        { get: "_api/collection/#{@name}/count", block: ->(result) { result.count }}
+      def size
+        args = { name: @name, type: @type }
+        Arango::Requests::Collection::Count.execute(server: server, args: args).count
       end
       alias count size
       alias length size
-      alias batch_count batch_size
-      alias batch_length batch_size
 
       # Fetch the statistics of a collection
       # @return [Hash]
-      request_method :statistics do
-        { get: "_api/collection/#{@name}/figures", block: ->(result) { Arango::Result.new(result.figures) }}
+      def statistics
+        args = { name: @name, type: @type }
+        Arango::Requests::Collection::Statistics.execute(server: server, args: args)
       end
 
       # Return the shard ids of a collection
@@ -190,30 +193,37 @@ module Arango
       # @param details [Boolean] If set to true, the return value will also contain the responsible servers for the collections’ shards.
       # @return [Array, Hash]
       def shards(details: false)
-        @database.request(get: "_api/collection/#{@name}/shards", query: { details: details }).shards if @database.arango_server.coordinator?
+        if @database.server.coordinator?
+          args = { name: @name, type: @type }
+          body = { details: details }
+          Arango::Requests::Collection::Shards.execute(server: server, args: args)
+        end
       end
 
       # Retrieve the collections revision id
       # @return [String]
-      request_method :revision do
-        { get: "_api/collection/#{@name}/revision", block: -> (result) { result.revision }}
+      def revision
+        args = { name: @name, type: @type }
+        Arango::Requests::Collection::Revision.execute(server: server, args: args).revision
       end
 
       # Returns a checksum for the specified collection
       # @param with_revisions [Boolean] Whether or not to include document revision ids in the checksum calculation, optional, default: false.
       # @param with_data [Boolean] Whether or not to include document body data in the checksum calculation, optional, default: false.
-      request_method :checksum do |with_revisions: false, with_data: false|
-        query = {
+      def checksum (with_revisions: false, with_data: false)
+        params = {
           withRevisions: with_revisions,
           withData: with_data
         }
-        { get: "_api/collection/#{@name}/checksum", query: query, block: ->(result) { result.checksum } }
+        args = { name: @name, type: @type }
+        Arango::Requests::Collection::Checksum.execute(server: server, args: args, params: params).checksum
       end
 
       # Loads a collection into ArangoDBs memory. Returns the collection on success.
       # @return [Arango::DocumentCollection] self
       def load_into_memory
-        result = @database.request(put: "_api/collection/#{@name}/load", body: { count: false }).status
+        args = { name: @name, type: @type, count: false }
+        result = Arango::Requests::Collection::Load.execute(server: server, args: args).status
         _set_status(result)
         self
       end
@@ -221,7 +231,8 @@ module Arango
       # Unloads a collection into ArangoDBs memory. Returns the collection on success.
       # @return [Arango::DocumentCollection] self
       def unload_from_memory
-        result = @database.request(put: "_api/collection/#{@name}/unload").status
+        args = { name: @name, type: @type }
+        result = Arango::Requests::Collection::Unload.execute(server: server, args: args).status
         _set_status(result)
         self
       end
@@ -230,7 +241,10 @@ module Arango
       # Note: For the time being this function is only useful on RocksDB storage engine, as in MMFiles engine all indexes are in memory anyways.
       # @return [Arango::DocumentCollection] self
       def load_indexes_into_memory
-        @database.request(put: "_api/collection/#{@name}/loadIndexesIntoMemory") if @database.arango_server.rocksdb?
+        if @database.server.rocksdb?
+          args = { name: @name, type: @type }
+          Arango::Requests::Collection::LoadIndexesIntoMemory.execute(server: server, args: args)
+        end
         self
       end
 
@@ -238,7 +252,10 @@ module Arango
       # Note: This method is specific for the MMFiles storage engine, and there it is not available in a cluster.
       # @return [Arango::DocumentCollection] self
       def rotate_journal
-        @database.request(put: "_api/collection/#{@name}/rotate") if @database.arango_server.mmfiles?
+        if @database.server.mmfiles?
+          args = { name: @name, type: @type }
+          Arango::Requests::Collection::RotateJournal.execute(server: server, args: args)
+        end
         self
       end
 
@@ -246,55 +263,55 @@ module Arango
       # Note: This function is only useful on RocksDB storage engine.
       # @return [Arango::DocumentCollection] self
       def recalculate_count
-        @database.request(put: "_api/collection/#{@name}/recalculateCount") if @database.arango_server.rocksdb?
+        if @database.server.rocksdb?
+          args = { name: @name, type: @type }
+          Arango::Requests::Collection::RecalculateCount.execute(server: server, args: args)
+        end
         self
       end
 
       # Reload collection properties and name from the database, reverting any changes.
       # @return [Arango::DocumentCollection] self
-      request_method :reload do
+      def reload
         request_name = @name_changed ? @original_name : @name
         @name_changed = false
         @journal_size_changed = false
         @wait_for_sync_changed = false
-        { get: "_api/collection/#{request_name}/properties", block: ->(result) { _update_attributes(result); self }}
+        args = { name: request_name, type: @type }
+        result = Arango::Requests::Collection::GetProperties.execute(server: server, args: args)
+        _update_attributes(result)
+        self
       end
       alias refresh reload
-      alias retrieve reload
       alias revert reload
-      alias batch_refresh batch_reload
-      alias batch_retrieve batch_reload
-      alias batch_revert batch_reload
 
       # Save changed collection properties and name changed, to the database.
       # Note: except for wait_for_sync, journal_size and name, collection properties cannot be changed once a collection is created.
       # @return [Arango::DocumentCollection] self
-      multi_request_method :save do
+      def save
         requests = []
+        args = { name: @name, type: @type }
+        rename = nil
         if @name_changed
-          request_name = @name_changed ? @original_name : @name
+          args[:name] = @original_name
           @name_changed = false
-          # @database.request(put: "_api/collection/#{request_name}/rename", body: { name: @name })
-          requests << { put: "_api/collection/#{request_name}/rename", body: { name: @name }, block: -> (_) { self }}
+          body = { name: @name }
+          rename = Arango::Requests::Collection::Rename.execute(server: server, args: args, body: body)
           @original_name = @name
         end
         if @journal_size_changed || @wait_for_sync_changed
           body = {}
-          body[:journalSize] = @journal_size if @journal_size_changed && @database.arango_server.mmfiles?
+          body[:journalSize] = @journal_size if @journal_size_changed && @database.server.mmfiles?
           body[:waitForSync] = @wait_for_sync if @wait_for_sync_changed
           @journal_size_changed = false
           @wait_for_sync_changed = false
-          # result = @database.request(get: "_api/collection/#{@name}/properties", body: body)
-          requests << { put: "_api/collection/#{@name}/properties", body: body, block: -> (result) {
-            @journal_size = result.journal_size if result.key?(:journal_size)
-            @wait_for_sync = result.wait_for_sync if result.key?(:wait_for_sync)
-            self
-          }}
+          result = Arango::Requests::Collection::SetProperties.execute(server: server, args: args, body: body)
+          @journal_size = result.journal_size if result.key?(:journal_size)
+          @wait_for_sync = result.wait_for_sync if result.key?(:wait_for_sync)
         end
-        requests
+        [rename, self]
       end
       alias update save
-      alias batch_update batch_save
 
       # Request next batch from a batched request.
       # @return value depending on original batched request.

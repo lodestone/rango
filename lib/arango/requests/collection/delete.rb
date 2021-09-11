@@ -10,7 +10,7 @@ module Arango
 
         code 200, :success
         code 400, "Collection name is missing!"
-        code 404, "Collection unknown!"
+        code 404, "collection or view not found"
       end
     end
   end

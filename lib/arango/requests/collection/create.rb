@@ -33,6 +33,8 @@ module Arango
 
         code 200, :success
         code 400, "Collection name is missing!"
+        code 404, "Collection name is unknown!"
+        code 409, "Collection name is existing!"
       end
     end
   end

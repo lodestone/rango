@@ -2,24 +2,24 @@ module Arango
   module EdgeCollection
     module ClassMethods
       def new(database: Arango.current_database, graph: nil,
-              name:, id: nil, is_system: false, status: nil, type: :edge,
+              name:, id: nil, globally_unique_id: nil, is_system: false, status: nil, type: :edge,
               properties: {})
         case type
         when :document
           Arango::DocumentCollection::Base.new(database: database, graph: graph,
-                                               name: name, id: nil, is_system: false, status: status, type: :document,
+                                               name: name, id: nil, globally_unique_id: globally_unique_id, is_system: false, status: status, type: :document,
                                                properties: properties)
         when :edge
           super(database: database, graph: graph,
-                name: name, id: id, status: status, type: :edge, is_system: is_system,
+                name: name, id: id, globally_unique_id: globally_unique_id, status: status, type: :edge, is_system: is_system,
                 properties: properties)
         else raise "unknown type"
         end
       end
 
-      # Takes a hash and instantiates a Arango::DocumentCollection object from it.
+      # Takes a hash and instantiates a Arango::EdgeCollection object from it.
       # @param collection_hash [Hash]
-      # @return [Arango::DocumentCollection]
+      # @return [Arango::EdgeCollection]
       def from_h(collection_hash, database: Arango.current_database)
         collection_hash = collection_hash.transform_keys! { |k| k.to_s.underscore.to_sym }
         collection_hash.merge!(database: database) unless collection_hash.key?(:database)
@@ -33,71 +33,64 @@ module Arango
         Arango::EdgeCollection::Base.new(**collection_hash)
       end
 
-      # Takes a Arango::Result and instantiates a Arango::DocumentCollection object from it.
+      # Takes a Arango::Result and instantiates a Arango::EdgeCollection object from it.
       # @param collection_result [Arango::Result]
       # @param properties_result [Arango::Result]
-      # @return [Arango::DocumentCollection]
+      # @return [Arango::EdgeCollection]
       def from_results(collection_result, properties_result, database: Arango.current_database)
         hash = collection_result ? {}.merge(collection_result.to_h) : {}
         hash[:properties] = properties_result
         from_h(hash, database: database)
       end
 
-      def self.extended(base)
-        # Retrieves all collections from the database.
-        # @param exclude_system [Boolean] Optional, default true, exclude system collections.
-        # @param database [Arango::Database]
-        # @return [Array<Arango::DocumentCollection>]
-        Arango.request_class_method(base, :all) do |exclude_system: true, database: Arango.current_database|
-          query = { excludeSystem: exclude_system }
-          { get: '_api/collection', query: query, block: ->(result) { result.result.map { |c| from_results({}, c.to_h, database: database) }}}
-        end
+      # Retrieves all collections from the database.
+      # @param exclude_system [Boolean] Optional, default true, exclude system collections.
+      # @param database [Arango::Database]
+      # @return [Array<Arango::EdgeCollection>]
+      def all (exclude_system: true, database: Arango.current_database)
+        args = { excludeSystem: exclude_system }
+        result = Arango::Requests::Collection::ListAll.execute(server: database.server, params: query)
+        result.result.map { |c| from_results({}, c.to_h, database: database) }
+      end
 
-        # Get collection from the database.
-        # @param name [String] The name of the collection.
-        # @param database [Arango::Database]
-        # @return [Arango::Database]
-        Arango.multi_request_class_method(base, :get) do |name:, database: Arango.current_database|
-          requests = []
-          first_get_result = nil
-          requests << { get: "/_api/collection/#{name}", block: ->(result) { first_get_result = result.result }}
-          requests << { get: "/_api/collection/#{name}/properties", block: ->(result) { from_results(first_get_result, result.raw_result, database: database) }}
-          requests
-        end
-        base.singleton_class.alias_method :fetch, :get
-        base.singleton_class.alias_method :retrieve, :get
-        base.singleton_class.alias_method :batch_fetch, :batch_get
-        base.singleton_class.alias_method :batch_retrieve, :batch_get
+      # Get collection from the database.
+      # @param name [String] The name of the collection.
+      # @param database [Arango::Database]
+      # @return [Arango::EdgeCollection]
+      def get (name:, database: Arango.current_database)
+        args = { name: name }
+        result = Arango::Requests::Collection::Get.execute(server: database.server, args: args)
+        props = Arango::Requests::Collection::GetProperties.execute(server: database.server, args: args)
+        from_results(result, props.raw_result, database: database)
+      end
 
-        # Retrieves a list of all collections.
-        # @param exclude_system [Boolean] Optional, default true, exclude system collections.
-        # @param database [Arango::Database]
-        # @return [Array<String>] List of collection names.
-        Arango.request_class_method(base, :list) do |exclude_system: true, database: Arango.current_database|
-          query = { excludeSystem: exclude_system }
-          { get: '_api/collection', query: query, block: ->(result) { result.result.select { |c| TYPES[c[:type]] == :edge }.map { |c| c[:name] }}}
-        end
+      # Retrieves a list of all collections.
+      # @param exclude_system [Boolean] Optional, default true, exclude system collections.
+      # @param database [Arango::Database]
+      # @return [Array<String>] List of collection names.
+      def list (exclude_system: true, database: Arango.current_database)
+        args = { excludeSystem: exclude_system }
+        result = Arango::Requests::Collection::ListAll.execute(server: database.server, args: args)
+        result.result.select { |c| TYPES[c[:type]] == :edge }.map { |c| c[:name] }
+      end
 
-        # Removes a collection.
-        # @param name [String] The name of the collection.
-        # @param database [Arango::Database]
-        # @return nil
-        Arango.request_class_method(base, :drop) do |name:, database: Arango.current_database|
-          { delete: "_api/collection/#{name}" , block: ->(_) { nil }}
-        end
-        base.singleton_class.alias_method :delete, :drop
-        base.singleton_class.alias_method :destroy, :drop
-        base.singleton_class.alias_method :batch_delete, :batch_drop
-        base.singleton_class.alias_method :batch_destroy, :batch_drop
+      # Removes a collection.
+      # @param name [String] The name of the collection.
+      # @param database [Arango::Database]
+      # @return nil
+      def delete (name:, database: Arango.current_database)
+        args = { name: name }
+        Arango::Requests::Collection::Delete.execute(server: database.server, args: args)
+      end
 
-        # Check if a edge collection exists.
-        # @param name [String] Name of the collection
-        # @param database [Arango::Database]
-        # @return [Boolean]
-        Arango.request_class_method(base, :exists?) do |name:, exclude_system: true, database: Arango.current_database|
-          query = { excludeSystem: exclude_system }
-          { get: '_api/collection', query: query, block: ->(result) { result.result.select { |c| TYPES[c[:type]] == :edge }.map { |c| c[:name] }.include?(name) }}
-        end
+      # Check if a edge collection exists.
+      # @param name [String] Name of the collection
+      # @param database [Arango::Database]
+      # @return [Boolean]
+      def exists? (name:, exclude_system: true, database: Arango.current_database)
+        args = { excludeSystem: exclude_system }
+        result = Arango::Requests::Collection::All.execute(server: database.server, params: query)
+        result.result.select { |c| TYPES[c[:type]] == :edge }.map { |c| c[:name] }.include?(name)
       end
     end
   end

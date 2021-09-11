@@ -7,7 +7,7 @@ module Arango
         uri_template "/_api/collection/{name}"
 
         code 200, :success
-        code 404, "Collection is unknown!"
+        code 404, "collection or view not found"
       end
     end
   end
