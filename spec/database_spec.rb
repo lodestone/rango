@@ -7,14 +7,14 @@ describe Arango::Database do
 
   before :each do
     begin
-      @server.drop_database(name: "MyDatabase")
+      @server.delete_database(name: "MyDatabase")
     rescue
     end
   end
 
   after :each do
     begin
-      @server.drop_database(name: "MyDatabase")
+      @server.delete_database(name: "MyDatabase")
     rescue
     end
   end
@@ -53,11 +53,11 @@ describe Arango::Database do
       expect(list).to include("MyDatabase")
     end
 
-    it "drop_database" do
+    it "delete_database" do
       @server.create_database name: "MyDatabase"
       list = @server.list_databases
       expect(list).to include("MyDatabase")
-      @server.drop_database(name: "MyDatabase")
+      @server.delete_database(name: "MyDatabase")
       list = @server.list_databases
       expect(list).not_to include("MyDatabase")
     end

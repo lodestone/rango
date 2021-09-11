@@ -13,7 +13,7 @@ module Arango
         code 201, :success
         code 400, "Database already exists or request paramaters invalid!"
         code 403, "Not executed within the _system database!"
-        code 409, "Database already exists!"
+        code 409, "duplicate database"
       end
     end
   end

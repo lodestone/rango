@@ -24,16 +24,14 @@ module Arango
       # @param server [Arango::Server]
       # @return [Array<Arango::Database>]
       def all(server:)
-        result = server.request(get: '_api/database').result
-        result.map{ |db| Arango::Database.new(name: db, server: server).reload }
+        list(server: server).map{ |db| Arango::Database.new(name: db, server: server).reload }
       end
 
       # Retrieves all databases the current user can access.
       # @param server [Arango::Server]
       # @return [Array<Arango::Database>]
       def all_user_databases(server:)
-        result = server.request(get: '_api/database/user').result
-        result.map{ |db| Arango::Database.new(name: db, server: server).reload }
+        list_user_databases(server: server).map{ |db| Arango::Database.new(name: db, server: server).reload }
       end
 
       def create()
@@ -52,14 +50,14 @@ module Arango
       # @param server [Arango::Server]
       # @return [Array<String>] List of database names.
       def list(server:)
-        server.request(get: '_api/database').result
+        result = Arango::Requests::Database::ListAll.execute(server: server).result        
       end
 
       # Retrieves a list of all databases the current user can access.
       # @param server [Arango::Server]
       # @return [Array<String>] List of database names.
       def list_user_databases(server:)
-        server.request(get: '_api/database/user').result
+        result = Arango::Requests::Database::ListAccessible.execute(server: server).result
       end
 
       # Removes a database.
@@ -118,14 +116,14 @@ module Arango
     # @return [Arango::Database] self
     def create
       # TODO users: users
-      Arango::Requests::Database::Create.new(server: self.server, body: { name: @name }).execute
+      Arango::Requests::Database::Create.execute(server: self.server, body: { name: @name })
       self
     end
 
     # Reload database properties.
     # @return [Arango::Database] self
     def reload
-      result = Arango::Requests::Database::GetInformation.new(server: self.server, args: { db: @name }).execute
+      result = Arango::Requests::Database::GetInformation.execute(server: self.server, args: { db: @name })
       _update_attributes(result)
       self
     end
@@ -140,7 +138,7 @@ module Arango
     # Returns the database version that this server requires.
     # @return [String]
     def target_version
-      request(get: '_admin/database/target-version').version
+      Arango::Requests::Administration::TargetVersion.execute(server: self.server).version
     end
 
     def request(get: nil, head: nil, patch: nil, post: nil, put: nil, delete: nil, body: nil, headers: nil, query: nil, block: nil)

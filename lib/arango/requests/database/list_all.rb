@@ -6,7 +6,7 @@ module Arango
 
         uri_template '{/dbcontext}/_api/database'
 
-        code 201, :success
+        code 200, :success
         code 400, "Request is invalid!"
         code 403, "Not executed within the _system database!"
       end
