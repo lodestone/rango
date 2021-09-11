@@ -14,7 +14,7 @@ module Arango
 
         code 200, :success
         code 400, "Task name, command, or params is missing"
-        code 409, "Task already exists"
+        code 409, "duplicate task id"
       end
     end
   end

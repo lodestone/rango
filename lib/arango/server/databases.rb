@@ -42,8 +42,8 @@ module Arango
       # Removes a database.
       # @param name [String] The name of the database
       # @return nil
-      def drop_database(name:)
-        Arango::Database.drop(name: name, server: self)
+      def delete_database(name:)
+        Arango::Database.delete(name: name, server: self)
       end
 
       # Get database from server.

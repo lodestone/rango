@@ -66,12 +66,10 @@ module Arango
       # @param name [String] The name of the database
       # @param server [Arango::Server]
       # @return nil
-      def drop(name:, server:)
-        server.request(delete: "_api/database/#{name}")
+      def delete(name:, server:)
+        Arango::Requests::Database::Delete.execute(server: server, args: {name: name})
         nil
       end
-      alias delete drop
-      alias destroy drop
 
       # Check if database exists.
       # @param name [String] Name of the database.
@@ -111,11 +109,16 @@ module Arango
 
     attr_accessor :server
 
+    # driver for database's server
+    def driver_instance
+      @server.driver_instance
+    end
+
     # Creates the database on the server.
     # @return [Arango::Database] self
     def create
       # TODO users: users
-      Arango::Request::Database::Create.new(server: self.server, args: { db: @name }).execute
+      Arango::Requests::Database::Create.new(server: self.server, body: { name: @name }).execute
       self
     end
 
@@ -129,12 +132,10 @@ module Arango
 
     # Remove database from the server.
     # @return nil
-    def drop
-      self.class.drop(name: @name, server: @arango_server)
+    def delete
+      self.class.delete(name: @name, server: @arango_server)
       nil
     end
-    alias delete drop
-    alias destroy drop
 
     # Returns the database version that this server requires.
     # @return [String]

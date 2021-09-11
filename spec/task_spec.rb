@@ -92,7 +92,7 @@ describe "Arango::Task" do
   context "Database" do
     before :all do
       begin
-        @server.drop_database(name: "TaskDatabase")
+        @server.delete_database(name: "TaskDatabase")
       rescue
       end
       @database = @server.create_database(name: "TaskDatabase")
@@ -129,7 +129,7 @@ describe "Arango::Task" do
     end
 
     after :all do
-      @server.drop_database(name: "TaskDatabase")
+      @server.delete_database(name: "TaskDatabase")
     end
 
     it "new_task" do
@@ -188,7 +188,7 @@ describe "Arango::Task" do
   context "Arango::Task itself" do
     before :all do
       begin
-        @server.drop_database(name: "TaskDatabase")
+        @server.delete_database(name: "TaskDatabase")
       rescue
       end
       @database = @server.create_database(name: "TaskDatabase")
@@ -196,20 +196,20 @@ describe "Arango::Task" do
 
     before :each do
       begin
-        @server.drop_task(id: "mytaskid")
+        @server.delete_task(id: "mytaskid")
       rescue
       end
     end
 
     after :each do
       begin
-        @server.drop_task(id: "mytaskid")
+        @server.delete_task(id: "mytaskid")
       rescue
       end
     end
 
     after :all do
-      @server.drop_database(name: "TaskDatabase")
+      @server.delete_database(name: "TaskDatabase")
     end
 
     it "create new instance without id and check params" do
@@ -219,6 +219,7 @@ describe "Arango::Task" do
       myArangoTask.create
       expect(myArangoTask.params[:foo]).to eq "bar"
       expect(myArangoTask.id).to be_a String
+      myArangoTask.delete
     end
 
     it "create a new Task instance and check created" do
@@ -226,6 +227,7 @@ describe "Arango::Task" do
                                       command: "(function(params) { require('@arangodb').print(params); })(params)",
                                       params: {foo: "bar", bar: "foo"}, period: 2, database: @database
       expect([BigDecimal, Float].include?(myArangoTask.create.created.class)).to eq true
+      myArangoTask.delete
     end
 
     it "create a new Task instance with ID" do
@@ -234,6 +236,7 @@ describe "Arango::Task" do
                                       params: {"foo2": "bar2", "bar2": "foo2"}, period: 2, offset: 4, database: @database
       myArangoTask.create
       expect(myArangoTask.params[:foo2]).to eq "bar2"
+      myArangoTask.delete
     end
 
     it "fail to duplicate a Task instance with ID" do
@@ -251,13 +254,14 @@ describe "Arango::Task" do
         val = e.message
       end
       expect(val).to eq "duplicate task id"
+      myArangoTask.delete
     end
 
-    it "destroy" do
+    it "can delete tasks" do
       myArangoTask = Arango::Task.new id: "mytaskid", command: '1+1', period: 2, database: @database
       myArangoTask.create
       expect(@database.list_tasks).to include('mytaskid')
-      expect(myArangoTask.destroy).to be nil
+      expect(myArangoTask.delete).to be nil
       expect(@database.list_tasks).not_to include('mytaskid')
     end
   end

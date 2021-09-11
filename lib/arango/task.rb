@@ -44,12 +44,10 @@ module Arango
       # @return [Arango::Task]
       def delete(id:, database: nil, server: Arango.current_server)
         args = {id: id}
-        STDERR.puts "delete server #{server}"
         if database
           args[:db] = database.name
           Arango::Requests::Task::Delete.execute(server: database.server, args: args)
         elsif server
-          STDERR.puts("Task.delete #{args.inspect}")
           Arango::Requests::Task::Delete.execute(server: server, args: args)
         end
         self
@@ -65,11 +63,9 @@ module Arango
         args = { id: id }
         if database
           args[:db] = database.name
-          result = database.request(get: "_api/tasks/#{id}")
-          server = database.arango_server
-        elsif server
-          result = Arango::Requests::Task::Get.execute(server: server, args: args)
+          server = database.server
         end
+        result = Arango::Requests::Task::Get.execute(server: server, args: args)
         Arango::Task.from_result(result, server: server)
       end
 
@@ -229,7 +225,6 @@ module Arango
     # Delete the task from the database.
     # return nil.
     def delete
-      STDERR.puts "task.delete #{@args.inspect}"
       Arango::Requests::Task::Delete.execute(server: @requester, args: @args)
       nil
     end
