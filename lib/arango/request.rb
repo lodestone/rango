@@ -190,9 +190,9 @@ module Arango
 
     def validate_and_format_params!(params)
       result = {}
-      raise Arango::Error.new("No params given!") unless params
+      params ||= {} #raise Arango::Error.new("No params given!") unless params
       self.class.params.each do |param, options|
-        values = nil
+        value = nil
         sym = param.to_sym
         exists = params.has_key? sym
         if exists
@@ -207,7 +207,7 @@ module Arango
           end
         end
         raise Arango::Error.new("Required param '#{param}' not given or nil!") if options.key?(:required) && value.nil?
-        raise Arango::Error.new("Given param '#{param}' cannot be nil!") if exists && value.nil?
+        raise Arango::Error.new("Given param '#{param}' must not be nil!") if exists && value.nil?
         result[options[:camel]] = value if exists
       end
       raise Arango::Error.new("Unknown params passed #{params}!") unless params.empty?
