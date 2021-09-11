@@ -9,6 +9,10 @@ module Arango
         @has_body
       end
 
+      def body_is_array?
+        @body_is_array
+      end
+
       def body_keys
         @body_keys ||= Hash.new
       end
@@ -30,6 +34,11 @@ module Arango
         end
       ensure
         @current_nested_body = nil
+      end
+
+      def body_array
+        body_any
+        @body_is_array = true
       end
 
       def body_any
@@ -141,7 +150,11 @@ module Arango
       end
       @formatted_headers = validate_and_format_header!(headers) if self.class.has_header?
       @formatted_params = validate_and_format_params!(params) if self.class.has_param?
-      @formatted_body = validate_and_format_body!(body) if self.class.has_body?
+      @formatted_body = if self.class.body_is_array?
+                          body
+                        elsif self.class.has_body?
+                          validate_and_format_body!(body)
+                        end
     end
 
     def execute
@@ -169,10 +182,13 @@ module Arango
 
     def validate_and_format_header!(headers)
       result = {}
-      raise Arango::Error.new("No headers given!") unless headers
+      headers ||= {} #raise Arango::Error.new("No headers given!") unless headers
       self.class.headers.each do |header, options|
-        value = headers.delete(header)
+        value = nil
+        exists = headers.has_key? header
+        value = headers.delete(header) if exists
         raise Arango::Error.new("Required header '#{header}' not given or nil!") if options.key?(:required) && value.nil?
+        next unless exists
         raise Arango::Error.new("Given header '#{header}' cannot be nil!") if value.nil?
         result[options[:real]] = value
       end
