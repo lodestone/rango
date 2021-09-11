@@ -1,10 +1,13 @@
 module Arango
   module Requests
     module Collection
-      class GetProperties < Arango::Request
-        request_method :get
+      class SetProperties < Arango::Request
+        request_method :put
 
         uri_template "/_api/collection/{name}/properties"
+
+        body :journal_size
+        body :wait_for_sync
 
         code 200, :success
         code 400, "Collection name missing!"

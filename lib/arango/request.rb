@@ -216,9 +216,13 @@ module Arango
 
     def validate_and_format_body!(body)
       result = {}
-      body = {} unless body
+      body ||= {}
       self.class.body_keys.each do |key, options|
         has_key = body.key?(key)
+        unless has_key
+          key = options[:camel].to_sym
+          has_key = body.key?(key)
+        end
         raise Arango::Error.new("Required body key '#{key}' not given!") if options.key?(:required) && !has_key
         if has_key
           result[options[:camel]] = if options.key?(:nested)
