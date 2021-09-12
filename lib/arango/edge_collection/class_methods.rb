@@ -89,7 +89,7 @@ module Arango
       # @return [Boolean]
       def exists? (name:, exclude_system: true, database: Arango.current_database)
         args = { excludeSystem: exclude_system }
-        result = Arango::Requests::Collection::All.execute(server: database.server, params: query)
+        result = Arango::Requests::Collection::ListAll.execute(server: database.server, params: query)
         result.result.select { |c| TYPES[c[:type]] == :edge }.map { |c| c[:name] }.include?(name)
       end
     end

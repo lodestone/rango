@@ -4,7 +4,7 @@ describe Arango::EdgeCollection do
   before :all do
     @server = connect
     begin
-      @server.drop_database(name: "EdgeCollectionDatabase")
+      @server.delete_database(name: "EdgeCollectionDatabase")
     rescue
     end
     @database = @server.create_database(name: "EdgeCollectionDatabase")
@@ -12,20 +12,20 @@ describe Arango::EdgeCollection do
 
   before :each do
     begin
-      @database.drop_collection(name: 'MyCollection')
+      @database.delete_collection(name: 'MyCollection')
     rescue
     end
   end
 
   after :each do
     begin
-      @database.drop_collection(name: 'MyCollection')
+      @database.delete_collection(name: 'MyCollection')
     rescue
     end
   end
 
   after :all do
-    @server.drop_database(name: "EdgeCollectionDatabase")
+    @server.delete_database(name: "EdgeCollectionDatabase")
   end
 
   context "Database" do
@@ -75,11 +75,11 @@ describe Arango::EdgeCollection do
       expect(list).not_to include("MyCollection")
     end
 
-    it "drop_collection" do
+    it "delete_collection" do
       @database.create_edge_collection name: "MyCollection"
       list = @database.list_collections
       expect(list).to include("MyCollection")
-      @database.drop_collection(name: "MyCollection")
+      @database.delete_collection(name: "MyCollection")
       list = @database.list_collections
       expect(list).not_to include("MyCollection")
     end
@@ -120,10 +120,10 @@ describe Arango::EdgeCollection do
       error = nil
       begin
         Arango::EdgeCollection::Base.new(name: "MyCollection", database: @database).create
-      rescue Arango::ErrorDB => e
-        error = e.error_num
+      rescue Arango::Error => e
+        error = e.message
       end
-      expect(error.class).to eq Integer
+      expect(error).to be_a String
     end
 
     it "reload the Collection" do
@@ -177,6 +177,7 @@ describe Arango::EdgeCollection do
       collection.name = 'StampCollection'
       collection.save
       expect(collection.name).to eq 'StampCollection'
+      collection.delete
     end
 
     it "truncate" do
@@ -185,14 +186,14 @@ describe Arango::EdgeCollection do
       expect(collection.size).to eq 0
     end
 
-    it "drop" do
+    it "delete" do
       Arango::EdgeCollection::Base.new(name: "MyCollection", database: @database).create
       collection = Arango::EdgeCollection::Base.get(name: "MyCollection", database: @database)
-      collection.drop
+      collection.delete
       message = nil
       begin
         Arango::EdgeCollection::Base.get(name: "MyCollection", database: @database)
-      rescue Arango::ErrorDB => e
+      rescue Arango::Error => e
         message = e.message
       end
       expect(message).to eq 'collection or view not found'
@@ -293,43 +294,4 @@ describe Arango::EdgeCollection do
   #     end
   end
 
-  context "Arango::EdgeCollection itself batched" do
-
-    it "all" do
-      start = Time.now
-      $cb1 = $cb2 = $cb3 = $cb4 = $cb5 = $cb6 = $cb7 = $cb8 = nil
-      Arango::EdgeCollection::Base.new(name: "MyCollection", database: @database).batch_create.fail { |u| STDERR.puts "failed 1 #{u}" }
-      Arango::EdgeCollection::Base.batch_get(name: "MyCollection", database: @database).then do |collection|
-        $cb1 = collection.name
-        $cb2 = collection.type
-      end.fail { |u| STDERR.puts "failed 2 #{u}" }
-      Arango::EdgeCollection::Base.batch_drop(name: "MyCollection", database: @database).fail { |u| STDERR.puts "failed 3 #{u}" }
-      Arango::EdgeCollection::Base.new(name: "MyCollection", type: :edge, database: @database).batch_create.fail { |u| STDERR.puts "failed 4 #{u}" }
-      Arango::EdgeCollection::Base.batch_get(name: "MyCollection", database: @database).then do |collection|
-        $cb3 = collection.name
-        $cb4 = collection.type
-      end.fail { |u| STDERR.puts "failed 5 #{u}" }
-      Arango::EdgeCollection::Base.batch_drop(name: "MyCollection", database: @database).fail { |u| STDERR.puts "failed 6 #{u}" }
-      Arango::EdgeCollection::Base.new(name: "MyCollection", database: @database).batch_create.fail { |u| STDERR.puts "failed 7 #{u}" }
-      Arango::EdgeCollection::Base.batch_get(name: "MyCollection", database: @database).then do |collection|
-        collection.batch_size.then { |r| $cb5 = r }
-        collection.batch_statistics.then { |r| $cb6 = r }
-        collection.batch_checksum.then { |r| $cb7 = r }
-        collection.batch_revision.then { |r| $cb8 = r }
-        @database.execute_batched_requests
-      end.fail { |u| STDERR.puts "failed 8 #{u}" }
-      p = Time.now
-      @database.execute_batched_requests
-      t = Time.now
-      STDERR.puts "\nBatched EdgeCollecion spec: Prepare time: #{p - start}  Execute time: #{t -p}  Total time: #{t - start}"
-      expect($cb1).to eq "MyCollection"
-      expect($cb2).to eq :edge
-      expect($cb3).to eq "MyCollection"
-      expect($cb4).to eq :edge
-      expect($cb5).to eq 0
-      expect($cb6.cache_in_use).to eq false
-      expect($cb7).to be_a String
-      expect($cb8).to be_a String
-    end
-  end
 end

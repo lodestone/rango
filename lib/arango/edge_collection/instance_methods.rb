@@ -125,7 +125,7 @@ module Arango
         body = { name: @name, type: @type }
 
         @properties.each do |k, v|
-          body[k.to_s.camelize(:lower)] = v unless v.nil?
+          body[k.to_s.camelize(:lower).to_sym] = v unless v.nil?
         end
 
         if body[:keyOptions]
@@ -161,6 +161,7 @@ module Arango
       def truncate
         args = { name: @name, type: @type }
         Arango::Requests::Collection::Truncate.execute(server: server, args: args)
+        self
       end
 
       # Counts the documents in a collection
@@ -268,9 +269,8 @@ module Arango
         @name_changed = false
         @journal_size_changed = false
         @wait_for_sync_changed = false
-        args = { name: name, type: @type }
-        body = { name: request_name }
-        result = Arango::Requests::Collection::Reload.execute(server: server, args: args, body: body)
+        args = { name: request_name, type: @type }
+        result = Arango::Requests::Collection::Get.execute(server: server, args: args)
         _update_attributes(result)
         self
       end
@@ -288,7 +288,6 @@ module Arango
           args[:name] = @original_name
           @name_changed = false
           body = { name: @name }
-          @name_changed = false
           rename = Arango::Requests::Collection::Rename.execute(server: server, args: args, body: body)
           @original_name = @name
         end

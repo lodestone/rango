@@ -278,7 +278,7 @@ module Arango
         @journal_size_changed = false
         @wait_for_sync_changed = false
         args = { name: request_name, type: @type }
-        result = Arango::Requests::Collection::GetProperties.execute(server: server, args: args)
+        result = Arango::Requests::Collection::Get.execute(server: server, args: args)
         _update_attributes(result)
         self
       end
