@@ -111,14 +111,15 @@ module Arango
     def request
       body = {
           batchSize:   @batch_size,
-          bindVars:    @bind_vars,
           cache:       @cache,
           count:       @count,
           memoryLimit: @memory_limit,
           options:     @options,
           query:       @query,
           ttl:         @ttl
-      }
+        }
+      body[:bindVars] = @bind_vars if @bind_vars
+
       result = Arango::Requests::Cursor::Create.execute(server: @server, body: body)
       set_instance_vars(result)
       @block ? @block.call(self, result) : self
@@ -139,13 +140,13 @@ module Arango
     end
 
     def delete
-      result = Arango::Requests::Cursor::Delete.execute(server: @server, args: { id: @id })
-      result.response_code == 200
+      Arango::Requests::Cursor::Delete.execute(server: @server, args: { id: @id })
+      true
     end
 
     def kill
-      result = Arango::Requests::Aql::KillQuery.execute(server: @server, args: { id: @query_id })
-      result.response_code == 200
+      Arango::Requests::AQL::KillQuery.execute(server: @server, args: { id: @query_id })
+      true
     end
 
 # === PROPERTY QUERY ===
@@ -156,11 +157,11 @@ module Arango
         options:  @options,
         bindVars: @bind_vars
       }
-      Arango::Requests::Aql::Explain.execute(server: @server, body: body)
+      Arango::Requests::AQL::Explain.execute(server: @server, body: body)
     end
 
     def parse
-      Arango::Requests::Aql::Parse.execute(server: @server, body: { query: @query })
+      Arango::Requests::AQL::Parse.execute(server: @server, body: { query: @query })
     end
 
     private

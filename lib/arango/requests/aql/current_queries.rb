@@ -1,6 +1,6 @@
 module Arango
   module Requests
-    module Aql
+    module AQL
       class CurrentQueries < Arango::Request
         request_method :get
 
