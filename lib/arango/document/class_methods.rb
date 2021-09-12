@@ -160,31 +160,29 @@ module Arango
         base.singleton_class.alias_method :fetch_documents, :get_documents
         base.singleton_class.alias_method :retrieve_documents, :get_documents
 
-        Arango.request_class_method(base, :replace_documents) do |documents, ignore_revs: false, wait_for_sync: nil, collection:|
+        def replace_documents (documents, ignore_revs: false, wait_for_sync: nil, collection:)
           documents = [documents] unless documents.is_a? Array
           documents = documents.map{ |d| _attributes_from_arg(d) }
-          query = { returnNew: true, ignoreRevs: ignore_revs }
-          query[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
-          { put: "_api/document/#{collection.name}", body: documents, query: query, block: ->(result) do
-            result.map do |doc|
-              Arango::Document::Base.new(attributes: doc[:new], collection: collection)
-            end
+          params = { returnNew: true, ignoreRevs: ignore_revs }
+          params[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
+          args = { collection: collection.name }
+          result = Arango::Requests::Document::ReplaceMultiple.execute(server: @server, args: args, params: params, body: documents)
+          result.map do |doc|
+            Arango::Document::Base.new(attributes: doc[:new], collection: collection)
           end
-          }
         end
 
-        Arango.request_class_method(base, :update_documents) do |documents, ignore_revs: false, wait_for_sync: nil, merge_objects: nil, collection:|
+        def update_documents (documents, ignore_revs: false, wait_for_sync: nil, merge_objects: nil, collection:)
           documents = [documents] unless documents.is_a? Array
           documents = documents.map{ |d| _attributes_from_arg(d) }
-          query = { returnNew: true, ignoreRevs: ignore_revs }
-          query[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
-          query[:mergeObjects] = merge_objects unless merge_objects.nil?
-          { patch: "_api/document/#{collection.name}", body: documents, query: query, block: ->(result) do
-            result.map do |doc|
-              Arango::Document::Base.new(attributes: doc[:new], collection: collection)
-            end
+          params = { returnNew: true, ignoreRevs: ignore_revs }
+          params[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
+          params[:mergeObjects] = merge_objects unless merge_objects.nil?
+          args = { collection: collection.name }
+          result = Arango::Requests::Document::UpdateMultiple.execute(server: @server, args: args, params: params, body: documents)
+          result.map do |doc|
+            Arango::Document::Base.new(attributes: doc[:new], collection: collection)
           end
-          }
         end
 
         def delete (key: nil, attributes: {}, ignore_revs: false, wait_for_sync: nil, collection:)
