@@ -207,9 +207,7 @@ module Arango
           Arango::Requests::Document::DeleteMultiple.execute(server: collection.server, args: args, params: params, body: documents)
         end
 
-        private
-
-        def _attributes_from_arg(arg)
+        private def _attributes_from_arg(arg)
           case arg
           when String then { _key: arg }
           when Hash
