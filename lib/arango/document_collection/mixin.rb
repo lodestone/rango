@@ -11,8 +11,6 @@ module Arango
 
         include Arango::Helper::Satisfaction
 
-        # extend Arango::Helper::RequestMethod
-
         include Arango::DocumentCollection::Documents
         include Arango::DocumentCollection::Indexes
       end

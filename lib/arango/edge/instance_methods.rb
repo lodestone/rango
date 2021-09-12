@@ -1,7 +1,6 @@
 module Arango
   module Edge
     module InstanceMethods
-      extend Arango::Helper::RequestMethod
 
       def initialize(key: nil, attributes: {}, from: nil, to: nil, edge_collection:, ignore_revs: false, wait_for_sync: false)
         @attributes = _attributes_from_arg(attributes)

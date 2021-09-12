@@ -1,7 +1,6 @@
 module Arango
   module Graph
     module InstanceMethods
-      extend Arango::Helper::RequestMethod
 
       # Instantiate a new collection.
       # For param description see the attributes descriptions. All params except name and database are optional.
@@ -63,7 +62,7 @@ module Arango
 
       # Stores the graph in the database.
       # @return [Arango::DocumentCollection] self
-      request_method :create do
+      def create
         @name_changed = false
         @wait_for_sync_changed = false
 
@@ -74,23 +73,22 @@ module Arango
           body[:options][k.to_s.camelize(:lower)] = v unless v.nil?
         end
 
-        query = nil
+        params = {}
         if @wait_for_sync_changed
-          query[:waitForSync] = @wait_for_sync
+          params[:waitForSync] = @wait_for_sync
         end
 
-        { post: '_api/gharial', body: body, query: query, block: ->(result) { _update_attributes(result[:graph]); self }}
+        result = Arango::Requests::Graph::Create.execute(server: @database.server, body: body, params: params)
+        _update_attributes(result[:graph])
+        self
       end
 
-      # Drops a graph.
+      # Deletes a graph.
       # @return [NilClass]
-      request_method :drop do
-        { delete: "_api/gharial/#{@name}" , block: ->(_) { nil }}
+      def delete
+        args = { name: @name }
+        Arango::Requests::Graph::Delete.execute(server: @database.server, args: args)
       end
-      alias delete drop
-      alias destroy drop
-      alias batch_delete batch_drop
-      alias batch_destroy batch_drop
 
       private
 

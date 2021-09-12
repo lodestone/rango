@@ -1,7 +1,6 @@
 module Arango
   module Document
     module InstanceMethods
-      extend Arango::Helper::RequestMethod
 
       attr_accessor :ignore_revs, :wait_for_sync
       attr_reader :graph, :collection, :database, :server, :attributes

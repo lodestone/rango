@@ -1,7 +1,6 @@
 module Arango
   module DocumentCollection
     module InstanceMethods
-      extend Arango::Helper::RequestMethod
 
       # Instantiate a new collection.
       # For param description see the attributes descriptions. All params except name and database are optional.
