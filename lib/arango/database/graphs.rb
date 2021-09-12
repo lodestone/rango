@@ -1,6 +1,6 @@
 module Arango
   class Database
-    module GraphAccess
+    module Graphs
       def all_graphs
         Arango::Graph::Base.all(database: self)
       end

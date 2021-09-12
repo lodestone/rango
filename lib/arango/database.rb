@@ -9,7 +9,7 @@ module Arango
     include Arango::Database::DocumentCollections
     include Arango::Database::EdgeCollections
     include Arango::Database::FoxxServices
-    include Arango::Database::GraphAccess
+    include Arango::Database::Graphs
     include Arango::Database::HTTPRoute
     include Arango::Database::AQLQueries
     include Arango::Database::AQLQueryCache

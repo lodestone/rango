@@ -31,7 +31,6 @@ loader.inflector.inflect(
   "aql_functions" => "AQLFunctions",
   "aql_queries" => "AQLQueries",
   "aql_query_cache" => "AQLQueryCache",
-  "graphs" => "GraphAccess",
   "http_route" => "HTTPRoute",
   "error_db" => "ErrorDB"
 )
