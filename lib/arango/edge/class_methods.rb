@@ -2,7 +2,8 @@ module Arango
   module Edge
     module ClassMethods
       def self.extended(base)
-        Arango.aql_request_class_method(base, :all) do |offset: 0, limit: nil, batch_size: nil, edge_collection:|
+        # returns Array of Edge
+        def all (offset: 0, limit: nil, batch_size: nil, edge_collection:)
           bind_vars = {}
           query = "FOR doc IN #{edge_collection.name}"
           if limit && offset
@@ -12,24 +13,31 @@ module Arango
           end
           raise Arango::Error.new err: "offset must be used with limit" if offset > 0 && !limit
           query << "\n RETURN doc"
-          { query: query, bind_vars: bind_vars, batch_size: batch_size, block: -> (aql, result) do
-            result_proc = ->(b) { b.result.map { |d| Arango::Edge::Base.new(attributes: d, edge_collection: edge_collection) }}
-            final_result = result_proc.call(result)
-            if aql.has_more?
-              edge_collection.instance_variable_set(:@aql, aql)
-              edge_collection.instance_variable_set(:@batch_proc, result_proc)
-              unless batch_size
-                while aql.has_more?
-                  final_result += edge_collection.next_batch
-                end
+          body = { query: query }
+          unless bind_vars.empty?
+            body[:bind_vars] = bind_vars
+          end
+          if batch_size
+            body[:batch_size] = batch_size
+          end
+          result = Arango::Requests::Cursor::Create.execute(server: edge_collection.server, body: body)
+          result_proc = ->(result) { result.result.map { |edge_attr| Arango::Edge::Base.new(attributes: edge_attr, edge_collection: edge_collection) }}
+          final_result = result_proc.call(result)
+          if result[:has_more]
+            edge_collection.instance_variable_set(:@cursor, result)
+            edge_collection.instance_variable_set(:@batch_proc, result_proc)
+            unless batch_size
+              while edge_collection.has_more?
+                b = edge_collection.next_batch
+                final_result += b if b
               end
             end
-            final_result
           end
-          }
+          final_result
         end
 
-        Arango.aql_request_class_method(base, :list) do |offset: 0, limit: nil, batch_size: nil, edge_collection:|
+        # returns Array of keys
+        def list (offset: 0, limit: nil, batch_size: nil, edge_collection:)
           bind_vars = {}
           query = "FOR doc IN #{edge_collection.name}"
           if limit && offset
@@ -39,63 +47,68 @@ module Arango
           end
           raise Arango::Error.new err: "offset must be used with limit" if offset > 0 && !limit
           query << "\n RETURN doc._key"
-          { database: edge_collection.database, query: query, bind_vars: bind_vars, batch_size: batch_size, block: -> (aql, result) do
-            result_proc = ->(b) { b.result }
-            final_result = result_proc.call(result)
-            if aql.has_more?
-              edge_collection.instance_variable_set(:@aql, aql)
-              edge_collection.instance_variable_set(:@batch_proc, result_proc)
-              unless batch_size
-                while aql.has_more?
-                  final_result += edge_collection.next_batch
-                end
+          body = { query: query }
+          unless bind_vars.empty?
+            body[:bind_vars] = bind_vars
+          end
+          if batch_size
+            body[:batch_size] = batch_size
+          end
+          result = Arango::Requests::Cursor::Create.execute(server: edge_collection.server, body: body)
+          result_proc = ->(result) { result.result }
+          final_result = result_proc.call(result)
+          if result[:has_more]
+            edge_collection.instance_variable_set(:@cursor, result)
+            edge_collection.instance_variable_set(:@batch_proc, result_proc)
+            unless batch_size
+              while edge_collection.has_more?
+                b = edge_collection.next_batch
+                final_result += b if b
               end
             end
-            final_result
           end
-          }
+          final_result
         end
 
-        Arango.request_class_method(base, :exists?) do |key: nil, attributes: {}, match_rev: nil, edge_collection:|
+        def exists? (key: nil, attributes: {}, match_rev: nil, edge_collection:)
           edge = _attributes_from_arg(attributes)
           edge[:_key] = key if key
+          headers = { }
           raise Arango::Error.new(err: "Edge with key required!") unless edge.key?(:_key)
-          request = { head: "_api/document/#{edge_collection.name}/#{edge[:_key]}" }
           if edge.key?(:_key) && edge.key?(:_rev) && match_rev == true
-            request[:headers] = {'If-Match' => edge[:_rev] }
+            headers[:'If-Match'] = edge[:_rev]
           elsif edge.key?(:_key) && edge.key?(:_rev) && match_rev == false
-            request[:headers] = {'If-None-Match' => edge[:_rev] }
+            headers[:'If-None-Match'] = edge[:_rev]
           end
-          request[:block] = ->(result) do
-            case result.response_code
-            when 200 then true # edge was found
-            when 304 then true # “If-None-Match” header is given and the edge has the same version
-            when 412 then true # “If-Match” header is given and the found edge has a different version.
-            else
-              false
-            end
+          args = { collection: edge_collection.name, key: edge[:_key] }
+          begin
+            Arango::Requests::Document::Head.execute(server: edge_collection.server, args: args, headers: headers)
+          rescue Error
+            return false
           end
-          request
+          true
         end
 
-        Arango.request_class_method(base, :create_edges) do |edges, wait_for_sync: nil, edge_collection:|
+        def create_edges (edges, wait_for_sync: nil, edge_collection:)
           edges = [edges] unless edges.is_a? Array
           edges = edges.map{ |d| _attributes_from_arg(d) }
-          query = { returnNew: true }
-          query[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
-          { post: "_api/document/#{edge_collection.name}", body: edges, query: query, block: ->(result) do
-            result.map do |doc|
-              Arango::Edge::Base.new(attributes: doc[:new], edge_collection: edge_collection)
-            end
+          params = { returnNew: true }
+          params[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
+          args = { collection: edge_collection.name }
+          result = Arango::Requests::Document::CreateMultiple.execute(server: edge_collection.server, args: args, params: params, body: edges)
+          result.map do |edge|
+            # returnNew does not work for 'multiple'
+            Arango::Edge::Base.get(key: edge[:_key], edge_collection: edge_collection)
           end
-          }
         end
 
-        Arango.request_class_method(base, :get) do |key: nil, attributes: {}, edge_collection:|
+        def get (key: nil, attributes: {}, edge_collection:)
           edge = _attributes_from_arg(attributes)
           edge[:_key] = key if key
           if edge.key?(:_key)
-            { get: "_api/document/#{edge_collection.name}/#{edge[:_key]}", block: ->(result) { Arango::Edge::Base.new(attributes: result, edge_collection: edge_collection) }}
+            args = {collection: edge_collection.name, key: edge[:_key] }
+            result = Arango::Requests::Document::Get.execute(server: edge_collection.server, args: args)
+            Arango::Edge::Base.new(attributes: result, edge_collection: edge_collection)
           else
             bind_vars = {}
             query = "FOR doc IN #{edge_collection.name}"
@@ -109,28 +122,25 @@ module Arango
             query << "\n LIMIT 1"
             query << "\n RETURN doc"
             aql = AQL.new(query: query, database: edge_collection.database, bind_vars: bind_vars, block: ->(_, result) do
-              Arango::Edge::Base.new(attributes: result.result.first, edge_collection: edge_collection) if result.result.first
-            end
-            )
+                            Arango::Edge::Base.new(attributes: result.result.first, edge_collection: edge_collection) if result.result.first
+                          end
+                         )
             aql.request
           end
         end
-        base.singleton_class.alias_method :fetch, :get
-        base.singleton_class.alias_method :retrieve, :get
-        base.singleton_class.alias_method :batch_fetch, :batch_get
-        base.singleton_class.alias_method :batch_retrieve, :batch_get
 
-        Arango.multi_request_class_method(base, :get_edges) do |edges, edge_collection:|
+        def get_edges (edges, edge_collection:)
           edges = [edges] unless edges.is_a? Array
           edges = edges.map{ |d| _attributes_from_arg(d) }
-          requests = []
+          results = []
           result_edges = []
+          args = { collection: edge_collection.name }
           edges.each do |edge|
             if edge.key?(:_key)
-              requests << { get: "_api/document/#{edge_collection.name}/#{edge[:_key]}", block: ->(result) do
-                result_edges << Arango::Edge::Base.new(attributes: result, edge_collection: edge_collection)
-              end
-              }
+              args[:key] = edge[:_key]
+              result = Arango::Requests::Document::Get.execute(server: edge_collection.server, args: args)
+              results << result
+              result_edges << Arango::Edge::Base.new(attributes: result, edge_collection: edge_collection)
             else
               bind_vars = {}
               query = "FOR doc IN #{edge_collection.name}"
@@ -144,72 +154,62 @@ module Arango
               query << "\n LIMIT 1"
               query << "\n RETURN doc"
               aql = AQL.new(query: query, database: edge_collection.database, bind_vars: bind_vars, block: ->(_, result) do
-                result_edges << Arango::Edge::Base.new(attributes: result.result.first, edge_collection: edge_collection) if result.result.first
-                result_edges
-              end
-              )
-              requests << aql.request
+                              result_edges << Arango::Edge::Base.new(attributes: result.result.first, edge_collection: edge_collection) if result.result.first
+                              result_edges
+                            end
+                           )
+              results << aql.request
             end
           end
-          requests
+          results
         end
         base.singleton_class.alias_method :fetch_edges, :get_edges
         base.singleton_class.alias_method :retrieve_edges, :get_edges
-        base.singleton_class.alias_method :batch_fetch_edges, :batch_get_edges
-        base.singleton_class.alias_method :batch_retrieve_edges, :batch_get_edges
 
-        Arango.request_class_method(base, :replace_edges) do |edges, ignore_revs: false, wait_for_sync: nil, edge_collection:|
+        def replace_edges (edges, ignore_revs: false, wait_for_sync: nil, edge_collection:)
           edges = [edges] unless edges.is_a? Array
           edges = edges.map{ |d| _attributes_from_arg(d) }
-          query = { returnNew: true, ignoreRevs: ignore_revs }
-          query[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
-          { put: "_api/document/#{edge_collection.name}", body: edges, query: query, block: ->(result) do
-            result.map do |doc|
-              Arango::Edge::Base.new(attributes: doc[:new], edge_collection: edge_collection)
-            end
+          params = { returnNew: true, ignoreRevs: ignore_revs }
+          params[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
+          args = { collection: edge_collection.name }
+          result = Arango::Requests::Document::ReplaceMultiple.execute(server: edge_collection.server, args: args, params: params, body: edges)
+          result.map do |doc|
+            Arango::Edge::Base.new(attributes: doc[:new], edge_collection: edge_collection)
           end
-          }
         end
 
-        Arango.request_class_method(base, :update_edges) do |edges, ignore_revs: false, wait_for_sync: nil, merge_objects: nil, edge_collection:|
+        def update_edges (edges, ignore_revs: false, wait_for_sync: nil, merge_objects: nil, edge_collection:)
           edges = [edges] unless edges.is_a? Array
           edges = edges.map{ |d| _attributes_from_arg(d) }
-          query = { returnNew: true, ignoreRevs: ignore_revs }
-          query[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
-          query[:mergeObjects] = merge_objects unless merge_objects.nil?
-          { patch: "_api/document/#{edge_collection.name}", body: edges, query: query, block: ->(result) do
-            result.map do |doc|
-              Arango::Edge::Base.new(attributes: doc[:new], edge_collection: edge_collection)
-            end
+          params = { returnNew: true, ignoreRevs: ignore_revs }
+          params[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
+          params[:mergeObjects] = merge_objects unless merge_objects.nil?
+          args = { collection: edge_collection.name }
+          result = Arango::Requests::Document::UpdateMultiple.execute(server: edge_collection.server, args: args, params: params, body: edges)
+          result.map do |doc|
+            Arango::Edge::Base.new(attributes: doc[:new], edge_collection: edge_collection)
           end
-          }
         end
 
-        Arango.request_class_method(base, :drop) do |key: nil, attributes: {}, ignore_revs: false, wait_for_sync: nil, edge_collection:|
+        def delete (key: nil, attributes: {}, ignore_revs: false, wait_for_sync: nil, edge_collection:)
           edge = _attributes_from_arg(attributes)
           edge[:_key] = key if key
-          query = { ignoreRevs: ignore_revs }
-          query[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
+          params = { }
+          params[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
           headers = nil
           headers = { "If-Match": edge[:_rev] } if !ignore_revs && edge.key?(:_rev)
-          { delete: "_api/document/#{edge_collection.name}/#{edge[:_key]}", query: query, headers: headers, block: ->(_) { nil }}
+          args = { collection: edge_collection.name, key: edge[:_key] }
+          Arango::Requests::Document::Delete.execute(server: edge_collection.server, args: args, headers: headers, params: params)
         end
-        base.singleton_class.alias_method :delete, :drop
-        base.singleton_class.alias_method :destroy, :drop
-        base.singleton_class.alias_method :batch_delete, :batch_drop
-        base.singleton_class.alias_method :batch_destroy, :batch_drop
 
-        Arango.request_class_method(base, :drop_edges) do |edges, ignore_revs: false, wait_for_sync: nil, edge_collection:|
+        def delete_edges (edges, ignore_revs: false, wait_for_sync: nil, edge_collection:)
           edges = [edges] unless edges.is_a? Array
           edges = edges.map{ |d| _attributes_from_arg(d) }
-          query = { ignoreRevs: ignore_revs }
-          query[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
-          { delete: "_api/document/#{edge_collection.name}", body: edges, query: query, block: ->(_) { nil }}
+          params = { ignoreRevs: ignore_revs }
+          params[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
+          args = { collection: edge_collection.name }
+          Arango::Requests::Document::DeleteMultiple.execute(server: edge_collection.server, args: args, params: params, body: edges)
         end
-        base.singleton_class.alias_method :delete_edges, :drop_edges
-        base.singleton_class.alias_method :destroy_edges, :drop_edges
-        base.singleton_class.alias_method :batch_delete_edges, :batch_drop_edges
-        base.singleton_class.alias_method :batch_destroy_edges, :batch_drop_edges
 
         private def _attributes_from_arg(arg)
           case arg

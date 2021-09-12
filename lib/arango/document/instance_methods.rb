@@ -124,7 +124,7 @@ module Arango
         headers = { "If-Match": @attributes[:_rev] }
         args = { collection: @collection.name, key: @attributes[:_key] }
         begin
-          Arango::Requests::Document::Get.execute(server: @server, headers: headers, args: args)
+          Arango::Requests::Document::Head.execute(server: @server, headers: headers, args: args)
         rescue Error => e
           return false
         end

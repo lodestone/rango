@@ -167,7 +167,7 @@ module Arango
       # @return [Integer]
       def size
         args = { name: @name, type: @type }
-        Arango::Requests::Collection::Size.execute(server: server, args: args).count
+        Arango::Requests::Collection::Count.execute(server: server, args: args).count
       end
       alias count size
       alias length size

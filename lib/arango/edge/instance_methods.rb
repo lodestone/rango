@@ -3,9 +3,10 @@ module Arango
     module InstanceMethods
       extend Arango::Helper::RequestMethod
 
-      def initialize(key: nil, attributes: {}, from: nil, to: nil, edge_collection:, ignore_revs: false, wait_for_sync: nil)
+      def initialize(key: nil, attributes: {}, from: nil, to: nil, edge_collection:, ignore_revs: false, wait_for_sync: false)
         @attributes = _attributes_from_arg(attributes)
         @attributes[:_key] = key if key
+        #STDERR.puts ("Edge.new key #{key.inspect}, attributes #{attributes.inspect}, from #{from.inspect}, to #{to.inspect}")
         @changed_attributes = {}
         @ignore_revs = ignore_revs
         @wait_for_sync = wait_for_sync
@@ -57,14 +58,14 @@ module Arango
         @edge_collection = edge_collection
         @graph = @edge_collection.graph
         @database = @edge_collection.database
-        @arango_server = @database.arango_server
+        @server = @database.server
       end
 
       def graph=(graph)
         satisfy_module?(graph, Arango::Graph::Mixin)
         @graph = graph
         @database = @graph.database
-        @arango_server = @graph.arango_server
+        @server = @graph.server
       end
 
       def method_missing(name, *args, &block)
@@ -85,45 +86,41 @@ module Arango
         super(name, *args, &block)
       end
 
-      request_method :reload do
+      def reload
         headers = nil
         headers = { "If-Match": @attributes[:_rev] } if !@ignore_revs && @attributes.key?(:_rev)
-        { get: "_api/document/#{@edge_collection.name}/#{@attributes[:_key]}", headers: headers,
-          block: ->(result) do
-            @attributes = _attributes_from_arg(result)
-            @changed_attributes = {}
-            self
-          end
-        }
+        args = { collection: @edge_collection.name, key: @attributes[:_key] }
+        result = Arango::Requests::Document::Get.execute(server: @server, headers: headers, args: args)
+        @attributes = _attributes_from_arg(result)
+        @changed_attributes = {}
+        self
       end
-      alias refresh reload
-      alias retrieve reload
-      alias revert reload
-      alias batch_refresh batch_reload
-      alias batch_retrieve batch_reload
-      alias batch_revert batch_reload
 
-      request_method :same_revision? do
+      def same_revision?
         headers = { "If-Match": @attributes[:_rev] }
-        { head: "_api/document/#{@edge_collection.name}/#{@attributes[:_key]}", headers: headers, block: ->(result) { result.response_code == 200 }}
+        args = { collection: @edge_collection.name, key: @attributes[:_key] }
+        begin
+          Arango::Requests::Document::Head.execute(server: @server, headers: headers, args: args)
+        rescue Error => e
+          return false
+        end
+        true
       end
 
-      request_method :create do
-        query = { returnNew: true }
-        query[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
+      def create
+        params = { returnNew: true }
+        params[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
         @attributes = @attributes.merge(@changed_attributes)
         @changed_attributes = {}
-        { post: "_api/document/#{@edge_collection.name}", body: @attributes, query: query,
-          block: ->(result) do
-            @attributes.merge!(result[:new])
-            self
-          end
-        }
+        args = { collection: @edge_collection.name }
+        result = Arango::Requests::Document::Create.execute(server: @server, args: args, params: params, body: @attributes)
+        @attributes.merge!(result[:new])
+        self
       end
 
-      request_method :replace do
-        query = { returnNew: true, ignoreRevs: @ignore_revs }
-        query[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
+      def replace
+        params = { returnNew: true, ignoreRevs: @ignore_revs }
+        params[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
         headers = nil
         attributes = @changed_attributes
         attributes[:_id] = @attributes[:_id]
@@ -134,41 +131,34 @@ module Arango
         @attributes = attributes
         @changed_attributes = {}
         headers = { "If-Match": @attributes[:_rev] } if !@ignore_revs && @attributes.key?(:_rev)
-        { put: "_api/document/#{@edge_collection.name}/#{@attributes[:_key]}", body: @attributes, query: query, headers: headers,
-          block: ->(result) do
-            @attributes.merge!(result[:new])
-            self
-          end
-        }
+        args = { collection: @edge_collection.name, key: @attributes[:_key] }
+        result = Arango::Requests::Document::Replace.execute(server: @server, args: args, params: params, headers: headers, body: @attributes)
+        @attributes.merge!(result[:new])
+        self
       end
 
-      request_method :save do
-        query = { returnNew: true, ignoreRevs: @ignore_revs }
-        query[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
+      def save
+        params = { returnNew: true, ignoreRevs: @ignore_revs }
+        params[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
         headers = nil
         headers = { "If-Match": @attributes[:_rev] } if !@ignore_revs && @attributes.key?(:_rev)
         changed_attributes = @changed_attributes
         @changed_attributes = {}
-        { patch: "_api/document/#{@edge_collection.name}/#{@attributes[:_key]}", body: changed_attributes, query: query, headers: headers,
-          block: ->(result) do
-            @attributes.merge!(result[:new])
-            self
-          end
-        }
+        args = { collection: @edge_collection.name, key: @attributes[:_key] }
+        result = Arango::Requests::Document::Update.execute(server: @server, args: args, params: params, headers: headers, body: changed_attributes)
+        @attributes.merge!(result[:new])
+        self
       end
       alias update save
-      alias batch_update batch_save
 
-      request_method :drop do
-        query = { waitForSync: @wait_for_sync }
+      def delete
+        params = { waitForSync: @wait_for_sync }
         headers = nil
         headers = { "If-Match": @attributes[:_rev] } if !@ignore_revs && @attributes.key?(:_rev)
-        { delete: "_api/document/#{@edge_collection.name}/#{@attributes[:_key]}", query: query, headers: headers, block: ->(_) { nil }}
+        args = { collection: @edge_collection.name, key: @attributes[:_key] }
+        Arango::Requests::Document::Delete.execute(server: @server, args: args, params: params, headers: headers)
+        nil
       end
-      alias delete drop
-      alias destroy drop
-      alias batch_delete batch_drop
-      alias batch_destroy batch_drop
 
       def from
         @from_instance ||= _get_instance(from_id)
@@ -221,12 +211,12 @@ module Arango
       def _get_instance(id)
 
       end
-      # request_method :_get_instance do |id|
-      #   query = { returnNew: true }
-      #   query[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
+      # def _get_instance do |id|
+      #   params = { returnNew: true }
+      #   params[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
       #   @attributes = @attributes.merge(@changed_attributes)
       #   @changed_attributes = {}
-      #   { post: "_api/document/#{@edge_collection.name}", body: @attributes, query: query,
+      #   { post: "_api/document/#{@edge_collection.name}", body: @attributes, params: params,
       #     block: ->(result) do
       #       @attributes.merge!(result[:new])
       #       self

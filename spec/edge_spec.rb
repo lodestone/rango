@@ -4,7 +4,7 @@ describe Arango::Edge do
   before :all do
     @server = connect
     begin
-      @server.drop_database(name: "EdgeDatabase")
+      @server.delete_database(name: "EdgeDatabase")
     rescue
     end
     @database = @server.create_database(name: "EdgeDatabase")
@@ -12,11 +12,11 @@ describe Arango::Edge do
 
   before :each do
     begin
-      @database.drop_collection(name: "DocumentCollection")
+      @database.delete_collection(name: "DocumentCollection")
     rescue
     end
     begin
-      @database.drop_collection(name: "EdgeCollection")
+      @database.delete_collection(name: "EdgeCollection")
     rescue
     end
     @collection = @database.create_collection(name: "DocumentCollection")
@@ -27,17 +27,17 @@ describe Arango::Edge do
 
   after :each do
     begin
-      @database.drop_collection(name: "DocumentCollection")
+      @database.delete_collection(name: "DocumentCollection")
     rescue
     end
     begin
-      @database.drop_collection(name: "EdgeCollection")
+      @database.delete_collection(name: "EdgeCollection")
     rescue
     end
   end
 
   after :all do
-    @server.drop_database(name: "EdgeDatabase")
+    @server.delete_database(name: "EdgeDatabase")
   end
 
   context "EdgeCollection" do
@@ -153,17 +153,17 @@ describe Arango::Edge do
       expect(edges.size).to eq 2
     end
 
-    it "drop_edge" do
+    it "delete_edge" do
       edge = @edge_collection.create_edge(attributes: { key: '1234567890', test1: 'value', test2: 100}, from: @doc_a.id, to: @doc_b.id)
       expect(@edge_collection.list_edges).to include(edge.key)
-      @edge_collection.drop_edge(key: edge.key)
+      @edge_collection.delete_edge(key: edge.key)
       expect(@edge_collection.list_edges).not_to include(edge.key)
     end
 
-    it "drop_edges" do
+    it "delete_edges" do
       @edge_collection.create_edge(key: '1234567890', attributes: { test1: 'value', test2: 100 }, from: @doc_a.id, to: @doc_b.id)
       @edge_collection.create_edge(attributes: { key: '1234567891', test1: 'value', test2: 100 }, from: @doc_a.id, to: @doc_b.id)
-      @edge_collection.drop_edges(['1234567890', '1234567891'])
+      @edge_collection.delete_edges(['1234567890', '1234567891'])
       expect(@edge_collection.size).to eq 0
     end
 
@@ -190,15 +190,15 @@ describe Arango::Edge do
       begin
         Arango::Edge::Base.new(key: 'mykey', from: @doc_a.id, to: @doc_b.id, edge_collection: @edge_collection).create
         Arango::Edge::Base.new(key: 'mykey', from: @doc_a.id, to: @doc_b.id, edge_collection: @edge_collection).create
-      rescue Arango::ErrorDB => e
-        error = e.error_num
+        raise
+      rescue Arango::Error => e
+        expect(e.message).to be_a String
       end
-      expect(error).to eq 1210
     end
 
     it "delete a Edge" do
       edge = Arango::Edge::Base.new(key: 'mykey', from: @doc_a.id, to: @doc_b.id, edge_collection: @edge_collection).create
-      result = edge.destroy
+      result = edge.delete
       expect(result).to eq nil
       expect(Arango::Edge::Base.exists?(key: 'mykey', edge_collection: @edge_collection)).to be false
     end
@@ -220,10 +220,10 @@ describe Arango::Edge do
       expect(edge.attribute_test).to be_nil
     end
 
-    it "retrieve Edge" do
+    it "get Edge" do
       edge = Arango::Edge::Base.new(attributes: {key: 'mykey', test: 1}, from: @doc_a.id, to: @doc_b.id, edge_collection: @edge_collection).create
       edge.test = 2
-      edge.retrieve
+      edge.reload
       expect(edge.test).to eq 1
     end
 
@@ -257,7 +257,7 @@ describe Arango::Edge do
     # end
     #
     # it "delete a Edge" do
-    #   result = @my_edge.destroy
+    #   result = @my_edge.delete
     #   expect(result).to eq true
     # end
   end

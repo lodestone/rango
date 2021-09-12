@@ -18,7 +18,7 @@ module Arango
         result = (object_ancestors | object_incl_modules) & modules
         return true if result.size > 0
         name ||= object.object_id.to_s
-        raise Arango::Error.new err: :wrong_class, data: { wrong_value: name, wrong_class: object.class.to_s, expected_class: classes.to_s }
+        raise Arango::Error.new err: :wrong_module, data: { wrong_value: name, wrong_module: object.class.to_s, expected_class: modules.to_s }
       end
 
       def satisfy_module_or_string?(object, *modules)

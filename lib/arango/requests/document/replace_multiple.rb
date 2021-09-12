@@ -11,8 +11,7 @@ module Arango
         param :return_old
         param :wait_for_sync
 
-        # TODO
-        # body_is_array
+        body_array
 
         code 201, :success
         code 202, :success

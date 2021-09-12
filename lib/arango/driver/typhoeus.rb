@@ -26,12 +26,12 @@ module Arango
         end
 
         begin
-          # STDERR.puts "#{request_method} #{uri} #{options}"
+#          STDERR.puts "\n#{request_method} #{uri} #{options}"
           response = ::Typhoeus.send(request_method, uri, options)
         rescue Exception => e
           raise Arango::Error.new err: :impossible_to_connect_with_database, data: { error: e.message }
         end
-        # STDERR.puts "#{response.response_body} #{response.return_code} #{response.response_code}"
+#        STDERR.puts "\t#{response.response_body} #{response.return_code} #{response.response_code}"
         raise Arango::Error.new "Typhoeus curl error: #{response.return_code}" unless response.return_code == :ok
         if headers && headers.key?("Content-Type") && headers["Content-Type"].start_with?("multipart/form-data")
           return response.response_body

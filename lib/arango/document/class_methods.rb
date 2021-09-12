@@ -46,8 +46,14 @@ module Arango
           raise Arango::Error.new err: "offset must be used with limit" if offset > 0 && !limit
           query << "\n RETURN doc._key"
           args = { db: collection.database.name }
-          body = { query: query, bind_vars: bind_vars, batch_size: batch_size }
-          result = Arango::Requests::Cursor::Create.execute(server: collection.server, body: body, args: args)
+          body = { query: query }
+          unless bind_vars.empty?
+            body[:bind_vars] = bind_vars
+          end
+          if batch_size
+            body[:batch_size] = batch_size
+          end
+          result = Arango::Requests::Cursor::Create.execute(server: collection.server, args: args, body: body)
           result_proc = ->(b) { b.result }
           final_result = result_proc.call(result)
           if result[:has_more]
@@ -89,7 +95,8 @@ module Arango
           args = { collection: collection.name }
           result = Arango::Requests::Document::CreateMultiple.execute(server: collection.server, args: args, params: params, body: documents)
           result.map do |doc|
-            Arango::Document::Base.new(attributes: doc, collection: collection)
+            # returnNew does not work for 'multiple'
+            Arango::Document::Base.get(key: doc[:_key], collection: collection)
           end
         end
 
