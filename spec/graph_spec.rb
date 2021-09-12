@@ -4,7 +4,7 @@ describe Arango::Graph do
   before :all do
     @server = connect
     begin
-      @server.drop_database(name: "GraphDatabase")
+      @server.delete_database(name: "GraphDatabase")
     rescue
     end
     @database = @server.create_database(name: "GraphDatabase")
@@ -12,20 +12,20 @@ describe Arango::Graph do
 
   before :each do
     begin
-      @database.drop_graph(name: 'MyGraph')
+      @database.delete_graph(name: 'MyGraph')
     rescue
     end
   end
 
   after :each do
     begin
-      @database.drop_graph(name: 'MyGraph')
+      @database.delete_graph(name: 'MyGraph')
     rescue
     end
   end
 
   after :all do
-    @server.drop_database(name: "GraphDatabase")
+    @server.delete_database(name: "GraphDatabase")
   end
 
   context "Database" do
@@ -51,11 +51,11 @@ describe Arango::Graph do
       expect(list).to include("MyGraph")
     end
 
-    it "drop_graph" do
+    it "delete_graph" do
       @database.create_graph name: "MyGraph"
       list = @database.list_graphs
       expect(list).to include("MyGraph")
-      @database.drop_graph(name: "MyGraph")
+      @database.delete_graph(name: "MyGraph")
       list = @database.list_graphs
       expect(list).not_to include("MyGraph")
     end
@@ -100,10 +100,10 @@ describe Arango::Graph do
       expect(error.class).to eq Integer
     end
 
-    it "drop" do
+    it "delete" do
       Arango::Graph::Base.new(name: "MyGraph", database: @database).create
       graph = Arango::Graph::Base.get(name: "MyGraph", database: @database)
-      graph.drop
+      graph.delete
       message = nil
       begin
         Arango::Graph::Base.get(name: "MyGraph", database: @database)

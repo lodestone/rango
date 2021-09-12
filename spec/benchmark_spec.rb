@@ -8,7 +8,7 @@ describe Arango::Server do
     before :all do
       @server = connect
       begin
-        @server.drop_database(name: "BenchmarkDatabase")
+        @server.delete_database(name: "BenchmarkDatabase")
       rescue
       end
       @database = @server.create_database(name: "BenchmarkDatabase")
@@ -17,10 +17,10 @@ describe Arango::Server do
 
     after :all do
       begin
-        @database.drop_collection(name: 'MyCollection')
+        @database.delete_collection(name: 'MyCollection')
       rescue
       end
-      @server.drop_database(name: "BenchmarkDatabase")
+      @server.delete_database(name: "BenchmarkDatabase")
     end
 
     it "version works" do
@@ -40,7 +40,7 @@ describe Arango::Server do
       end
       NUMBER_OF_RUNS.times do |i|
         key = "foo#{i}"
-        @collection.drop_document(key: key)
+        @collection.delete_document(key: key)
       end
       puts 'Write/Read: %.2f Kops' % (2 * NUMBER_OF_RUNS / 1000 / elapsed)
       expect(result).to be_a String
@@ -59,7 +59,7 @@ describe Arango::Server do
       end
       NUMBER_OF_RUNS.times do |i|
         key = "foo#{i}"
-        @collection.drop_document(key: key)
+        @collection.delete_document(key: key)
       end
       puts 'Write/Read batched: %.2f Kops' % (2 * NUMBER_OF_RUNS / 1000 / elapsed)
       expect(result).to be_a String
@@ -75,7 +75,7 @@ describe Arango::Server do
       end
       NUMBER_OF_RUNS.times do |i|
         key = "foo#{i}"
-        @collection.drop_document(key: key)
+        @collection.delete_document(key: key)
       end
       puts 'Write: %.2f Kops' % (NUMBER_OF_RUNS / 1000 / elapsed)
     end
@@ -95,7 +95,7 @@ describe Arango::Server do
       end
       NUMBER_OF_RUNS.times do |i|
         key = "foo#{i}"
-        @collection.drop_document(key: key)
+        @collection.delete_document(key: key)
       end
       puts 'Read: %.2f Kops' % (NUMBER_OF_RUNS / 1000 / elapsed)
       expect(result).to be_a String
@@ -127,7 +127,7 @@ describe Arango::Server do
       end
       NUMBER_OF_RUNS.times do |i|
         key = "foo#{i}"
-        @collection.drop_document(key: key)
+        @collection.delete_document(key: key)
       end
       puts 'AQL queries: %.2f Kops' % (NUMBER_OF_RUNS / 1000 / elapsed)
       expect(result.result.first).to be_a Hash
@@ -156,7 +156,7 @@ describe Arango::Server do
       end
       NUMBER_OF_RUNS.times do |i|
         key = "foo#{i}"
-        @collection.drop_document(key: key)
+        @collection.delete_document(key: key)
       end
       puts 'Javascript AQL function: %.2f Kops' % (NUMBER_OF_RUNS / 1000 / elapsed)
       expect(result.result.first).to be_a Hash
@@ -182,7 +182,7 @@ describe Arango::Server do
       end
       NUMBER_OF_RUNS.times do |i|
         key = "foo#{i}"
-        @collection.drop_document(key: key)
+        @collection.delete_document(key: key)
       end
       puts 'Ruby AQL function: %.2f Kops' % (NUMBER_OF_RUNS / 1000 / elapsed)
       expect(result.result.first).to be_a Hash

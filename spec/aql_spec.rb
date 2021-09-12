@@ -4,7 +4,7 @@ describe Arango::AQL do
   before :all do
     @server = connect
     begin
-      @server.drop_database(name: "AQLDatabase")
+      @server.delete_database(name: "AQLDatabase")
     rescue
     end
     @database = @server.create_database(name: "AQLDatabase")
@@ -12,7 +12,7 @@ describe Arango::AQL do
 
   before :each do
     begin
-      @database.drop_collection(name: 'MyCollection')
+      @database.delete_collection(name: 'MyCollection')
     rescue
     end
     collection = @database.create_collection(name: 'MyCollection')
@@ -27,13 +27,13 @@ describe Arango::AQL do
 
   after :each do
     begin
-      @database.drop_collection(name: 'MyCollection')
+      @database.delete_collection(name: 'MyCollection')
     rescue
     end
   end
 
   after :all do
-    @server.drop_database(name: "AQLDatabase")
+    @server.delete_database(name: "AQLDatabase")
   end
 
   context "#new" do

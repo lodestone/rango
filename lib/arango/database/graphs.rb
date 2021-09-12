@@ -4,9 +4,6 @@ module Arango
       def all_graphs
         Arango::Graph::Base.all(database: self)
       end
-      def batch_all_graps
-        Arango::Graph::Base.batch_all(database: self)
-      end
 
       # TODO issmart, edgedefinitions, waitforsync, options
       def create_graph(name:, edge_definitions: [], is_smart: nil)
