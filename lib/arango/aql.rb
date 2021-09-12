@@ -4,7 +4,6 @@ module Arango
   class AQL
     include Arango::Helper::Satisfaction
 
-    extend Arango::Helper::RequestMethod
     class << self
 
       # id: the query’s id
@@ -125,11 +124,11 @@ module Arango
       @block ? @block.call(self, result) : self
     end
 
-    request_method :execute do
+    def execute
       request
     end
 
-    request_method :next do
+    def next
       if @has_more
         result = Arango::Requests::Cursor::NextBatch.execute(server: @server, args: { id: @id })
         set_instance_vars(result)
@@ -139,29 +138,29 @@ module Arango
       end
     end
 
-    request_method :delete do
+    def delete
       result = Arango::Requests::Cursor::Delete.execute(server: @server, args: { id: @id })
       result.response_code == 200
     end
 
-    request_method :kill do
+    def kill
       result = Arango::Requests::Aql::KillQuery.execute(server: @server, args: { id: @query_id })
       result.response_code == 200
     end
 
 # === PROPERTY QUERY ===
 
-    request_method :explain do
+    def explain
       body = {
         query:    @query,
         options:  @options,
         bindVars: @bind_vars
       }
-      { post: "_api/explain", body: body, block: ->(result) { result }}
+      Arango::Requests::Aql::Explain.execute(server: @server, body: body)
     end
 
-    request_method :parse do
-      { post: "_api/query", body: {query: @query} , block: ->(result) { result }}
+    def parse
+      Arango::Requests::Aql::Parse.execute(server: @server, body: { query: @query })
     end
 
     private
