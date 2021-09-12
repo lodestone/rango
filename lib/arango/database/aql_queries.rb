@@ -78,36 +78,36 @@ module Arango
       end
 
       def query_tracking_properties
-        execute_request(get: "_api/query/properties")
+        Arango::Requests::AQL::GetQueryTrackingProperties.execute(server: @server)
       end
 
       def set_query_tracking_properties(props)
         body = props.to_h
         body.transform_keys! { |k| k.to_s.camelize(:lower).to_sym }
-        execute_request(put: "_api/query/properties", body: props.to_h)
+        Arango::Requests::AQL::SetQueryTrackingProperties.execute(server: @server, body: props.to_h)
       end
 
       def running_queries
-        result = execute_request(get: "_api/query/current")
+        result = Arango::Requests::AQL::CurrentQueries.execute(server: @server)
         result.map { |query_hash| Arango::AQL.from_result(query_hash) }
       end
 
       def slow_queries
-        result = execute_request(get: "_api/query/slow")
+        result = Arango::Requests::AQL::GetSlowQueryList.execute(server: @server)
         result.map { |query_hash| Arango::AQL.from_result(query_hash) }
       end
 
       def clear_slow_queries_list
-        result = execute_request(delete: "_api/query/slow")
-        result.response_code == 200
+        result = Arango::Requests::AQL::DeleteSlowQueryList.execute(server: @server)
+        true
       end
 
       def kill_query(aql_id)
         id = if id.class == String then id
              elsif id.class == Arango::AQL then id.id
              end
-        result = execute_request(delete: "_api/query/#{id}")
-        result == 200
+        result = Arango::Requests::AQL::KillQuery.execute(server: @server, args: {id: id})
+        true
       end
     end
   end

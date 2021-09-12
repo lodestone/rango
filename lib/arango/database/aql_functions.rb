@@ -3,9 +3,9 @@ module Arango
     module AQLFunctions
 
       def list_aql_functions(namespace: nil)
-        query = nil
-        query = { namespace: namespace } unless namespace.nil?
-        result = execute_request(get: "_api/aqlfunction", query: query)
+        params = nil
+        params = { namespace: namespace } unless namespace.nil?
+        result = Arango::Requests::AQL::ListFunctions(server: @server, params: params)
         result.map { |r| Arango::Result.new(r) }
       end
 
@@ -38,16 +38,17 @@ module Arango
           }
           JAVASCRIPT
         end
-        body = { code: code, name: name, isDeterministic: is_deterministic }
-        result = execute_request(post: "_api/aqlfunction", body: body)
-        result.response_code == 200 || result.response_code == 201
+        body = { name: name, code: code, isDeterministic: is_deterministic }
+        Arango::Requests::AQL::CreateFunction.execute(server: @server, body: body)
+        true
       end
 
-      def drop_aql_function(name, group: nil)
-        query = nil
-        query = { group: group } unless group.nil?
-        result = request(delete: "_api/aqlfunction/#{name}", query: query)
-        result.response_code == 200
+      def drop_aql_function(name, namespace: nil)
+        params = nil
+        params = { namespace: namespace } unless group.nil?
+        args = { name: name }
+        Arango::Requests::AQL::CreateFunction.execute(server: @server, args: args, params: params)
+        true
       end
     end
   end

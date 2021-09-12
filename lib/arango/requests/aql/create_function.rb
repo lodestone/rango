@@ -4,11 +4,14 @@ module Arango
       class CreateFunction < Arango::Request
         request_method :post
 
-        uri_template "/_api/aqlfunction/{name}"
+        uri_template "/_api/aqlfunction"
 
         param :group
 
+        body_any
+
         code 200, :success
+        code 201, :success # created
         code 400, "Function name is malformed!"
         code 404, "Function does not exist!"
       end

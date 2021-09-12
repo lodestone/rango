@@ -107,10 +107,10 @@ describe Arango::AQL do
       myAQL = @database.new_aql query: "FOR u IN MyCollection RETURN u.num"
       begin
         myAQL.kill
-      rescue Arango::ErrorDB => e
-        error = e.error_num
+      rescue Arango::Error => e
+        error = e.message
       end
-      expect(error.class).to be Integer
+      expect(error).to be_a String
     end
 
     it "changeProperties" do
@@ -119,49 +119,49 @@ describe Arango::AQL do
     end
   end
 
-  context "opal support for functions" do
-    it "can install opal" do
-      @server.install_opal_module(@database)
-      collection = @database.get_collection(name: '_modules')
-      expect(collection.name).to eq '_modules'
-      document = collection.get_document(attributes: {path: '/opal'})
-      expect(document.content).to be_a String
-    end
-
-    it "can use opal" do
-      @server.install_opal_module(@database)
-      @database.create_aql_function('RUBY::VERSION', code: <<~JAVASCRIPT
-        function() {
-          require('opal');
-          Opal.top
-          return Opal.RUBY_VERSION;
-        }
-      JAVASCRIPT
-      )
-      result = @database.execute_query('RETURN RUBY::VERSION()')
-      expect(result.result.first).to be_a String
-      expect(result.result.first).to eq '2.5.3'
-    end
-
-    it "can execute opal" do
-      @server.install_opal_module(@database)
-      @database.create_aql_function('RUBY::ADD') do
-        args[0] + args[1]
-      end
-      result = @database.execute_query('RETURN RUBY::ADD(1, 2)')
-      expect(result.result.first).to eq 3
-    end
-
-    it "can execute opal with doc" do
-      @server.install_opal_module(@database)
-      @database.create_aql_function('RUBY::DOCMOD') do
-        doc = args[0]
-        doc[:num] = doc[:num] + 10
-        doc
-      end
-      result = @database.execute_query('FOR d IN MyCollection FILTER d._key == "FirstKey" RETURN RUBY::DOCMOD(d)')
-      expect(result.result.first[:_key]).to eq('FirstKey')
-      expect(result.result.first[:num]).to eq(11)
-    end
-  end
+#  context "opal support for functions" do
+#    it "can install opal" do
+#      @server.install_opal_module(@database)
+#      collection = @database.get_collection(name: 'opal_modules')
+#      expect(collection.name).to eq 'opal_modules'
+#      document = collection.get_document(attributes: {path: '/opal'})
+#      expect(document.content).to be_a String
+#    end
+#
+#    it "can use opal" do
+#      @server.install_opal_module(@database)
+#      @database.create_aql_function('RUBY::VERSION', code: <<~JAVASCRIPT
+#        function() {
+#          require('opal');
+#          Opal.top
+#          return Opal.RUBY_VERSION;
+#        }
+#      JAVASCRIPT
+#      )
+#      result = @database.execute_query('RETURN RUBY::VERSION()')
+#      expect(result.result.first).to be_a String
+#      expect(result.result.first).to eq '2.5.3'
+#    end
+#
+#    it "can execute opal" do
+#      @server.install_opal_module(@database)
+#      @database.create_aql_function('RUBY::ADD') do
+#        args[0] + args[1]
+#      end
+#      result = @database.execute_query('RETURN RUBY::ADD(1, 2)')
+#      expect(result.result.first).to eq 3
+#    end
+#
+#    it "can execute opal with doc" do
+#      @server.install_opal_module(@database)
+#      @database.create_aql_function('RUBY::DOCMOD') do
+#        doc = args[0]
+#        doc[:num] = doc[:num] + 10
+#        doc
+#      end
+#      result = @database.execute_query('FOR d IN MyCollection FILTER d._key == "FirstKey" RETURN RUBY::DOCMOD(d)')
+#      expect(result.result.first[:_key]).to eq('FirstKey')
+#      expect(result.result.first[:num]).to eq(11)
+#    end
+#  end
 end

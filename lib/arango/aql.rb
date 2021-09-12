@@ -154,9 +154,9 @@ module Arango
     def explain
       body = {
         query:    @query,
-        options:  @options,
-        bindVars: @bind_vars
+        options:  @options
       }
+      body[:bindVars] = @bind_vars if @bind_vars
       Arango::Requests::AQL::Explain.execute(server: @server, body: body)
     end
 
