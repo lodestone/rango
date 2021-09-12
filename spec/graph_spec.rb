@@ -94,10 +94,10 @@ describe Arango::Graph do
       error = nil
       begin
         Arango::Graph::Base.new(name: "MyGraph", database: @database).create
-      rescue Arango::ErrorDB => e
-        error = e.error_num
+      rescue Arango::Error => e
+        error = e.message
       end
-      expect(error.class).to eq Integer
+      expect(error).to be_a String
     end
 
     it "delete" do
@@ -107,10 +107,10 @@ describe Arango::Graph do
       message = nil
       begin
         Arango::Graph::Base.get(name: "MyGraph", database: @database)
-      rescue Arango::ErrorDB => e
+      rescue Arango::Error => e
         message = e.message
       end
-      expect(message).to include 'not found'
+      expect(message).to include 'not be found'
     end
 
     it "revision" do

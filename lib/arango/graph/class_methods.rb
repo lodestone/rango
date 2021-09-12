@@ -3,9 +3,9 @@ module Arango
     module ClassMethods
       def from_h(graph_hash, database: Arango.current_database)
         graph_hash = graph_hash.transform_keys { |k| k.to_s.underscore.to_sym }
-        graph_hash.merge!(database: database) unless graph_hash.key?(:database)
-        if graph_hash.key?(:properties)
-          graph_hash[:name] = graph_hash[:properties].delete(:name) if graph_hash[:properties].key?(:name)
+        graph_hash.merge!(database: database) unless graph_hash.has_key?(:database)
+        if graph_hash.has_key?(:properties)
+          graph_hash[:name] = graph_hash[:properties].delete(:name) if graph_hash[:properties].has_key?(:name)
         end
         Arango::Graph::Base.new(**graph_hash)
       end
@@ -36,7 +36,7 @@ module Arango
         # @param database [Arango::Database]
         # @return [Arango::Database]
         def get (name:, database: Arango.current_database)
-          args = { name: name }
+          args = { graph: name }
           result = Arango::Requests::Graph::Get.execute(server: database.server, args: args)
           from_results({}, result.graph, database: database)
         end
@@ -46,7 +46,7 @@ module Arango
         # @param database [Arango::Database]
         # @return [Array<String>] List of graph names.
         def list (database: Arango.current_database)
-          result = Arango::Requests::Graph::List.execute(server: database.server)
+          result = Arango::Requests::Graph::ListAll.execute(server: database.server)
           result.graphs.map { |c| c[:name] }
         end
 
@@ -55,7 +55,7 @@ module Arango
         # @param database [Arango::Database]
         # @return nil
         def delete(name:, database: Arango.current_database)
-          args = { name: name }
+          args = { graph: name }
           result = Arango::Requests::Graph::Delete.execute(server: database.server, args: args)
         end
 
@@ -75,7 +75,6 @@ module Arango
         body = {
           name: @name,
           edgeDefinitions:   edge_definitions_raw,
-          orphanCollections: orphan_collections_raw,
           isSmart: is_smart,
           options: {
             smartGraphAttribute: smart_graph_attribute,
