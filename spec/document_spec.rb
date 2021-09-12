@@ -4,7 +4,7 @@ describe Arango::Document do
   before :all do
     @server = connect
     begin
-      @server.drop_database(name: "DocumentDatabase")
+      @server.delete_database(name: "DocumentDatabase")
     rescue
     end
     @database = @server.create_database(name: "DocumentDatabase")
@@ -12,11 +12,11 @@ describe Arango::Document do
 
   before :each do
     begin
-      @database.drop_collection(name: "DocumentCollection")
+      @database.delete_collection(name: "DocumentCollection")
     rescue
     end
     begin
-      @database.drop_collection(name: "EdgeCollection")
+      @database.delete_collection(name: "EdgeCollection")
     rescue
     end
     @collection = @database.create_collection(name: "DocumentCollection")
@@ -25,17 +25,17 @@ describe Arango::Document do
 
   after :each do
     begin
-      @database.drop_collection(name: "DocumentCollection")
+      @database.delete_collection(name: "DocumentCollection")
     rescue
     end
     begin
-      @database.drop_collection(name: "EdgeCollection")
+      @database.delete_collection(name: "EdgeCollection")
     rescue
     end
   end
 
   after :all do
-    @server.drop_database(name: "DocumentDatabase")
+    @server.delete_database(name: "DocumentDatabase")
   end
 
   context "Collection" do
@@ -134,17 +134,17 @@ describe Arango::Document do
       expect(documents.size).to eq 2
     end
 
-    it "drop_document" do
+    it "delete_document" do
       document = @collection.create_document(attributes: {})
       expect(@collection.list_documents).to include(document.key)
-      @collection.drop_document(key: document.key)
+      @collection.delete_document(key: document.key)
       expect(@collection.list_documents).not_to include(document.key)
     end
 
-    it "drop_documents" do
+    it "delete_documents" do
       @collection.create_document(key: '1234567890', attributes: { test1: 'value', test2: 100 })
       @collection.create_document(attributes: { key: '1234567891', test1: 'value', test2: 100 })
-      @collection.drop_documents(['1234567890', '1234567891'])
+      @collection.delete_documents(['1234567890', '1234567891'])
       expect(@collection.size).to eq 0
     end
 
@@ -167,19 +167,19 @@ describe Arango::Document do
     end
 
     it "create a duplicate Document" do
-      error = ""
+      error = nil
       begin
         Arango::Document::Base.new(key: 'mykey', collection: @collection).create
         Arango::Document::Base.new(key: 'mykey', collection: @collection).create
-      rescue Arango::ErrorDB => e
-        error = e.error_num
+      rescue Arango::Error => e
+        error = e.message
       end
-      expect(error).to eq 1210
+      expect(error).to be_a String
     end
 
     it "delete a Document" do
       document = Arango::Document::Base.new(key: 'mykey', collection: @collection).create
-      result = document.destroy
+      result = document.delete
       expect(result).to eq nil
       expect(Arango::Document::Base.exists?(key: 'mykey', collection: @collection)).to be false
     end
@@ -201,10 +201,10 @@ describe Arango::Document do
       expect(document.attribute_test).to be_nil
     end
 
-    it "retrieve Document" do
+    it "reload Document" do
       document = Arango::Document::Base.new(attributes: {key: 'mykey', test: 1}, collection: @collection).create
       document.test = 2
-      document.retrieve
+      document.reload
       expect(document.test).to eq 1
     end
 

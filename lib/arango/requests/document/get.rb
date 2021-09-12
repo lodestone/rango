@@ -12,7 +12,7 @@ module Arango
         code 200, :success
         code 304, :success
         code 404, "Document or collection not found!"
-        code 412, "If-Match header was given but the found document has a different version!"
+        code 412, "If-Match header was given but the found document has a different revision!"
       end
     end
   end

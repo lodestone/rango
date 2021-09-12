@@ -31,7 +31,7 @@ module Arango
       satisfy_class?(query, String)
       @query = query
       @database = database
-      @arango_server = database.arango_server
+      @server = database.server
 
       @block        = block
 
@@ -86,7 +86,7 @@ module Arango
 
     attr_accessor :batch_size, :bind_vars, :cache, :count, :options, :query, :ttl
 
-    attr_reader :arango_server, :cached, :database, :extra, :id, :id_cache, :optimizer_rules, :result
+    attr_reader :server, :cached, :database, :extra, :id, :id_cache, :optimizer_rules, :result
     attr_reader :run_time, :started, :state, :stream
 
     def has_more?
@@ -120,10 +120,9 @@ module Arango
           query:       @query,
           ttl:         @ttl
       }
-      { post: "_api/cursor", body: body, block: ->(result) {
-        set_instance_vars(result)
-        @block ? @block.call(self, result) : self
-      }}
+      result = Arango::Requests::Cursor::Create.execute(server: @server, body: body)
+      set_instance_vars(result)
+      @block ? @block.call(self, result) : self
     end
 
     request_method :execute do
@@ -132,22 +131,22 @@ module Arango
 
     request_method :next do
       if @has_more
-        { put: "_api/cursor/#{@id}", block: ->(result) { set_instance_vars(result); self }}
+        result = Arango::Requests::Cursor::NextBatch.execute(server: @server, args: { id: @id })
+        set_instance_vars(result)
+        self
       else
         raise Arango::Error.new err: :no_other_aql_next, data: { has_more: false }
       end
     end
 
-    request_method :drop do
-      { delete: "_api/cursor/#{@id}", block: ->(result) { result.response_code == 200 }}
+    request_method :delete do
+      result = Arango::Requests::Cursor::Delete.execute(server: @server, args: { id: @id })
+      result.response_code == 200
     end
-    alias delete drop
-    alias destroy drop
-    alias batch_delete batch_drop
-    alias batch_destroy batch_drop
 
     request_method :kill do
-      { delete: "_api/query/#{@query_id}", block: ->(result) { result.response_code == 200 }}
+      result = Arango::Requests::Aql::KillQuery.execute(server: @server, args: { id: @query_id })
+      result.response_code == 200
     end
 
 # === PROPERTY QUERY ===

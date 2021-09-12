@@ -12,9 +12,6 @@ module Arango
         param :silent
         param :wait_for_sync
 
-        # TODO
-        # body_is_array
-
         code 200, :success
         code 202, :success
         code 404, "Collection not found!"

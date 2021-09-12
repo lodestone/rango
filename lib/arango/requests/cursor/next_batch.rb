@@ -6,6 +6,7 @@ module Arango
 
         uri_template "/_api/cursor/{id}"
 
+        code 200, :success
         code 202, :success
         code 404, "Unknown cursor!"
       end

@@ -1,7 +1,7 @@
 module Arango
   module Requests
     module Document
-      class Create < Arango::Request
+      class CreateMultiple < Arango::Request
         request_method :post
 
         uri_template '{/dbcontext}/_api/document/{collection}#multiple'
@@ -12,8 +12,7 @@ module Arango
         param :silent
         param :wait_for_sync
 
-        # TODO
-        # body_is_array
+        body_array
 
         code 201, :success
         code 202, :success

@@ -2,7 +2,7 @@ module Arango
   module Document
     module ClassMethods
       def self.extended(base)
-        Arango.aql_request_class_method(base, :all) do |offset: 0, limit: nil, batch_size: nil, collection:|
+        def all (offset: 0, limit: nil, batch_size: nil, collection:)
           bind_vars = {}
           query = "FOR doc IN #{collection.name}"
           if limit && offset
@@ -12,24 +12,30 @@ module Arango
           end
           raise Arango::Error.new err: "offset must be used with limit" if offset > 0 && !limit
           query << "\n RETURN doc"
-          { query: query, bind_vars: bind_vars, batch_size: batch_size, block: -> (aql, result) do
-            result_proc = ->(result) { result.result.map { |doc_attr| Arango::Document::Base.new(attributes: doc_attr, collection: collection) }}
-            final_result = result_proc.call(result)
-            if aql.has_more?
-              collection.instance_variable_set(:@aql, aql)
-              collection.instance_variable_set(:@batch_proc, result_proc)
-              unless batch_size
-                while aql.has_more?
-                  final_result += collection.next_batch
-                end
+          body = { query: query }
+          unless bind_vars.empty?
+            body[:bind_vars] = bind_vars
+          end
+          if batch_size
+            body[:batch_size] = batch_size
+          end
+          result = Arango::Requests::Cursor::Create.execute(server: collection.server, body: body)
+          result_proc = ->(result) { result.result.map { |doc_attr| Arango::Document::Base.new(attributes: doc_attr, collection: collection) }}
+          final_result = result_proc.call(result)
+          if result[:has_more]
+            collection.instance_variable_set(:@cursor, result)
+            collection.instance_variable_set(:@batch_proc, result_proc)
+            unless batch_size
+              while collection.has_more?
+                b = collection.next_batch
+                final_result += b if b
               end
             end
-            final_result
           end
-          }
+          final_result
         end
 
-        Arango.aql_request_class_method(base, :list) do |offset: 0, limit: nil, batch_size: nil, collection:|
+        def list (offset: 0, limit: nil, batch_size: nil, collection:)
           bind_vars = {}
           query = "FOR doc IN #{collection.name}"
           if limit && offset
@@ -39,63 +45,61 @@ module Arango
           end
           raise Arango::Error.new err: "offset must be used with limit" if offset > 0 && !limit
           query << "\n RETURN doc._key"
-          { database: collection.database, query: query, bind_vars: bind_vars, batch_size: batch_size, block: -> (aql, result) do
-            result_proc = ->(b) { b.result }
-            final_result = result_proc.call(result)
-            if aql.has_more?
-              collection.instance_variable_set(:@aql, aql)
-              collection.instance_variable_set(:@batch_proc, result_proc)
-              unless batch_size
-                while aql.has_more?
-                  final_result += collection.next_batch
-                end
+          args = { db: collection.database.name }
+          body = { query: query, bind_vars: bind_vars, batch_size: batch_size }
+          result = Arango::Requests::Cursor::Create.execute(server: collection.server, body: body, args: args)
+          result_proc = ->(b) { b.result }
+          final_result = result_proc.call(result)
+          if result[:has_more]
+            collection.instance_variable_set(:@cursor, result)
+            collection.instance_variable_set(:@batch_proc, result_proc)
+            unless batch_size
+              while result[:has_more]
+                final_result += collection.next_batch
               end
             end
-            final_result
           end
-          }
+          final_result
         end
 
-        Arango.request_class_method(base, :exists?) do |key: nil, attributes: {}, match_rev: nil, collection:|
+        def exists? (key: nil, attributes: {}, match_rev: nil, collection:)
           document = _attributes_from_arg(attributes)
           document[:_key] = key if key
           raise Arango::Error.new(err: "Document with key required!") unless document.key?(:_key)
-          request = { head: "_api/document/#{collection.name}/#{document[:_key]}" }
+          headers = { }
           if document.key?(:_key) && document.key?(:_rev) && match_rev == true
-            request[:headers] = {'If-Match' => document[:_rev] }
+            headers[:'If-Match'] = document[:_rev]
           elsif document.key?(:_key) && document.key?(:_rev) && match_rev == false
-            request[:headers] = {'If-None-Match' => document[:_rev] }
+            headers[:'If-None-Match'] = document[:_rev]
           end
-          request[:block] = ->(result) do
-            case result.response_code
-            when 200 then true # document was found
-            when 304 then true # “If-None-Match” header is given and the document has the same version
-            when 412 then true # “If-Match” header is given and the found document has a different version.
-            else
-              false
-            end
+          args = { collection: collection.name, key: document[:_key] }
+          begin
+            Arango::Requests::Document::Head.execute(server: collection.server, args: args, headers: headers)
+          rescue Error
+            return false
           end
-          request
+          true
         end
 
-        Arango.request_class_method(base, :create_documents) do |documents, wait_for_sync: nil, collection:|
+        def create_documents (documents, wait_for_sync: nil, collection:)
           documents = [documents] unless documents.is_a? Array
           documents = documents.map{ |d| _attributes_from_arg(d) }
-          query = { returnNew: true }
-          query[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
-          { post: "_api/document/#{collection.name}", body: documents, query: query, block: ->(result) do
-            result.map do |doc|
-              Arango::Document::Base.new(attributes: doc[:new], collection: collection)
-            end
+          params = { returnNew: true }
+          params[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
+          args = { collection: collection.name }
+          result = Arango::Requests::Document::CreateMultiple.execute(server: collection.server, args: args, params: params, body: documents)
+          result.map do |doc|
+            Arango::Document::Base.new(attributes: doc, collection: collection)
           end
-          }
         end
 
-        Arango.request_class_method(base, :get) do |key: nil, attributes: {}, collection: nil, database: nil|
+        def get (key: nil, attributes: {}, collection: nil, database: nil)
           document = _attributes_from_arg(attributes)
           document[:_key] = key if key
           if document.key?(:_key)
-            { get: "_api/document/#{collection.name}/#{document[:_key]}", block: ->(result) { Arango::Document::Base.new(attributes: result, collection: collection) }}
+            args = {collection: collection.name, key: document[:_key] }
+            result = Arango::Requests::Document::Get.execute(server: collection.server, args: args)
+            Arango::Document::Base.new(attributes: result, collection: collection)
           else
             bind_vars = {}
             query = "FOR doc IN #{collection.name}"
@@ -110,28 +114,27 @@ module Arango
             query << "\n RETURN doc"
             database = collection.database unless database
             aql = AQL.new(query: query, database: database, bind_vars: bind_vars, block: ->(_, result) do
-              Arango::Document::Base.new(attributes: result.result.first, collection: collection) if result.result.first
-            end
-            )
+                            Arango::Document::Base.new(attributes: result.result.first, collection: collection) if result.result.first
+                          end
+                         )
             aql.request
           end
         end
         base.singleton_class.alias_method :fetch, :get
         base.singleton_class.alias_method :retrieve, :get
-        base.singleton_class.alias_method :batch_fetch, :batch_get
-        base.singleton_class.alias_method :batch_retrieve, :batch_get
 
-        Arango.multi_request_class_method(base, :get_documents) do |documents, collection:|
+        def get_documents (documents, collection:)
           documents = [documents] unless documents.is_a? Array
           documents = documents.map{ |d| _attributes_from_arg(d) }
-          requests = []
+          results = []
           result_documents = []
+          args = { collection: collection.name }
           documents.each do |document|
             if document.key?(:_key)
-              requests << { get: "_api/document/#{collection.name}/#{document[:_key]}", block: ->(result) do
-                result_documents << Arango::Document::Base.new(attributes: result, collection: collection)
-              end
-              }
+              args[:key] = document[:_key]
+              result = Arango::Requests::Document::Get.execute(server: collection.server, args: args)
+              results << result
+              result_documents << Arango::Document::Base.new(attributes: result, collection: collection)
             else
               bind_vars = {}
               query = "FOR doc IN #{collection.name}"
@@ -149,15 +152,13 @@ module Arango
                 result_documents
               end
               )
-              requests << aql.request
+              results << aql.request
             end
           end
-          requests
+          results
         end
         base.singleton_class.alias_method :fetch_documents, :get_documents
         base.singleton_class.alias_method :retrieve_documents, :get_documents
-        base.singleton_class.alias_method :batch_fetch_documents, :batch_get_documents
-        base.singleton_class.alias_method :batch_retrieve_documents, :batch_get_documents
 
         Arango.request_class_method(base, :replace_documents) do |documents, ignore_revs: false, wait_for_sync: nil, collection:|
           documents = [documents] unless documents.is_a? Array
@@ -186,31 +187,25 @@ module Arango
           }
         end
 
-        Arango.request_class_method(base, :drop) do |key: nil, attributes: {}, ignore_revs: false, wait_for_sync: nil, collection:|
+        def delete (key: nil, attributes: {}, ignore_revs: false, wait_for_sync: nil, collection:)
           document = _attributes_from_arg(attributes)
           document[:_key] = key if key
-          query = { ignoreRevs: ignore_revs }
-          query[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
+          params = { }
+          params[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
           headers = nil
           headers = { "If-Match": document[:_rev] } if !ignore_revs && document.key?(:_rev)
-          { delete: "_api/document/#{collection.name}/#{document[:_key]}", query: query, headers: headers, block: ->(_) { nil }}
+          args = {collection: collection.name, key: document[:_key]}
+          Arango::Requests::Document::Delete.execute(server: collection.server, args: args, headers: headers, params: params)
         end
-        base.singleton_class.alias_method :delete, :drop
-        base.singleton_class.alias_method :destroy, :drop
-        base.singleton_class.alias_method :batch_delete, :batch_drop
-        base.singleton_class.alias_method :batch_destroy, :batch_drop
 
-        Arango.request_class_method(base, :drop_documents) do |documents, ignore_revs: false, wait_for_sync: nil, collection:|
+        def delete_documents (documents, ignore_revs: false, wait_for_sync: nil, collection:)
           documents = [documents] unless documents.is_a? Array
           documents = documents.map{ |d| _attributes_from_arg(d) }
-          query = { ignoreRevs: ignore_revs }
-          query[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
-          { delete: "_api/document/#{collection.name}", body: documents, query: query, block: ->(_) { nil }}
+          params = { }
+          params[:waitForSync] = wait_for_sync unless wait_for_sync.nil?
+          args = {collection: collection.name }
+          Arango::Requests::Document::DeleteMultiple.execute(server: collection.server, args: args, params: params, body: documents)
         end
-        base.singleton_class.alias_method :delete_documents, :drop_documents
-        base.singleton_class.alias_method :destroy_documents, :drop_documents
-        base.singleton_class.alias_method :batch_delete_documents, :batch_drop_documents
-        base.singleton_class.alias_method :batch_destroy_documents, :batch_drop_documents
 
         private
 
@@ -227,7 +222,7 @@ module Arango
           when Arango::Document::Mixin then arg.to_h
           when Arango::Result then arg.to_h
           else
-            raise "Unknown arg type, must be String, Hash, Arango::Result or Arango::Document but was #{arg.class}"
+            raise "Unknown arg type '#{arg.class}', must be String, Hash, Arango::Result or Arango::Document but was #{arg.class}"
           end
         end
       end

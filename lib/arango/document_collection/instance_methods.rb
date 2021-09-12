@@ -15,7 +15,7 @@ module Arango
                      properties: {})
         @database = database if database
         @graph = graph if graph
-        @aql = nil
+        @cursor = nil
         @batch_proc = nil
         @id = id
         @globally_unique_id = globally_unique_id
@@ -313,28 +313,28 @@ module Arango
       end
       alias update save
 
-      # Request next batch from a batched request.
-      # @return value depending on original batched request.
+      # Request next batch from a cursor.
+      # @return value depending on original query.
       def next_batch
         return unless has_more?
-        result = @aql.next
+        @cursor = Arango::Requests::Cursor::NextBatch.execute(server: self.server, args: { id: @cursor[:id] })
         final_result = if @batch_proc
-                         @batch_proc.call(result)
+                         @batch_proc.call(@cursor)
                        else
-                         result
+                         @cursor
                        end
-        unless @aql.has_more?
-          @aql = nil
+        unless @cursor[:has_more]
+          @cursor = nil
           @batch_proc = nil
         end
         final_result
       end
 
-      # Check if more results are available for a betched request.
+      # Check if more results are available for a cursor
       # @return [Boolean]
       def has_more?
-        return false unless @aql
-        @aql.has_more?
+        return false unless @cursor
+        @cursor[:has_more]
       end
 
       private

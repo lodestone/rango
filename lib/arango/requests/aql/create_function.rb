@@ -1,8 +1,8 @@
 module Arango
   module Requests
     module Aql
-      class DeleteFunction < Arango::Request
-        request_method :delete
+      class CreateFunction < Arango::Request
+        request_method :post
 
         uri_template "/_api/aqlfunction/{name}"
 

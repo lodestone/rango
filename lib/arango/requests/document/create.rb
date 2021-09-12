@@ -12,7 +12,7 @@ module Arango
         param :silent
         param :wait_for_sync
 
-        body :any, :allowed
+        body_any
 
         code 201, :success
         code 202, :success

@@ -27,14 +27,14 @@ module Arango
         @collection = collection
         @graph = @collection.graph
         @database = @collection.database
-        @arango_server = @database.arango_server
+        @server = @database.server
       end
 
       def graph=(graph)
         satisfy_module?(graph, Arango::Graph::Mixin)
         @graph = graph
         @database = @graph.database
-        @arango_server = @graph.arango_server
+        @server = @graph.server
       end
 
       def id
@@ -89,108 +89,107 @@ module Arango
         super(name, *args, &block)
       end
 
-      request_method :create do
-        query = { returnNew: true }
-        query[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
-        @attributes = @attributes.merge(@changed_attributes)
+      def create
+        params = { returnNew: true }
+        params[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
+        @attributes.merge!(@changed_attributes)
         @changed_attributes = {}
-        if @graph
-          { post: "_api/gharial/#{@graph.name}/vertex/#{@collection.name}",
-            block: ->(result) { @attributes.merge!(result[:new]); self },
-            formatted_request: Arango::RequestFormats::VertexCreate.new(body: @attributes, query: query) }
+        result = if @graph
+          Arango::Requests::Graph::CreateVertex.execute(server: @server, args: @attributes, params: params)
         else
-          { post: "_api/document/#{@collection.name}",
-            block: ->(result) { @attributes.merge!(result[:new]); self },
-            formatted_request: Arango::RequestFormats::DocumentCreate.new(body: @attributes, query: query) }
+          args = { collection: @collection.name }
+          Arango::Requests::Document::Create.execute(server: @server, args: args, body: @attributes, params: params)
         end
+        @attributes.merge!(result.new)
+        self
       end
 
-      request_method :reload do
-        # TODO conditional
-        if @graph
-          headers = {}
+      def reload
+        headers = {}
+        result = if @graph
           headers[:"If-Match"] = @attributes[:_rev] if if_match
-          @graph.request("GET", "vertex/#{@collection.name}/#{@attributes[:_key]}", headers: headers, key: :vertex)
+          args = { collection: @collection.name, vertex: @attributes[:_key] }
+          Arango::Requests::Graph::GetVertex.execute(server: @server, headers: headers, args: args)
+        else
+          headers = { "If-Match": @attributes[:_rev] } if !@ignore_revs && @attributes.key?(:_rev)
+          args = { collection: @collection.name, key: @attributes[:_key] }
+          Arango::Requests::Document::Get.execute(server: @server, headers: headers, args: args)
         end
-        headers = nil
-        headers = { "If-Match": @attributes[:_rev] } if !@ignore_revs && @attributes.key?(:_rev)
-        { get: "_api/document/#{@collection.name}/#{@attributes[:_key]}", headers: headers,
-          block: ->(result) do
-            @attributes = _attributes_from_arg(result)
-            @changed_attributes = {}
-            self
-          end
-        }
+        @attributes = _attributes_from_arg(result)
+        @changed_attributes = {}
       end
 
-      request_method :same_revision? do
+      # is the same revision stored in the DB ?
+      def same_revision?
         headers = { "If-Match": @attributes[:_rev] }
-        { head: "_api/document/#{@collection.name}/#{@attributes[:_key]}", headers: headers, block: ->(result) { result.response_code == 200 }}
+        args = { collection: @collection.name, key: @attributes[:_key] }
+        begin
+          Arango::Requests::Document::Get.execute(server: @server, headers: headers, args: args)
+        rescue Error => e
+          return false
+        end
+        true
       end
 
-      request_method :replace do
-        # TODO conditional
-        if @graph
+      def replace
+        headers = {}
+        result = if @graph
           headers[:"If-Match"] = @attributes[:_rev] if if_match
-          result = @graph.request("PUT", "vertex/#{@collection.name}/#{@attributes[:_key]}",
-                                  body: attributes, query: query, headers: headers, key: :vertex)
+          args = { graph: @graph.name, collection: @collection.name, vertex: @attributes[:_key] }
+          Arango::Requests::Graph::UpdateVertex.execute(server: @server, args: args, headers: headers)
+        else
+          query = { returnNew: true, ignoreRevs: @ignore_revs }
+          query[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
+          headers = nil
+          attributes = @changed_attributes
+          attributes[:_id] = @attributes[:_id]
+          attributes[:_key] = @attributes[:_key]
+          attributes[:_rev] = @attributes[:_rev]
+          @attributes = attributes
+          @changed_attributes = {}
+          headers = { "If-Match": @attributes[:_rev] } if !@ignore_revs && @attributes.key?(:_rev)
+          args = { collection: @collection.name, key: @attributes[:_key] }
+          Arango::Requests::Document::Update.execute(server: @server, args: args, headers: headers, body: @attributes)
         end
-        query = { returnNew: true, ignoreRevs: @ignore_revs }
-        query[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
-        headers = nil
-        attributes = @changed_attributes
-        attributes[:_id] = @attributes[:_id]
-        attributes[:_key] = @attributes[:_key]
-        attributes[:_rev] = @attributes[:_rev]
-        @attributes = attributes
-        @changed_attributes = {}
-        headers = { "If-Match": @attributes[:_rev] } if !@ignore_revs && @attributes.key?(:_rev)
-        { put: "_api/document/#{@collection.name}/#{@attributes[:_key]}", body: @attributes, query: query, headers: headers,
-          block: ->(result) do
-            @attributes.merge!(result[:new])
-            self
-          end
-        }
+        @attributes.merge!(@attributes)
+        self
       end
 
-      request_method :save do
-        # TODO conditional
-        if @graph
+      def save
+        headers = { }
+        result = if @graph
           headers[:"If-Match"] = @attributes[:_rev] if if_match
-          result = @graph.request("PATCH", "vertex/#{@collection.name}/#{@attributes[:_key]}", body: attributes,
-                                  query: query, headers: headers, key: :vertex)
+          args = { graph: @graph.name, collection: @collection.name, vertex: @attributes[:_key] }
+          Arango::Requests::Graph::UpdateVertex.execute(server: @server, args: args, headers: headers)
+        else
+          query = { returnNew: true, ignoreRevs: @ignore_revs }
+          query[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
+          headers[:"If-Match"] =  @attributes[:_rev] if !@ignore_revs && @attributes.key?(:_rev)
+          changed_attributes = @changed_attributes
+          @changed_attributes = {}
+          args = { collection: @collection.name, key: @attributes[:_key] }
+          rev = Arango::Requests::Document::Update.execute(server: @server, args: args, headers: headers, body: changed_attributes)[:_rev]
+          changed_attributes.merge({ _rev: rev })
         end
-        query = { returnNew: true, ignoreRevs: @ignore_revs }
-        query[:waitForSync] = @wait_for_sync unless @wait_for_sync.nil?
-        headers = nil
-        headers = { "If-Match": @attributes[:_rev] } if !@ignore_revs && @attributes.key?(:_rev)
-        changed_attributes = @changed_attributes
-        @changed_attributes = {}
-        { patch: "_api/document/#{@collection.name}/#{@attributes[:_key]}", body: changed_attributes, query: query, headers: headers,
-          block: ->(result) do
-            @attributes.merge!(result[:new])
-            self
-          end
-        }
+        @attributes.merge!(result)
+        self
       end
       alias update save
-      alias batch_update batch_save
 
-      request_method :drop do
-        # TODO conditional
+      def delete
+        headers = { }
         if @graph
           headers[:"If-Match"] = @attributes[:_rev] if if_match
-          result = @graph.request("DELETE", "vertex/#{@collection.name}/#{@attributes[:_key]}")
+          args = { graph: @graph.name, collection: @collection.name, vertex: @attributes[:_key] }
+          Arango::Requests::Graph::Delete.execute(server: @server, args: args, headers: headers)
+        else
+          query = { waitForSync: @wait_for_sync }
+          headers[:"If-Match"] = @attributes[:_rev] if !@ignore_revs && @attributes.key?(:_rev)
+          args = { collection: @collection.name, key: @attributes[:_key] }
+          Arango::Requests::Document::Delete.execute(server: @server, args: args, headers: headers)
         end
-        query = { waitForSync: @wait_for_sync }
-        headers = nil
-        headers = { "If-Match": @attributes[:_rev] } if !@ignore_revs && @attributes.key?(:_rev)
-        { delete: "_api/document/#{@collection.name}/#{@attributes[:_key]}", query: query, headers: headers, block: ->(_) { nil }}
+        nil
       end
-      alias delete drop
-      alias destroy drop
-      alias batch_delete batch_drop
-      alias batch_destroy batch_drop
 
       private
 
@@ -207,7 +206,7 @@ module Arango
         when Arango::Document::Mixin then arg.to_h
         when Arango::Result then arg.to_h
         else
-          raise "Unknown arg type, must be String, Hash, Arango::Result or Arango::Document but was #{arg.class}"
+          raise "Unknown arg type '#{arg.class}', must be String, Hash, Arango::Result or Arango::Document but was #{arg.class}"
         end
       end
     end
