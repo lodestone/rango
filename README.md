@@ -6,10 +6,10 @@
 </h1>
 
 [ArangoDatabase](https://www.arangodb.com/) is a native multi-model database with flexible data models for document, graphs, and key-values.
-arango-driver is a Gem to use ArangoDB with Ruby. arango-driver is based on the [HTTP API of ArangoDB](https://docs.arangodb.com/3.5/HTTP/index.html)
-and its [Error Codes](https://www.arangodb.com/docs/3.5/appendix-error-codes.html).
+arango-driver is a Gem to use ArangoDB with Ruby. arango-driver is based on the [HTTP API of ArangoDB](https://docs.arangodb.com/3.8/HTTP/index.html)
+and its [Error Codes](https://www.arangodb.com/docs/3.8/appendix-error-codes.html).
 
-The version of arango-driver follows the ArangoDB version, version 3.5.x of the driver is meant to be used with ArangoDB 3.5.y, where x and y may differ. 
+The version of arango-driver follows the ArangoDB version, version 3.8.x of the driver is meant to be used with ArangoDB 3.8.y, where x and y may differ. 
 
 This doesnt work yet, gem not published yet:
 To install arango-driver: `gem install arango-driver` 
@@ -17,7 +17,7 @@ To use it in your application: `require "arango-driver"`
 Please install from the repo instead.
 
 ## Community and Support
-At the [Isomorfeus Framework Project](http://isomorfeus.com). There is a #arango_driver channel at the isomorfeus Slack space.
+Please open issues at the [arango-driver github project](https://github.com/kkaempf/arango-driver)
 
 # This is currently WIP, the information below is mostly obsolete. See spec/*_spec.rb files for currently supported things and usage.
 
@@ -26,6 +26,7 @@ At the [Isomorfeus Framework Project](http://isomorfeus.com). There is a #arango
 arango-driver has the two type of classes.
 
 Classes relative to ArangoDB elements:
+
 * [Arango::Server](#ArangoServer): to manage a Server
 * [Arango::Database](#ArangoDatabase): to manage a Database
 * [Arango::Collection](#ArangoCollection): to manage a Collection
@@ -40,7 +41,6 @@ Classes relative to ArangoDB elements:
 * [Arango::Task](#ArangoTask): to manage a Task
 * [Arango::Transaction](#ArangoTransaction): to manage a Transaction
 * [Arango::Replication](#ArangoReplication): to manage a Replication
-* [Arango::Batch](#ArangoBatch): to manage a Batch of multiple requests
 * [Arango::Foxx](#ArangoFoxx): to manage a Foxx instance
 * [Arango::View](#ArangoView): to manage a View instance
 

@@ -1,7 +1,9 @@
 module Arango
   module Graph
     module Mixin
+      #@!visibility private
       def self.included(base)
+      #@!visibility public
         base.extend(Arango::Graph::ClassMethods)
         base.include(Arango::Graph::InstanceMethods)
         # base.include(Arango::Graph::Definition)

@@ -1,7 +1,9 @@
 module Arango
   module Edge
     module ClassMethods
+      #@!visibility private
       def self.extended(base)
+      #@!visibility public
         # returns Array of Edge
         def all (offset: 0, limit: nil, batch_size: nil, edge_collection:)
           bind_vars = {}

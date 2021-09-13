@@ -4,7 +4,9 @@ module Arango
     TYPES = %i[unknown unknown document edge] # do not sort, index is used
 
     module Mixin
+      #@!visibility private
       def self.included(base)
+      #@!visibility public
         base.extend(Arango::DocumentCollection::ClassMethods)
         base.include(Arango::DocumentCollection::InstanceMethods)
         base.include(Arango::DocumentCollection::Documents)

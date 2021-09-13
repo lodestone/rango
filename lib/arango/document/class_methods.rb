@@ -1,7 +1,9 @@
 module Arango
   module Document
     module ClassMethods
+      #@!visibility private
       def self.extended(base)
+      #@!visibility public
         def all (offset: 0, limit: nil, batch_size: nil, collection:)
           bind_vars = {}
           query = "FOR doc IN #{collection.name}"
