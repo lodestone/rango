@@ -97,7 +97,6 @@ describe Arango::EdgeCollection do
       collections = @database.all_collections
       list = collections.map(&:name)
       expect(list).to include("MyCollection")
-      expect(collections.first.class).to be Arango::EdgeCollection::Base
     end
   end
 
