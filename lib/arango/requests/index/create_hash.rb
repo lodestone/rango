@@ -4,14 +4,14 @@ module Arango
       class CreateHash < Arango::Request
         request_method :post
 
-        uri_template '{/dbcontext}/_api/index#hash'
+        uri_template '{/dbcontext}/_api/index'
 
         param :collection, :required
 
         body :deduplicate
         body :fields
         body :sparse
-        body :type
+        body :type, :required
         body :unique
 
         code 200, :success

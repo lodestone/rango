@@ -3,10 +3,16 @@
 module Arango
   class Index
     include Arango::Helper::Satisfaction
+    include Arango::Helper::DatabaseAssignment
+    def self.list(collection:)
+      params = { collection: collection.name }
+      Arango::Requests::Index::ListAll.execute(server: collection.database.server, params: params)
+    end
 
     def initialize(collection:, fields:, body: {}, cache_name: nil, deduplicate: nil, geo_json: nil, id: nil, min_length: nil, sparse: nil,
                    type: "hash", unique: nil)
-      assign_collection(collection)
+      @collection = collection
+      assign_database(@collection.database)
       unless cache_name.nil?
         @cache_name = cache_name
         @server.cache.save(:index, cache_name, self)
@@ -17,8 +23,8 @@ module Arango
       body[:unique]      ||= unique
       body[:fields]      ||= fields.is_a?(String) ? [fields] : fields
       body[:deduplicate] ||= deduplicate
-      body[:geoJson]     ||= geo_json
-      body[:minLength]   ||= min_length
+      body[:geo_json]     ||= geo_json
+      body[:min_length]   ||= min_length
 
       assign_attributes(body)
     end
@@ -45,10 +51,6 @@ module Arango
       @geo_json     = result[:geoJson]     || @geo_json
       @min_length   = result[:minLength]   || @min_length
       @deduplicate = result[:deduplicate] || @deduplicate
-      if @server.active_cache && @cache_name.nil?
-        @cache_name = "#{@database.name}/#{@collection.name}/#{@id}"
-        @server.cache.save(:index, @cache_name, self)
-      end
     end
     alias assign_attributes body=
 
@@ -73,29 +75,56 @@ module Arango
 
 # === COMMANDS ===
 
-    def retrieve
-      result = @database.request("GET", "_api/index/#{@id}")
-      return_element(result)
+    def get
+      args = {id: @id}
+      Arango::Requests::Index::Get(server: @database.server, args: args)
     end
 
     def create
       body = {
         fields:      @fields,
-        unique:      @unique,
-        type:        @type,
-        id:          @id,
-        geoJson:     @geo_json,
-        minLength:   @min_length,
-        deduplicate: @deduplicate
+        type:        @type
       }
-      query = { collection: @collection.name }
-      result = @database.request("POST", "_api/index", body: body, query: query)
-      return_element(result)
+      params = { collection: @collection.name }
+      result = case @type.to_sym
+               when :hash
+                 body[:deduplicate] = @deduplicate if @deduplicate
+                 body[:sparse] = @sparse if @sparse
+                 body[:unique] = @unique if @unique
+                 Arango::Requests::Index::CreateHash.execute(server: @database.server, params: params, body: body)
+               when :fulltext
+                 body[:min_length] = @min_length if @min_length
+                 Arango::Requests::Index::CreateFulltext.execute(server: @database.server, params: params, body: body)
+               when :general
+                 body[:deduplicate] = @deduplicate if @deduplicate
+                 body[:name] = @name if @name
+                 body[:sparse] = @sparse if @sparse
+                 body[:unique] = @unique if @unique
+                 Arango::Requests::Index::CreateGeneral.execute(server: @database.server, params: params, body: body)
+               when :geo
+                 body[:geo_jso] = @geo_json if @geo_json
+                 Arango::Requests::Index::CreateGeo.execute(server: @database.server, params: params, body: body)
+               when :persistent
+                 body[:sparse] = @sparse if @sparse
+                 body[:unique] = @unique if @unique
+                 Arango::Requests::Index::CreatePersistent.execute(server: @database.server, params: params, body: body)
+               when :skiplist
+                 body[:deduplicate] = @deduplicate if @deduplicate
+                 body[:sparse] = @sparse if @sparse
+                 body[:unique] = @unique if @unique
+                 Arango::Requests::Index::CreateSkiplist.execute(server: @database.server, params: params, body: body)
+               when :ttl
+                 body[:expire_after] = @expire_after if @expire_after
+                 Arango::Requests::Index::CreateTtl.execute(server: @database.server, params: params, body: body)
+               else
+                 raise "Unknown index type #{@type.to_sym}"
+               end
+      result
     end
 
-    def destroy
-      result = @database.request("DELETE", "_api/index/#{@id}")
-      return_delete(result)
+    def delete
+      args = {id: @id}
+      Arango::Requests::Index::Delete.execute(server: @database.server, args: args)
     end
   end
 end
