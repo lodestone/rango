@@ -24,7 +24,7 @@ module Arango
           options[:headers] = {} unless options.key?(:headers)
           options[:headers] = options[:headers].merge(headers)
         end
-
+#        options[:verbose] = true
         begin
 #          STDERR.puts "\n#{request_method} #{uri} #{options}"
           response = ::Typhoeus.send(request_method, uri, options)
