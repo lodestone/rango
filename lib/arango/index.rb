@@ -86,40 +86,33 @@ module Arango
         type:        @type
       }
       params = { collection: @collection.name }
-      result = case @type.to_sym
-               when :hash
-                 body[:deduplicate] = @deduplicate if @deduplicate
-                 body[:sparse] = @sparse if @sparse
-                 body[:unique] = @unique if @unique
-                 Arango::Requests::Index::CreateHash.execute(server: @database.server, params: params, body: body)
-               when :fulltext
-                 body[:min_length] = @min_length if @min_length
-                 Arango::Requests::Index::CreateFulltext.execute(server: @database.server, params: params, body: body)
-               when :general
-                 body[:deduplicate] = @deduplicate if @deduplicate
-                 body[:name] = @name if @name
-                 body[:sparse] = @sparse if @sparse
-                 body[:unique] = @unique if @unique
-                 Arango::Requests::Index::CreateGeneral.execute(server: @database.server, params: params, body: body)
-               when :geo
-                 body[:geo_jso] = @geo_json if @geo_json
-                 Arango::Requests::Index::CreateGeo.execute(server: @database.server, params: params, body: body)
-               when :persistent
-                 body[:sparse] = @sparse if @sparse
-                 body[:unique] = @unique if @unique
-                 Arango::Requests::Index::CreatePersistent.execute(server: @database.server, params: params, body: body)
-               when :skiplist
-                 body[:deduplicate] = @deduplicate if @deduplicate
-                 body[:sparse] = @sparse if @sparse
-                 body[:unique] = @unique if @unique
-                 Arango::Requests::Index::CreateSkiplist.execute(server: @database.server, params: params, body: body)
-               when :ttl
-                 body[:expire_after] = @expire_after if @expire_after
-                 Arango::Requests::Index::CreateTtl.execute(server: @database.server, params: params, body: body)
-               else
-                 raise "Unknown index type #{@type.to_sym}"
-               end
-      result
+      case @type.to_sym
+      when :hash
+        body[:deduplicate] = @deduplicate if @deduplicate
+        body[:sparse] = @sparse if @sparse
+        body[:unique] = @unique if @unique
+      when :fulltext
+        body[:min_length] = @min_length if @min_length
+      when :general
+        body[:deduplicate] = @deduplicate if @deduplicate
+        body[:name] = @name if @name
+        body[:sparse] = @sparse if @sparse
+        body[:unique] = @unique if @unique
+      when :geo
+        body[:geo_jso] = @geo_json if @geo_json
+      when :persistent
+        body[:sparse] = @sparse if @sparse
+        body[:unique] = @unique if @unique
+      when :skiplist
+        body[:deduplicate] = @deduplicate if @deduplicate
+        body[:sparse] = @sparse if @sparse
+        body[:unique] = @unique if @unique
+      when :ttl
+        body[:expire_after] = @expire_after if @expire_after
+      else
+        raise "Unknown index type #{@type.to_sym}"
+      end
+      Arango::Requests::Index::Create.execute(server: @database.server, params: params, body: body)
     end
 
     def delete
