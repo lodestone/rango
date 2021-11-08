@@ -10,6 +10,7 @@ module Arango
 
         body :deduplicate
         body :fields
+        body :inBackground
         body :sparse
         body :type, :required
         body :unique

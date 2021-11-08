@@ -31,13 +31,28 @@ describe Arango::Index do
 
   context "Index" do
     it "can create a new index" do
-      index = Arango::Index.new(collection: @collection, fields: ["checksum"], id: "TestIndex")
+      index = Arango::Index.new(collection: @collection, fields: ["checksum"])
       result = index.create
       expect(result.response_code).to eq 201
+      expect(index.id.class).to be String
     end
     it "can list existing indices" do
-      result = Arango::Index.list(collection: @collection)
-      expect(result.indexes.class).to be Array
+      Arango::Index.new(collection: @collection, fields: ["checksum"]).create
+      indexes = Arango::Index.list(collection: @collection)
+      expect(indexes).not_to be_nil
+      expect(indexes.size).to be >= 1
+      expect(indexes.map{|i| i.fields}.flatten).to include "checksum"
+    end
+    it "can retrieve a single index" do
+      index = Arango::Index.new(collection: @collection, fields: ["checksum"]).create
+      result = Arango::Index.get(collection: @collection, id: index.id)
+      expect(result.response_code).to eq 200
+    end
+    it "can delete an index" do
+      index = Arango::Index.new(collection: @collection, fields: ["checksum"])
+      index.create
+      result = index.delete
+      expect(result.response_code).to eq 200
     end
   end
 

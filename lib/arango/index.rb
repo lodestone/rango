@@ -6,10 +6,24 @@ module Arango
     include Arango::Helper::DatabaseAssignment
     def self.list(collection:)
       params = { collection: collection.name }
-      Arango::Requests::Index::ListAll.execute(server: collection.database.server, params: params)
+      result = Arango::Requests::Index::ListAll.execute(server: collection.database.server, params: params)
+      if result.response_code == 200
+        return result.indexes.map do |v|
+           self.new collection: collection, fields: v[:fields], type: v[:type], deduplicate: v[:deduplicate],
+                    geo_json: v[:geo_json], min_length: v[:min_length], sparse: v[:sparse], unique: v[:unique]
+        end
+      end
+      # FIXME - raise error
+      nil
     end
 
-    def initialize(collection:, fields:, body: {}, cache_name: nil, deduplicate: nil, geo_json: nil, id: nil, min_length: nil, sparse: nil,
+    # id is "CollectionName/XXXX"
+    def self.get collection:, id:
+      c, i = id.split '/' # Requests would convert / to %2F
+      Arango::Requests::Index::Get.execute(server: collection.database.server, args: {collection: c, id: i})
+    end
+
+    def initialize(collection:, fields:, name: nil, cache_name: nil, deduplicate: nil, geo_json: nil, min_length: nil, sparse: nil,
                    type: "hash", unique: nil)
       @collection = collection
       assign_database(@collection.database)
@@ -17,8 +31,9 @@ module Arango
         @cache_name = cache_name
         @server.cache.save(:index, cache_name, self)
       end
+      body = {}
       body[:type]        ||= type
-      body[:id]          ||= id
+      body[:name]        ||= name
       body[:sparse]      ||= sparse
       body[:unique]      ||= unique
       body[:fields]      ||= fields.is_a?(String) ? [fields] : fields
@@ -40,8 +55,7 @@ module Arango
     end
     alias assign_type type=
 
-    def body=(result)
-      @body        = result
+    def assign_attributes(result)
       @id          = result[:id] || @id
       @key         = @id&.split("/")&.dig(1)
       @type        = assign_type(result[:type] || @type)
@@ -52,7 +66,6 @@ module Arango
       @min_length   = result[:minLength]   || @min_length
       @deduplicate = result[:deduplicate] || @deduplicate
     end
-    alias assign_attributes body=
 
 # === DEFINE ===
 
@@ -74,11 +87,6 @@ module Arango
     end
 
 # === COMMANDS ===
-
-    def get
-      args = {id: @id}
-      Arango::Requests::Index::Get(server: @database.server, args: args)
-    end
 
     def create
       body = {
@@ -112,12 +120,14 @@ module Arango
       else
         raise "Unknown index type #{@type.to_sym}"
       end
-      Arango::Requests::Index::Create.execute(server: @database.server, params: params, body: body)
+      result = Arango::Requests::Index::Create.execute(server: @database.server, params: params, body: body)
+      assign_attributes result
+      result
     end
 
     def delete
-      args = {id: @id}
-      Arango::Requests::Index::Delete.execute(server: @database.server, args: args)
+      c, i = @id.split '/' # Requests would convert / to %2F
+      Arango::Requests::Index::Delete.execute(server: @database.server, args: { collection: c, id: i})
     end
   end
 end
