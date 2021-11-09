@@ -132,36 +132,37 @@ module Arango
         base.singleton_class.alias_method :fetch, :get
         base.singleton_class.alias_method :retrieve, :get
 
-        def get_documents (documents, collection:)
-          documents = [documents] unless documents.is_a? Array
-          documents = documents.map{ |d| _attributes_from_arg(d) }
+        # get documents by attribute(s)
+        def get_documents (attributes, collection:)
+          attributes = [attributes] unless attributes.is_a? Array
+          attributes = attributes.map{ |a| _attributes_from_arg(a) }
           results = []
-          result_documents = []
           args = { collection: collection.name }
-          documents.each do |document|
-            if document.key?(:_key)
-              args[:key] = document[:_key]
+          attributes.each do |attribute|
+            if attribute.key?(:_key)
+              args[:key] = attribute[:_key]
               result = Arango::Requests::Document::Get.execute(server: collection.server, args: args)
-              results << result
-              result_documents << Arango::Document::Base.new(attributes: result, collection: collection)
+              results << Arango::Document::Base.new(attributes: result, collection: collection)
             else
               bind_vars = {}
               query = "FOR doc IN #{collection.name}"
               i = 0
-              document.each do |k,v|
+              attribute.each do |k,v|
                 i += 1
                 query << "\n FILTER doc.@key#{i} == @value#{i}"
                 bind_vars["key#{i}"] = k.to_s
                 bind_vars["value#{i}"] = v
               end
-              query << "\n LIMIT 1"
               query << "\n RETURN doc"
               aql = AQL.new(query: query, database: collection.database, bind_vars: bind_vars, block: ->(_, result) do
-                result_documents << Arango::Document::Base.new(attributes: result.result.first, collection: collection) if result.result.first
-                result_documents
+                documents = []
+                result.result.each do |r|
+                  documents << Arango::Document::Base.new(attributes: r, collection: collection)
+                end
+                documents
               end
               )
-              results << aql.request
+              results += aql.request
             end
           end
           results
