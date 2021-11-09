@@ -31,9 +31,8 @@ describe Arango::Index do
 
   context "Index" do
     it "can create a new index" do
-      index = Arango::Index.new(collection: @collection, fields: ["checksum"])
-      result = index.create
-      expect(result.response_code).to eq 201
+      index = Arango::Index.new(collection: @collection, fields: ["checksum"]).create
+      expect(index.is_newly_created).to be true
       expect(index.id.class).to be String
     end
     it "can list existing indices" do
@@ -43,7 +42,7 @@ describe Arango::Index do
       expect(indexes.size).to be >= 1
       expect(indexes.map{|i| i.fields}.flatten).to include "checksum"
     end
-    it "can retrieve a single index" do
+    it "can retrieve a single index by id" do
       index = Arango::Index.new(collection: @collection, fields: ["checksum"]).create
       result = Arango::Index.get(collection: @collection, id: index.id)
       expect(result.response_code).to eq 200
@@ -53,6 +52,12 @@ describe Arango::Index do
       index.create
       result = index.delete
       expect(result.response_code).to eq 200
+    end
+    it "handles a duplicate create gracefully" do
+      i1 = Arango::Index.new(collection: @collection, fields: ["checksum"]).create
+      expect(i1.is_newly_created).to be true
+      i2 = Arango::Index.new(collection: @collection, fields: ["checksum"]).create
+      expect(i2.is_newly_created).to be false
     end
   end
 

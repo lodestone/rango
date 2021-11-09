@@ -23,7 +23,7 @@ module Arango
       Arango::Requests::Index::Get.execute(server: collection.database.server, args: {collection: c, id: i})
     end
 
-    def initialize(collection:, fields:, name: nil, cache_name: nil, deduplicate: nil, geo_json: nil, min_length: nil, sparse: nil,
+    def initialize(collection:, fields:, cache_name: nil, deduplicate: nil, geo_json: nil, min_length: nil, sparse: nil,
                    type: "hash", unique: nil)
       @collection = collection
       assign_database(@collection.database)
@@ -33,7 +33,6 @@ module Arango
       end
       body = {}
       body[:type]        ||= type
-      body[:name]        ||= name
       body[:sparse]      ||= sparse
       body[:unique]      ||= unique
       body[:fields]      ||= fields.is_a?(String) ? [fields] : fields
@@ -46,8 +45,8 @@ module Arango
 
 # === DEFINE ===
 
-    attr_accessor :cache_name, :deduplicate, :fields, :geo_json, :id, :key, :min_length, :sparse, :unique
-    attr_reader :collection, :database, :server, :type
+    attr_accessor :cache_name, :deduplicate, :fields, :geo_json, :min_length, :sparse, :unique
+    attr_reader :collection, :database, :server, :type, :name, :id, :key, :is_newly_created
 
     def type=(type)
       satisfy_category?(type, %w[hash skiplist persistent geo fulltext primary])
@@ -57,14 +56,17 @@ module Arango
 
     def assign_attributes(result)
       @id          = result[:id] || @id
+      @name        = result[:name] || @name
       @key         = @id&.split("/")&.dig(1)
       @type        = assign_type(result[:type] || @type)
       @unique      = result[:unique]      || @unique
       @fields      = result[:fields]      || @fields
       @sparse      = result[:sparse]      || @sparse
-      @geo_json     = result[:geoJson]     || @geo_json
-      @min_length   = result[:minLength]   || @min_length
+      @geo_json    = result[:geoJson]     || @geo_json
+      @min_length  = result[:minLength]   || @min_length
       @deduplicate = result[:deduplicate] || @deduplicate
+      @is_newly_created = result[:is_newly_created]
+      @estimates   = result[:estimates]   || @estimates
     end
 
 # === DEFINE ===
@@ -73,6 +75,7 @@ module Arango
       {
         key: @key,
         id: @id,
+        name: @name,
         body: @body,
         type: @type,
         sparse: @sparse,
@@ -122,7 +125,7 @@ module Arango
       end
       result = Arango::Requests::Index::Create.execute(server: @database.server, params: params, body: body)
       assign_attributes result
-      result
+      self
     end
 
     def delete
