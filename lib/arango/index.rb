@@ -128,6 +128,10 @@ module Arango
       self
     end
 
+    def to_s
+      "Index(#{@id}:#{@type.to_sym}-#{@fields})"
+    end
+
     def delete
       c, i = @id.split '/' # Requests would convert / to %2F
       Arango::Requests::Index::Delete.execute(server: @database.server, args: { collection: c, id: i})
