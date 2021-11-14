@@ -45,7 +45,7 @@ module Arango
             bind_vars[:offset] = offset
             bind_vars[:limit] = limit
           end
-          raise Arango::Error.new err: "offset must be used with limit" if offset > 0 && !limit
+          raise Arango::Error.new err: "offset must be used with limit" if offset && offset.to_i > 0 && !limit
           query << "\n RETURN doc._key"
           args = { db: collection.database.name }
           body = { query: query }
