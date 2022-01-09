@@ -12,7 +12,7 @@ module Arango
             bind_vars[:offset] = offset
             bind_vars[:limit] = limit
           end
-          raise Arango::Error.new err: "offset must be used with limit" if offset > 0 && !limit
+          raise Arango::Error.new "offset must be used with limit" if offset > 0 && !limit
           query << "\n RETURN doc"
           body = { query: query }
           unless bind_vars.empty?
@@ -45,7 +45,7 @@ module Arango
             bind_vars[:offset] = offset
             bind_vars[:limit] = limit
           end
-          raise Arango::Error.new err: "offset must be used with limit" if offset && offset.to_i > 0 && !limit
+          raise Arango::Error.new "offset must be used with limit" if offset && offset.to_i > 0 && !limit
           query << "\n RETURN doc._key"
           args = { db: collection.database.name }
           body = { query: query }
@@ -73,7 +73,6 @@ module Arango
         def exists? (key: nil, attributes: {}, match_rev: nil, collection:)
           document = _attributes_from_arg(attributes)
           document[:_key] = key if key
-          raise Arango::Error.new(err: "Document with key required!") unless document.key?(:_key)
           headers = { }
           if document.key?(:_key) && document.key?(:_rev) && match_rev == true
             headers[:'If-Match'] = document[:_rev]
