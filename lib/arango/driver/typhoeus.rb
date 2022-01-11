@@ -31,21 +31,26 @@ module Arango
         rescue Exception => e
           raise Arango::Error.new err: :impossible_to_connect_with_database, data: { error: e.message }
         end
-#        STDERR.puts "\t#{response.response_body} #{response.return_code} #{response.response_code}"
-        raise Arango::Error.new "Typhoeus curl error: #{response.return_code}" unless response.return_code == :ok
+#        STDERR.puts "\tresponse_body:#{response.response_body} return_code:#{response.return_code.inspect} response_code:#{response.response_code.inspect}"
+        raise Arango::Error.new "Typhoeus curl error: #{response.response_code}" unless response.return_code == :ok
+        response_body = response.response_body
         if headers && headers.key?("Content-Type") && headers["Content-Type"].start_with?("multipart/form-data")
-          return response.response_body
+          return response_body
         end
 
         begin
-          json_result = unless response.response_body.empty?
-                          Oj.load(response.response_body, mode: :json, symbol_keys: true)
+          json_result = unless response_body.empty?
+                          Oj.load(response_body, mode: :json, symbol_keys: true)
                         else
                           {}
                         end
         rescue Exception => e
           raise Arango::Error.new err: :impossible_to_parse_arangodb_response,
-            data: { response: response.response_body, request: JSON.pretty_generate(options) }
+            data: { response: response_body, request: JSON.pretty_generate(options) }
+        end
+#        STDERR.puts "json_result #{json_result.class}:#{json_result.inspect}"
+        if json_result[:error] == true
+          raise Arango::Error.new(json_result[:errorMessage], err: json_result[:errorNum])
         end
 
         [json_result, response.response_code]
