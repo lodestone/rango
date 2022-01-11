@@ -74,9 +74,12 @@ module Arango
 
         def exists? (key: nil, attributes: {}, match_rev: nil, edge_collection:)
           edge = _attributes_from_arg(attributes)
-          edge[:_key] = key if key
+          if key.nil?
+            return !!self.get(key: key, attributes: attributes, edge_collection: edge_collection)
+          end
+          edge[:_key] = key
           headers = { }
-          raise Arango::Error.new(err: "Edge with key required!") unless edge.key?(:_key)
+          raise Arango::Error.new("Edge with key required!") unless edge.key?(:_key)
           if edge.key?(:_key) && edge.key?(:_rev) && match_rev == true
             headers[:'If-Match'] = edge[:_rev]
           elsif edge.key?(:_key) && edge.key?(:_rev) && match_rev == false
