@@ -232,7 +232,7 @@ module Arango
           @attributes[:_from] = f.id
           @from_instance = f
         else
-          raise "from is not valid"
+          raise "from (of type #{f.class}) is not valid"
         end
       end
 
@@ -245,7 +245,7 @@ module Arango
           @attributes[:_to] = t.id
           @to_instance = t
         else
-          raise "to is not valid"
+          raise "to (of type #{t.class}) is not valid"
         end
       end
     end
