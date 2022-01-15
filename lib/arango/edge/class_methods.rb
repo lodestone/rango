@@ -171,6 +171,39 @@ module Arango
         base.singleton_class.alias_method :fetch_edges, :get_edges
         base.singleton_class.alias_method :retrieve_edges, :get_edges
 
+        def find_edges_matching (attributes, edge_collection:)
+          vars = _attributes_from_arg(attributes)
+          results = []
+          result_edges = []
+          args = { collection: edge_collection.name }
+          if vars.key?(:_key)
+            args[:key] = vars[:_key]
+            result = Arango::Requests::Document::Get.execute(server: edge_collection.server, args: args)
+            results << result
+            result_edges << Arango::Edge::Base.new(attributes: result, edge_collection: edge_collection)
+          else
+            bind_vars = {}
+            query = "FOR doc IN #{edge_collection.name}"
+            i = 0
+            vars.each do |k,v|
+              i += 1
+              query << "\n FILTER doc.@key#{i} == @value#{i}"
+              bind_vars["key#{i}"] = k.to_s
+              bind_vars["value#{i}"] = v
+            end
+            query << "\n RETURN doc"
+            aql = AQL.new(query: query, database: edge_collection.database, bind_vars: bind_vars, block: ->(_, result) do
+                            result.result.each do |res|
+                              result_edges << Arango::Edge::Base.new(attributes: res, edge_collection: edge_collection)
+                              result_edges
+                            end
+                          end
+                         )
+            results += aql.request
+          end
+          results
+        end
+
         def replace_edges (edges, ignore_revs: false, wait_for_sync: nil, edge_collection:)
           edges = [edges] unless edges.is_a? Array
           edges = edges.map{ |d| _attributes_from_arg(d) }

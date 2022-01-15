@@ -29,6 +29,10 @@ module Arango
       alias fetch_edges get_edges
       alias retrieve_edges get_edges
 
+      def find_edges_matching(attributes)
+        Arango::Edge::Base.find_edges_matching(attributes, edge_collection: self)
+      end
+
       def all_edges(offset: 0, limit: nil, batch_size: nil)
         Arango::Edge::Base.all(offset: offset, limit: limit, batch_size: batch_size, edge_collection: self)
       end
